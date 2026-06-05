@@ -106,7 +106,9 @@ export default function KitsList() {
                     <li key={i.id} className="flex items-center justify-between text-xs">
                       <span className="text-gray-700">{i.name}</span>
                       <div className="flex items-center gap-2">
-                        {i.serialNumber && <span className="text-gray-400">#{i.serialNumber}</span>}
+                        {(i.assetNumber || i.serialNumber) && (
+                          <span className="text-gray-400">#{i.assetNumber || i.serialNumber}</span>
+                        )}
                         <StatusBadge status={i.status} type="item" />
                       </div>
                     </li>
@@ -231,8 +233,8 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
                 >
                   <span className="text-gray-900">{item.name}</span>
                   <div className="flex items-center gap-2">
-                    {item.serialNumber && (
-                      <span className="text-xs text-gray-400">#{item.serialNumber}</span>
+                    {(item.assetNumber || item.serialNumber) && (
+                      <span className="text-xs text-gray-400">#{item.assetNumber || item.serialNumber}</span>
                     )}
                     <StatusBadge status={item.status} type="item" />
                     {selectedItems.includes(item.id) && <Check size={14} className="text-blue-600" />}

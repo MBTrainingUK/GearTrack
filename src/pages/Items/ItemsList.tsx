@@ -36,6 +36,7 @@ export default function ItemsList() {
     const matchSearch =
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.serialNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      item.assetNumber?.toLowerCase().includes(search.toLowerCase()) ||
       item.category.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'All' || item.category === category;
     return matchSearch && matchCat;
@@ -115,6 +116,9 @@ export default function ItemsList() {
                   <StatusBadge status={item.status} type="item" className="shrink-0" />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{item.category}</p>
+                {item.assetNumber && (
+                  <p className="text-xs text-gray-400">Asset: {item.assetNumber}</p>
+                )}
                 {item.serialNumber && (
                   <p className="text-xs text-gray-400">S/N: {item.serialNumber}</p>
                 )}

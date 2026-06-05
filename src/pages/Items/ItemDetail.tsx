@@ -84,6 +84,7 @@ export default function ItemDetail() {
             <h2 className="mb-4 text-sm font-semibold text-gray-900">Details</h2>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <InfoRow icon={Hash} label="Category" value={item.category} />
+              {item.assetNumber && <InfoRow icon={Hash} label="Asset No." value={item.assetNumber} />}
               {item.serialNumber && <InfoRow icon={Hash} label="Serial No." value={item.serialNumber} />}
               {item.location && <InfoRow icon={MapPin} label="Location" value={item.location} />}
               {item.purchasePrice && (

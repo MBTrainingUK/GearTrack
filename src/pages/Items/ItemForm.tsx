@@ -25,6 +25,7 @@ export default function ItemForm() {
     description: '',
     category: 'Camera',
     serialNumber: '',
+    assetNumber: '',
     location: '',
     purchasePrice: '',
     notes: '',
@@ -42,6 +43,7 @@ export default function ItemForm() {
           description: d.description,
           category: d.category,
           serialNumber: d.serialNumber ?? '',
+          assetNumber: d.assetNumber ?? '',
           location: d.location ?? '',
           purchasePrice: d.purchasePrice?.toString() ?? '',
           notes: d.notes ?? '',
@@ -124,7 +126,16 @@ export default function ItemForm() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Asset No. / Serial Number</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Asset No.</label>
+            <input
+              value={form.assetNumber}
+              onChange={(e) => set('assetNumber', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="GT-001"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Serial No.</label>
             <input
               value={form.serialNumber}
               onChange={(e) => set('serialNumber', e.target.value)}

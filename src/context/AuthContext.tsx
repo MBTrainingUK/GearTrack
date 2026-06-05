@@ -40,16 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const ref = doc(db, 'users', user.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      const newUser: Omit<AppUser, 'id'> = {
+      const newUser = {
         uid: user.uid,
         email: user.email ?? '',
         displayName: displayName ?? user.displayName ?? 'User',
-        role: 'user',
-        photoURL: user.photoURL ?? undefined,
-        createdAt: serverTimestamp() as AppUser['createdAt'],
+        role: 'user' as const,
+        createdAt: serverTimestamp(),
+        // Only include photoURL if it actually exists — Firestore rejects undefined
+        ...(user.photoURL ? { photoURL: user.photoURL } : {}),
       };
       await setDoc(ref, newUser);
-      return newUser as AppUser;
+      return newUser as unknown as AppUser;
     }
     return snap.data() as AppUser;
   }

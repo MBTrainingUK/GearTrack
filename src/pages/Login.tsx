@@ -43,7 +43,7 @@ export default function Login() {
             <Package size={22} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-1 text-sm text-gray-500">Sign in to your Cheqroom account</p>
+          <p className="mt-1 text-sm text-gray-500">Sign in to your GearTrack account</p>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-8 shadow-sm">

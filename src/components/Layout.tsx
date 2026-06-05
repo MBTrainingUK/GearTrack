@@ -38,7 +38,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
           <Package size={16} className="text-white" />
         </div>
-        <span className="text-base font-bold text-gray-900">Cheqroom</span>
+        <span className="text-base font-bold text-gray-900">GearTrack</span>
       </div>
 
       {/* Nav */}
@@ -121,7 +121,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
             <Package size={14} className="text-white" />
           </div>
-          <span className="font-bold text-gray-900">Cheqroom</span>
+          <span className="font-bold text-gray-900">GearTrack</span>
         </header>
 
         {/* Page content */}

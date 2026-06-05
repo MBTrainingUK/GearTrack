@@ -93,7 +93,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 flex-shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
+      <aside className="hidden w-72 flex-shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
         <SidebarContent />
       </aside>
 
@@ -104,7 +104,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="fixed inset-0 bg-black/30"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative z-50 w-60 bg-white shadow-xl">
+          <aside className="relative z-50 w-72 bg-white shadow-xl">
             <SidebarContent />
           </aside>
         </div>
@@ -127,7 +127,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

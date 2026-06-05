@@ -56,7 +56,7 @@ export default function ItemDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700">
           <ArrowLeft size={18} />

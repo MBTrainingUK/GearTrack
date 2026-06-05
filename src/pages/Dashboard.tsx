@@ -137,7 +137,7 @@ export default function Dashboard() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, color, bg, href }) => (
           <Link
             key={label}
@@ -153,9 +153,9 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-5">
         {/* Activity chart */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-900">Checkouts — Last 7 Days</h2>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} barSize={24}>
@@ -169,7 +169,7 @@ export default function Dashboard() {
         </div>
 
         {/* Upcoming reservations */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Upcoming Reservations</h2>
             <Link to="/reservations" className="text-xs text-blue-600 hover:underline">View all</Link>

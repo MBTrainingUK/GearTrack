@@ -204,7 +204,7 @@ export default function Dashboard() {
         </div>
         {checkouts.length === 0 ? (
           <div className="flex h-24 items-center justify-center">
-            <p className="text-sm text-gray-400">No active checkouts</p>
+            <p className="text-sm text-gray-400">No active checkouts.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

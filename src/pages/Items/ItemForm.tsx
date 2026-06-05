@@ -156,7 +156,7 @@ export default function ItemForm() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Purchase Price ($)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Purchase Price (£)</label>
             <input
               type="number"
               min="0"

@@ -78,7 +78,7 @@ export default function CheckoutsList() {
         <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
           <AlertTriangle size={16} className="shrink-0 text-red-600" />
           <p className="text-sm text-red-800">
-            <span className="font-semibold">{overdue} overdue</span> checkout{overdue > 1 ? 's' : ''} need attention.
+            <span className="font-semibold">{overdue} overdue</span> checkout{overdue > 1 ? 's' : ''} require attention.
           </p>
         </div>
       )}
@@ -347,7 +347,7 @@ function NewCheckoutModal({
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {saving ? 'Creating…' : 'Check Out & Add Report'}
+            {saving ? 'Creating…' : 'Check Out & Add Condition Report'}
           </button>
         </div>
       </div>

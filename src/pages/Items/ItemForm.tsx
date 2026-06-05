@@ -28,6 +28,7 @@ export default function ItemForm() {
     assetNumber: '',
     location: '',
     purchasePrice: '',
+    condition: 'good',
     notes: '',
   });
   const [saving, setSaving] = useState(false);
@@ -46,6 +47,7 @@ export default function ItemForm() {
           assetNumber: d.assetNumber ?? '',
           location: d.location ?? '',
           purchasePrice: d.purchasePrice?.toString() ?? '',
+          condition: d.condition ?? 'good',
           notes: d.notes ?? '',
         });
       }
@@ -151,6 +153,18 @@ export default function ItemForm() {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Studio A, Shelf 3"
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Condition</label>
+            <select
+              value={form.condition}
+              onChange={(e) => set('condition', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="good">Good</option>
+              <option value="needs_attention">Needs attention</option>
+              <option value="damaged">Damaged</option>
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Purchase Price (£)</label>

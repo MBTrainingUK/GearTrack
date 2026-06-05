@@ -5,6 +5,7 @@ import type { Item } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Package, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -121,6 +122,11 @@ export default function ItemsList() {
                 )}
                 {item.serialNumber && (
                   <p className="text-xs text-gray-400">S/N: {item.serialNumber}</p>
+                )}
+                {item.condition && item.condition !== 'good' && (
+                  <div className="mt-1.5">
+                    <ConditionBadge condition={item.condition} />
+                  </div>
                 )}
                 <div className="mt-3 flex items-center justify-between">
                   <Link

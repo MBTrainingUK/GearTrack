@@ -14,6 +14,7 @@ import type { Item, Kit, Reservation } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Check } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 
 export default function ReservationForm() {
@@ -125,6 +126,8 @@ export default function ReservationForm() {
   }
 
   function toggleItem(id: string) {
+    const item = items.find((i) => i.id === id);
+    if (item?.condition === 'needs_attention' || item?.condition === 'damaged') return;
     setSelectedKitId(null);
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -216,14 +219,16 @@ export default function ReservationForm() {
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);
               const isSelected = selectedItems.includes(item.id);
+              const isBlocked = item.condition === 'needs_attention' || item.condition === 'damaged';
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => toggleItem(item.id)}
-                  className={`flex w-full items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-50 ${
-                    isSelected ? 'bg-blue-50' : ''
-                  } ${isConflict ? 'bg-red-50' : ''}`}
+                  disabled={isBlocked}
+                  className={`flex w-full items-center justify-between px-3 py-2.5 text-sm ${
+                    isBlocked ? 'cursor-not-allowed opacity-60 bg-gray-50' : 'hover:bg-gray-50'
+                  } ${isSelected ? 'bg-blue-50' : ''} ${isConflict ? 'bg-red-50' : ''}`}
                 >
                   <div className="text-left">
                     <p className="font-medium text-gray-900">{item.name}</p>
@@ -231,8 +236,10 @@ export default function ReservationForm() {
                   </div>
                   <div className="flex items-center gap-2">
                     {isConflict && <span className="text-xs text-red-600">Conflict</span>}
-                    <StatusBadge status={item.status} type="item" />
-                    {isSelected && <Check size={14} className="text-blue-600 shrink-0" />}
+                    {isBlocked
+                      ? <ConditionBadge condition={item.condition} />
+                      : <StatusBadge status={item.status} type="item" />}
+                    {isSelected && !isBlocked && <Check size={14} className="text-blue-600 shrink-0" />}
                   </div>
                 </button>
               );

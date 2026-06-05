@@ -273,6 +273,8 @@ function NewCheckoutModal({
   const available = items.filter(
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
+      i.condition !== 'needs_attention' &&
+      i.condition !== 'damaged' &&
       i.name.toLowerCase().includes(search.toLowerCase())
   );
 

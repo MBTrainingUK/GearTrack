@@ -28,6 +28,7 @@ export interface Item {
   category: string;
   serialNumber?: string;
   assetNumber?: string;
+  condition?: 'good' | 'needs_attention' | 'damaged';
   status: ItemStatus;
   photoURLs: string[];
   location?: string;

@@ -1,0 +1,168 @@
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import type { Item } from '../../types';
+import { Link } from 'react-router-dom';
+import { Plus, Search, Package, Trash2 } from 'lucide-react';
+import StatusBadge from '../../components/StatusBadge';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
+
+const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Other'];
+
+export default function ItemsList() {
+  const { appUser } = useAuth();
+  const [items, setItems] = useState<Item[]>([]);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
+
+  useEffect(() => {
+    return onSnapshot(collection(db, 'items'), (s) =>
+      setItems(s.docs.map((d) => ({ id: d.id, ...d.data() } as Item)))
+    );
+  }, []);
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this item? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'items', id));
+      toast.success('Item deleted');
+    } catch {
+      toast.error('Failed to delete item');
+    }
+  }
+
+  const filtered = items.filter((item) => {
+    const matchSearch =
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      item.serialNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      item.category.toLowerCase().includes(search.toLowerCase());
+    const matchCat = category === 'All' || item.category === category;
+    return matchSearch && matchCat;
+  });
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Items</h1>
+          <p className="mt-0.5 text-sm text-gray-500">{items.length} items in inventory</p>
+        </div>
+        {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
+          <Link
+            to="/items/new"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Plus size={16} />
+            Add Item
+          </Link>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, serial, category…"
+            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                category === c
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
+          <Package size={36} className="text-gray-300" />
+          <p className="text-sm text-gray-500">No items found</p>
+          {appUser?.role !== 'user' && (
+            <Link to="/items/new" className="text-sm font-medium text-blue-600 hover:underline">
+              Add your first item →
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((item) => (
+            <div
+              key={item.id}
+              className="group relative rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+            >
+              {/* Photo */}
+              <Link to={`/items/${item.id}`}>
+                <div className="h-36 bg-gray-100 overflow-hidden">
+                  {item.photoURLs?.[0] ? (
+                    <img
+                      src={item.photoURLs[0]}
+                      alt={item.name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <Package size={32} className="text-gray-300" />
+                    </div>
+                  )}
+                </div>
+              </Link>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <Link to={`/items/${item.id}`} className="min-w-0">
+                    <h3 className="truncate font-semibold text-gray-900 hover:text-blue-600">
+                      {item.name}
+                    </h3>
+                  </Link>
+                  <StatusBadge status={item.status} type="item" className="shrink-0" />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">{item.category}</p>
+                {item.serialNumber && (
+                  <p className="text-xs text-gray-400">S/N: {item.serialNumber}</p>
+                )}
+                <div className="mt-3 flex items-center justify-between">
+                  <Link
+                    to={`/reservations/new?itemId=${item.id}`}
+                    className="text-xs font-medium text-blue-600 hover:underline"
+                  >
+                    Reserve
+                  </Link>
+                  {appUser?.role !== 'user' && (
+                    <div className="flex gap-2">
+                      <Link
+                        to={`/items/${item.id}/edit`}
+                        className="text-xs text-gray-400 hover:text-gray-700"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

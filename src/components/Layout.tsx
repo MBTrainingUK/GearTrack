@@ -8,17 +8,19 @@ import {
   History,
   LogOut,
   Menu,
+  Shield,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/items', label: 'Items', icon: Package },
-  { to: '/kits', label: 'Kits', icon: Layers },
-  { to: '/reservations', label: 'Reservations', icon: CalendarRange },
-  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight },
-  { to: '/history', label: 'My History', icon: History },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, adminOnly: false },
+  { to: '/items', label: 'Items', icon: Package, adminOnly: false },
+  { to: '/kits', label: 'Kits', icon: Layers, adminOnly: false },
+  { to: '/reservations', label: 'Reservations', icon: CalendarRange, adminOnly: false },
+  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, adminOnly: false },
+  { to: '/history', label: 'My History', icon: History, adminOnly: false },
+  { to: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -44,7 +46,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon, exact }) => (
+          {navItems.filter(item => !item.adminOnly || appUser?.role === 'admin').map(({ to, label, icon: Icon, exact }) => (
             <li key={to}>
 <NavLink
                 to={to}

@@ -16,6 +16,7 @@ import ReservationsList from './pages/Reservations/ReservationsList';
 import ReservationForm from './pages/Reservations/ReservationForm';
 import CheckoutsList from './pages/Checkouts/CheckoutsList';
 import UserHistory from './pages/History/UserHistory';
+import AdminPanel from './pages/Admin/AdminPanel';
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
                     <Route path="/reservations/new" element={<ReservationForm />} />
                     <Route path="/checkouts" element={<CheckoutsList />} />
                     <Route path="/history" element={<UserHistory />} />
+                    <Route path="/admin" element={<AdminPanel />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

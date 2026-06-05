@@ -3,7 +3,6 @@ import { doc, updateDoc, addDoc, collection, serverTimestamp, Timestamp } from '
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import type { ConditionReport } from '../types';
-import PhotoUpload from './PhotoUpload';
 import { X } from 'lucide-react';
 
 interface Props {
@@ -20,7 +19,6 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
   const { currentUser, appUser } = useAuth();
   const [condition, setCondition] = useState<ConditionReport['condition']>('good');
   const [notes, setNotes] = useState('');
-  const [photoURLs, setPhotoURLs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit() {
@@ -29,7 +27,7 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
     const report: ConditionReport = {
       condition,
       notes,
-      photoURLs,
+      photoURLs: [],
       reportedAt: Timestamp.now(),
       reportedBy: appUser.displayName,
     };
@@ -102,15 +100,6 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
               rows={3}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Any damage, missing accessories, etc…"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Photos</label>
-            <PhotoUpload
-              folder={`condition-reports/${checkoutId}`}
-              urls={photoURLs}
-              onChange={setPhotoURLs}
-              maxFiles={4}
             />
           </div>
         </div>

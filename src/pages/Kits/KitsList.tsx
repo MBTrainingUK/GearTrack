@@ -13,7 +13,6 @@ import type { Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Layers, X, Check, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
-import PhotoUpload from '../../components/PhotoUpload';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -106,7 +105,10 @@ export default function KitsList() {
                   {kitItems.slice(0, 4).map((i) => (
                     <li key={i.id} className="flex items-center justify-between text-xs">
                       <span className="text-gray-700">{i.name}</span>
-                      <StatusBadge status={i.status} type="item" />
+                      <div className="flex items-center gap-2">
+                        {i.serialNumber && <span className="text-gray-400">#{i.serialNumber}</span>}
+                        <StatusBadge status={i.status} type="item" />
+                      </div>
                     </li>
                   ))}
                   {kitItems.length > 4 && (
@@ -141,7 +143,6 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [photoURLs, setPhotoURLs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -164,7 +165,7 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
         name,
         description,
         itemIds: selectedItems,
-        photoURLs,
+        photoURLs: [],
         status: 'available',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -209,10 +210,6 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Cover Photo</label>
-            <PhotoUpload folder="kits/new" urls={photoURLs} onChange={setPhotoURLs} maxFiles={1} />
-          </div>
-          <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Add Items ({selectedItems.length} selected)
             </label>
@@ -234,6 +231,9 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
                 >
                   <span className="text-gray-900">{item.name}</span>
                   <div className="flex items-center gap-2">
+                    {item.serialNumber && (
+                      <span className="text-xs text-gray-400">#{item.serialNumber}</span>
+                    )}
                     <StatusBadge status={item.status} type="item" />
                     {selectedItems.includes(item.id) && <Check size={14} className="text-blue-600" />}
                   </div>

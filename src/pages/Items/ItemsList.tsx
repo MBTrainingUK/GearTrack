@@ -105,22 +105,6 @@ export default function ItemsList() {
               key={item.id}
               className="group relative rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
             >
-              {/* Photo */}
-              <Link to={`/items/${item.id}`}>
-                <div className="h-36 bg-gray-100 overflow-hidden">
-                  {item.photoURLs?.[0] ? (
-                    <img
-                      src={item.photoURLs[0]}
-                      alt={item.name}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Package size={32} className="text-gray-300" />
-                    </div>
-                  )}
-                </div>
-              </Link>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <Link to={`/items/${item.id}`} className="min-w-0">

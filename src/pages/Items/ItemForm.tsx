@@ -10,7 +10,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item } from '../../types';
-import PhotoUpload from '../../components/PhotoUpload';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 
@@ -30,7 +29,6 @@ export default function ItemForm() {
     purchasePrice: '',
     notes: '',
   });
-  const [photoURLs, setPhotoURLs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
 
@@ -48,7 +46,6 @@ export default function ItemForm() {
           purchasePrice: d.purchasePrice?.toString() ?? '',
           notes: d.notes ?? '',
         });
-        setPhotoURLs(d.photoURLs ?? []);
       }
       setLoading(false);
     });
@@ -64,7 +61,7 @@ export default function ItemForm() {
     const data = {
       ...form,
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
-      photoURLs,
+      photoURLs: [],
       updatedAt: serverTimestamp(),
     };
     try {
@@ -105,17 +102,6 @@ export default function ItemForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
-        {/* Photos */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Photos</label>
-          <PhotoUpload
-            folder={`items/${id ?? 'new'}`}
-            urls={photoURLs}
-            onChange={setPhotoURLs}
-            maxFiles={5}
-          />
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700">Name *</label>
@@ -138,7 +124,7 @@ export default function ItemForm() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Serial Number</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Asset No. / Serial Number</label>
             <input
               value={form.serialNumber}
               onChange={(e) => set('serialNumber', e.target.value)}

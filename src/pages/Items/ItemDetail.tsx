@@ -12,7 +12,7 @@ import {
 import { db } from '../../lib/firebase';
 import type { Item, Checkout, Reservation } from '../../types';
 import StatusBadge from '../../components/StatusBadge';
-import { ArrowLeft, Edit, Package, MapPin, PoundSterling, Hash, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -21,7 +21,6 @@ export default function ItemDetail() {
   const navigate = useNavigate();
   const [item, setItem] = useState<Item | null>(null);
   const [history, setHistory] = useState<(Checkout | Reservation)[]>([]);
-  const [activePhoto, setActivePhoto] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,37 +79,7 @@ export default function ItemDetail() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Left: photos */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-            {item.photoURLs?.[activePhoto] ? (
-              <img src={item.photoURLs[activePhoto]} alt={item.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <Package size={48} className="text-gray-300" />
-              </div>
-            )}
-          </div>
-          {item.photoURLs?.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {item.photoURLs.map((url, i) => (
-                <button
-                  key={url}
-                  onClick={() => setActivePhoto(i)}
-                  className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                    i === activePhoto ? 'border-blue-500' : 'border-transparent'
-                  }`}
-                >
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right: details */}
-        <div className="lg:col-span-3 space-y-5">
+      <div className="space-y-5">
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">Details</h2>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -158,7 +127,6 @@ export default function ItemDetail() {
               </ul>
             )}
           </div>
-        </div>
       </div>
     </div>
   );

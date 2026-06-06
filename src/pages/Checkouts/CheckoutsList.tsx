@@ -14,7 +14,7 @@ import {
 import { db } from '../../lib/firebase';
 import type { Checkout, Item, Reservation } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, AlertTriangle, X, Check } from 'lucide-react';
+import { Plus, AlertTriangle, X, Check, Zap } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
 import { format, startOfDay } from 'date-fns';
@@ -230,6 +230,34 @@ function NewCheckoutModal({
     });
   }, [reservationId]);
 
+  async function quickGrab(itemIds: string[]) {
+    if (!currentUser || !appUser || itemIds.length === 0) return;
+    setSaving(true);
+    try {
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 0, 0);
+      const docRef = await addDoc(collection(db, 'checkouts'), {
+        reservationId: null,
+        userId: currentUser.uid,
+        userName: appUser.displayName,
+        userEmail: appUser.email,
+        itemIds,
+        checkedOutAt: serverTimestamp(),
+        dueDate: Timestamp.fromDate(endOfToday),
+        status: 'active',
+        notes: 'Quick Grab',
+      });
+      for (const itemId of itemIds) {
+        await updateDoc(doc(db, 'items', itemId), { status: 'checked_out', updatedAt: serverTimestamp() });
+      }
+      onCreated(docRef.id, itemIds);
+    } catch {
+      toast.error('Failed to create checkout');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSubmit() {
     if (!currentUser || !appUser || selectedItems.length === 0 || !dueDate) {
       toast.error('Select items and due date');
@@ -275,7 +303,9 @@ function NewCheckoutModal({
       (i.status === 'available' || selectedItems.includes(i.id)) &&
       i.condition !== 'needs_attention' &&
       i.condition !== 'damaged' &&
-      i.name.toLowerCase().includes(search.toLowerCase())
+      (i.name.toLowerCase().includes(search.toLowerCase()) ||
+        (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (i.serialNumber ?? '').toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -303,29 +333,38 @@ function NewCheckoutModal({
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search available items…"
+              placeholder="Search by name, asset no, serial no…"
               className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
               {available.map((item) => {
                 const isSel = selectedItems.includes(item.id);
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      setSelectedItems((p) =>
-                        p.includes(item.id) ? p.filter((x) => x !== item.id) : [...p, item.id]
-                      )
-                    }
-                    className={`flex w-full items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-50 ${isSel ? 'bg-blue-50' : ''}`}
-                  >
-                    <span className="text-gray-900">{item.name}</span>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={item.status} type="item" />
+                  <div key={item.id} className={`flex w-full items-center justify-between px-3 py-2 text-sm ${isSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedItems((p) => p.includes(item.id) ? p.filter((x) => x !== item.id) : [...p, item.id])}
+                      className="flex-1 text-left min-w-0"
+                    >
+                      <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                      {(item.assetNumber || item.serialNumber) && (
+                        <p className="text-xs text-gray-400">{item.assetNumber ? `Asset: ${item.assetNumber}` : `S/N: ${item.serialNumber}`}</p>
+                      )}
+                    </button>
+                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                      <button
+                        type="button"
+                        title="Quick Grab — check out now, due end of today"
+                        onClick={() => quickGrab([item.id])}
+                        disabled={saving}
+                        className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        <Zap size={11} />
+                        Quick Grab
+                      </button>
                       {isSel && <Check size={13} className="text-blue-600" />}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -344,6 +383,17 @@ function NewCheckoutModal({
           <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
+          {selectedItems.length > 0 && (
+            <button
+              onClick={() => quickGrab(selectedItems)}
+              disabled={saving}
+              title="Check out now, due end of today"
+              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
+            >
+              <Zap size={14} />
+              Quick Grab
+            </button>
+          )}
           <button
             onClick={handleSubmit}
             disabled={saving}

@@ -3,7 +3,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   getDocs,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -28,26 +27,32 @@ export default function UserHistory() {
       getDocs(
         query(
           collection(db, 'checkouts'),
-          where('userId', '==', currentUser.uid),
-          orderBy('checkedOutAt', 'desc')
+          where('userId', '==', currentUser.uid)
         )
       ),
       getDocs(
         query(
           collection(db, 'reservations'),
-          where('userId', '==', currentUser.uid),
-          orderBy('createdAt', 'desc')
+          where('userId', '==', currentUser.uid)
         )
       ),
       getDocs(collection(db, 'items')),
     ]).then(([cSnap, rSnap, iSnap]) => {
-      setCheckouts(cSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)));
-      setReservations(rSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation)));
+      setCheckouts(
+        cSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Checkout))
+          .sort((a, b) => (b.checkedOutAt?.toMillis() ?? 0) - (a.checkedOutAt?.toMillis() ?? 0))
+      );
+      setReservations(
+        rSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Reservation))
+          .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
+      );
       const map: Record<string, Item> = {};
       iSnap.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
       setItems(map);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [currentUser]);
 
   if (loading) {

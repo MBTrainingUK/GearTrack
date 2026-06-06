@@ -7,7 +7,6 @@ import {
   query,
   where,
   getDocs,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item, Checkout, Reservation } from '../../types';
@@ -29,13 +28,16 @@ export default function ItemDetail() {
     Promise.all([
       getDoc(doc(db, 'items', id)),
       getDocs(
-        query(collection(db, 'checkouts'), where('itemIds', 'array-contains', id), orderBy('checkedOutAt', 'desc'))
+        query(collection(db, 'checkouts'), where('itemIds', 'array-contains', id))
       ),
     ]).then(([itemSnap, checkoutsSnap]) => {
       if (itemSnap.exists()) setItem({ id: itemSnap.id, ...itemSnap.data() } as Item);
-      setHistory(checkoutsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)));
+      const sorted = checkoutsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Checkout))
+        .sort((a, b) => (b.checkedOutAt?.toMillis() ?? 0) - (a.checkedOutAt?.toMillis() ?? 0));
+      setHistory(sorted);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [id]);
 
   if (loading) {

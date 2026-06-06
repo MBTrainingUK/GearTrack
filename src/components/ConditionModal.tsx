@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { doc, updateDoc, addDoc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useAuth } from '../context/AuthContext';
-import type { ConditionReport } from '../types';
+import { useAuth } from '../context/useAuth';
+import type { ConditionReport, Checkout, AuditLog } from '../types';
 import { X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Props {
   checkoutId: string;
@@ -33,45 +34,59 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
     };
 
     const checkoutRef = doc(db, 'checkouts', checkoutId);
-    if (mode === 'return') {
-      await updateDoc(checkoutRef, {
-        returnCondition: report,
-        returnedAt: serverTimestamp(),
-        status: 'returned',
-      });
-      // Update item statuses; auto-flag if condition is poor or damaged
-      const autoFlagCondition =
-        condition === 'damaged' ? 'damaged' :
-        condition === 'poor' ? 'needs_investigating' :
-        null;
-      for (const itemId of itemIds) {
-        await updateDoc(doc(db, 'items', itemId), {
-          status: 'available',
-          updatedAt: serverTimestamp(),
-          ...(autoFlagCondition ? {
-            condition: autoFlagCondition,
-            conditionFlagNote: `Flagged on return: "${condition}" — ${notes || 'no notes'}`,
-          } : {}),
+    try {
+      if (mode === 'return') {
+        await updateDoc(checkoutRef, {
+          returnCondition: report,
+          returnedAt: serverTimestamp(),
+          status: 'returned',
         });
+        // Update item statuses; auto-flag if condition is poor or damaged
+        const autoFlagCondition =
+          condition === 'damaged' ? 'damaged' :
+          condition === 'poor' ? 'needs_investigating' :
+          null;
+        for (const itemId of itemIds) {
+          await updateDoc(doc(db, 'items', itemId), {
+            status: 'available',
+            updatedAt: serverTimestamp(),
+            ...(autoFlagCondition ? {
+              condition: autoFlagCondition,
+              conditionFlagNote: `Flagged on return: "${condition}" — ${notes || 'no notes'}`,
+            } : {}),
+          });
+        }
+        // If this checkout came from a reservation, mark it completed on return.
+        const snap = await getDoc(checkoutRef);
+        const reservationId = (snap.data() as Checkout | undefined)?.reservationId;
+        if (reservationId) {
+          await updateDoc(doc(db, 'reservations', reservationId), {
+            status: 'completed',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } else {
+        await updateDoc(checkoutRef, { checkoutCondition: report });
       }
-    } else {
-      await updateDoc(checkoutRef, { checkoutCondition: report });
+
+      // Audit log
+      const auditEntry: Omit<AuditLog, 'id' | 'timestamp'> = {
+        action: mode === 'return' ? 'checkin' : 'checkout',
+        performedBy: currentUser.uid,
+        performedByName: appUser.displayName,
+        targetType: 'checkout',
+        targetId: checkoutId,
+        targetName: `Checkout ${checkoutId}`,
+        details: { condition, notes },
+      };
+      await addDoc(collection(db, 'auditLog'), { ...auditEntry, timestamp: serverTimestamp() });
+
+      onConfirm();
+    } catch {
+      toast.error(mode === 'return' ? 'Failed to check in items' : 'Failed to save condition report');
+    } finally {
+      setSaving(false);
     }
-
-    // Audit log
-    await addDoc(collection(db, 'auditLog'), {
-      action: mode === 'return' ? 'checkin' : 'checkout',
-      performedBy: currentUser.uid,
-      performedByName: appUser.displayName,
-      targetType: 'checkout',
-      targetId: checkoutId,
-      targetName: `Checkout ${checkoutId}`,
-      timestamp: serverTimestamp(),
-      details: { condition, notes },
-    });
-
-    setSaving(false);
-    onConfirm();
   }
 
   return (

@@ -14,12 +14,9 @@ export interface AppUser {
 }
 
 // ── Item ─────────────────────────────────────────────────────────────
-export type ItemStatus =
-  | 'available'
-  | 'checked_out'
-  | 'reserved'
-  | 'maintenance'
-  | 'flagged';
+// Items are only ever 'available' or 'checked_out'. Condition concerns
+// (needs_attention/damaged/etc.) are tracked separately on `Item.condition`.
+export type ItemStatus = 'available' | 'checked_out';
 
 export interface Item {
   id: string;
@@ -104,23 +101,6 @@ export interface Checkout {
   returnCondition?: ConditionReport;
   signatureURL?: string;
   notes?: string;
-}
-
-// ── Flag ─────────────────────────────────────────────────────────────
-export type FlagType = 'damaged' | 'missing' | 'dirty' | 'needs_repair' | 'other';
-
-export interface Flag {
-  id: string;
-  itemId: string;
-  flaggedBy: string;
-  flaggedByName: string;
-  type: FlagType;
-  description: string;
-  photoURLs: string[];
-  resolved: boolean;
-  resolvedBy?: string;
-  resolvedAt?: Timestamp;
-  createdAt: Timestamp;
 }
 
 // ── Audit Log ────────────────────────────────────────────────────────

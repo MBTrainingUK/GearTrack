@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   collection,
   onSnapshot,
@@ -7,7 +7,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import type { Item, Checkout, Reservation } from '../types';
 import { Link } from 'react-router-dom';
 import {
@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import { format, subDays } from 'date-fns';
 import StatusBadge from '../components/StatusBadge';
+import { isOverdue } from '../lib/checkout';
 
 export default function Dashboard() {
   const { appUser } = useAuth();
@@ -35,7 +36,6 @@ export default function Dashboard() {
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [recentCheckouts, setRecentCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [chartData, setChartData] = useState<{ day: string; checkouts: number }[]>([]);
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
 
   useEffect(() => {
@@ -66,13 +66,13 @@ export default function Dashboard() {
   }, []);
 
   // Build last-7-days chart from real checkout data
-  useEffect(() => {
+  const chartData = useMemo(() => {
     const days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
-    const data = days.map((d) => {
+    return days.map((d) => {
       const label = format(d, 'MMM d');
       const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(d); dayEnd.setHours(23, 59, 59, 999);
-      const count = checkouts.filter((c) => {
+      const count = recentCheckouts.filter((c) => {
         try {
           const t = c.checkedOutAt.toDate();
           return t >= dayStart && t <= dayEnd;
@@ -80,12 +80,11 @@ export default function Dashboard() {
       }).length;
       return { day: label, checkouts: count };
     });
-    setChartData(data);
   }, [recentCheckouts]);
 
   const available = items.filter((i) => i.status === 'available').length;
   const checkedOut = items.filter((i) => i.status === 'checked_out').length;
-  const overdue = checkouts.filter((c) => c.status === 'overdue').length;
+  const overdue = checkouts.filter(isOverdue).length;
   const upcomingReservations = reservations.slice(0, 5);
 
   const stats = [

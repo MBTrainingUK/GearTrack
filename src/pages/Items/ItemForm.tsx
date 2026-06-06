@@ -65,16 +65,17 @@ export default function ItemForm() {
     const data = {
       ...form,
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
-      photoURLs: [],
       updatedAt: serverTimestamp(),
     };
     try {
       if (isEdit) {
+        // Don't write photoURLs on edit — it would wipe any existing photos.
         await updateDoc(doc(db, 'items', id!), data);
         toast.success('Item updated');
       } else {
         await addDoc(collection(db, 'items'), {
           ...data,
+          photoURLs: [],
           status: 'available',
           createdAt: serverTimestamp(),
         });

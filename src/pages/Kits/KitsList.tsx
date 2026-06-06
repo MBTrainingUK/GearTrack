@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Layers, X, Check, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export default function KitsList() {
   const { appUser } = useAuth();

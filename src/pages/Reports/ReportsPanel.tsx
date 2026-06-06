@@ -5,6 +5,8 @@ import type { Item, Checkout } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { BarChart2 } from 'lucide-react';
 import { startOfDay } from 'date-fns';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth';
 
 interface ItemStat {
   id: string;
@@ -25,6 +27,7 @@ interface UserStat {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function ReportsPanel() {
+  const { appUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [itemStats, setItemStats] = useState<ItemStat[]>([]);
   const [userStats, setUserStats] = useState<UserStat[]>([]);
@@ -121,6 +124,11 @@ export default function ReportsPanel() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  // Guard: Reports is admin-only (checked after hooks to keep hook order stable)
+  if (appUser && appUser.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   if (loading) {
     return (

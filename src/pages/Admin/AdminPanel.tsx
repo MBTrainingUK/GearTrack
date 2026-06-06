@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { Shield, UserCheck, User, ChevronDown, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -28,11 +28,6 @@ export default function AdminPanel() {
   const [confirmRemove, setConfirmRemove] = useState<AppUser | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  // Guard: only admins can access this page
-  if (appUser && appUser.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), (snap) => {
       const list = snap.docs.map((d) => ({ ...d.data() } as AppUser));
@@ -40,6 +35,11 @@ export default function AdminPanel() {
       setUsers(list);
     });
   }, []);
+
+  // Guard: only admins can access this page (checked after hooks to keep hook order stable)
+  if (appUser && appUser.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   async function changeRole(uid: string, newRole: UserRole) {
     if (uid === currentUser?.uid && newRole !== 'admin') {

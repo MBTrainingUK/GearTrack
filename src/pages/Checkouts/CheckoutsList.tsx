@@ -17,9 +17,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, AlertTriangle, X, Check, Zap } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
+import { isOverdue } from '../../lib/checkout';
 
 export default function CheckoutsList() {
   const { appUser } = useAuth();
@@ -51,10 +52,14 @@ export default function CheckoutsList() {
     return () => unsubs.forEach((u) => u());
   }, []);
 
-  const filtered =
-    filter === 'all' ? checkouts : checkouts.filter((c) => c.status === filter);
+  const filtered = checkouts.filter((c) => {
+    if (filter === 'all') return true;
+    if (filter === 'overdue') return isOverdue(c);
+    if (filter === 'active') return c.status === 'active' && !isOverdue(c);
+    return c.status === filter;
+  });
 
-  const overdue = checkouts.filter((c) => c.status === 'active' && startOfDay(new Date()) > c.dueDate.toDate()).length;
+  const overdue = checkouts.filter(isOverdue).length;
 
   return (
     <div className="space-y-5">
@@ -119,10 +124,10 @@ export default function CheckoutsList() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((c) => {
-                const isOverdue = c.status === 'active' && startOfDay(new Date()) > c.dueDate.toDate();
-                const displayStatus = isOverdue ? 'overdue' : c.status;
+                const overdueRow = isOverdue(c);
+                const displayStatus = overdueRow ? 'overdue' : c.status;
                 return (
-                  <tr key={c.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50/40' : ''}`}>
+                  <tr key={c.id} className={`hover:bg-gray-50 ${overdueRow ? 'bg-red-50/40' : ''}`}>
                     <td className="px-5 py-3">
                       <p className="font-medium text-gray-900">{c.userName}</p>
                       <p className="text-xs text-gray-500">{c.userEmail}</p>
@@ -140,7 +145,7 @@ export default function CheckoutsList() {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-gray-600">{formatTS(c.checkedOutAt)}</td>
-                    <td className={`px-5 py-3 ${isOverdue ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
+                    <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
                       {formatTS(c.dueDate)}
                     </td>
                     <td className="px-5 py-3">

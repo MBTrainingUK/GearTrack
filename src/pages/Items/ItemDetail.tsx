@@ -9,7 +9,7 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Item, Checkout, Reservation } from '../../types';
+import type { Item, Checkout } from '../../types';
 import StatusBadge from '../../components/StatusBadge';
 import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle } from 'lucide-react';
 import ConditionBadge from '../../components/ConditionBadge';
@@ -20,7 +20,7 @@ export default function ItemDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [item, setItem] = useState<Item | null>(null);
-  const [history, setHistory] = useState<(Checkout | Reservation)[]>([]);
+  const [history, setHistory] = useState<Checkout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function ItemDetail() {
               <p className="text-sm text-gray-400">No checkout history yet.</p>
             ) : (
               <ul className="divide-y divide-gray-100">
-                {(history as Checkout[]).map((c) => (
+                {history.map((c) => (
                   <li key={c.id} className="flex items-center justify-between py-2.5 text-sm">
                     <div>
                       <p className="font-medium text-gray-900">{c.userName}</p>

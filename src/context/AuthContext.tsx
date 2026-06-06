@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9,27 +9,10 @@ import {
   signInWithPopup,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { AppUser } from '../types';
-
-interface AuthContextType {
-  currentUser: User | null;
-  appUser: AppUser | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
-  return ctx;
-}
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -52,7 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(ref, newUser);
       return newUser as unknown as AppUser;
     }
-    return snap.data() as AppUser;
+    const existing = snap.data() as AppUser;
+    // If the auth listener created the doc with the 'User' fallback before the
+    // chosen displayName was available (registration race), backfill the real name.
+    if (displayName && displayName !== existing.displayName) {
+      await updateDoc(ref, { displayName });
+      return { ...existing, displayName };
+    }
+    return existing;
   }
 
   useEffect(() => {
@@ -81,7 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function register(email: string, password: string, displayName: string) {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(user, { displayName });
-    await ensureUserDoc(user, displayName);
+    // ensureUserDoc backfills the name if the auth listener already created the doc
+    // with the 'User' fallback; apply the result so in-memory state is correct too.
+    const data = await ensureUserDoc(user, displayName);
+    setAppUser(data);
   }
 
   async function logout() {

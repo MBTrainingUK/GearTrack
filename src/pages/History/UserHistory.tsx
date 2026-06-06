@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Checkout, Reservation, Item } from '../../types';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import StatusBadge from '../../components/StatusBadge';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';

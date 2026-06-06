@@ -3,9 +3,6 @@ import type { ItemStatus, ReservationStatus, CheckoutStatus } from '../types';
 const itemColors: Record<ItemStatus, string> = {
   available: 'bg-emerald-100 text-emerald-800',
   checked_out: 'bg-blue-100 text-blue-800',
-  reserved: 'bg-violet-100 text-violet-800',
-  maintenance: 'bg-amber-100 text-amber-800',
-  flagged: 'bg-red-100 text-red-800',
 };
 
 const reservationColors: Record<ReservationStatus, string> = {
@@ -25,9 +22,6 @@ const checkoutColors: Record<CheckoutStatus, string> = {
 const labels: Record<string, string> = {
   available: 'Available',
   checked_out: 'Checked Out',
-  reserved: 'Reserved',
-  maintenance: 'Maintenance',
-  flagged: 'Flagged',
   pending: 'Pending',
   approved: 'Approved',
   completed: 'Completed',

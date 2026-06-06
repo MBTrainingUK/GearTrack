@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item, Kit, Reservation } from '../../types';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { ArrowLeft, Check } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
@@ -41,16 +41,21 @@ export default function ReservationForm() {
       getDocs(collection(db, 'kits')),
     ]).then(([itemsSnap, kitsSnap]) => {
       setItems(itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
-      setKits(kitsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Kit)));
+      const loadedKits = kitsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Kit));
+      setKits(loadedKits);
+      // Pre-select items for a kit passed in via ?kitId= once kits have loaded.
+      if (preselectedKitId) {
+        const kit = loadedKits.find((k) => k.id === preselectedKitId);
+        if (kit) setSelectedItems(kit.itemIds);
+      }
     });
-  }, []);
+  }, [preselectedKitId]);
 
-  // Auto-select kit items when kit chosen
-  useEffect(() => {
-    if (!selectedKitId) return;
-    const kit = kits.find((k) => k.id === selectedKitId);
-    if (kit) setSelectedItems(kit.itemIds);
-  }, [selectedKitId, kits]);
+  function selectKit(kit: Kit) {
+    const next = selectedKitId === kit.id ? null : kit.id;
+    setSelectedKitId(next);
+    if (next) setSelectedItems(kit.itemIds);
+  }
 
   async function checkConflicts(itemIds: string[], start: Date, end: Date): Promise<string[]> {
     const conflicted: string[] = [];
@@ -188,9 +193,7 @@ export default function ReservationForm() {
                 <button
                   key={kit.id}
                   type="button"
-                  onClick={() =>
-                    setSelectedKitId((prev) => (prev === kit.id ? null : kit.id))
-                  }
+                  onClick={() => selectKit(kit)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     selectedKitId === kit.id
                       ? 'border-violet-600 bg-violet-50 text-violet-700'

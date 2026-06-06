@@ -7,7 +7,7 @@ import { Plus, Search, Package, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Other'];
 

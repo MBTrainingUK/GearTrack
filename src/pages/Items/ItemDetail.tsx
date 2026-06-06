@@ -89,9 +89,21 @@ export default function ItemDetail() {
               <ConditionBadge condition={item.condition} />
             </div>
             {item.condition && item.condition !== 'good' && (
-              <div className="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                <AlertTriangle size={14} className="shrink-0" />
-                This item is marked as <strong className="mx-1">{item.condition === 'needs_attention' ? 'Needs attention' : 'Damaged'}</strong> and is blocked from booking.
+              <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <div>
+                  <p>
+                    This item is marked as{' '}
+                    <strong>
+                      {item.condition === 'needs_attention' ? 'Needs attention' :
+                       item.condition === 'needs_investigating' ? 'Needs investigating' :
+                       'Damaged'}
+                    </strong>{' '}and is blocked from booking.
+                  </p>
+                  {item.conditionFlagNote && (
+                    <p className="mt-1 text-xs text-amber-700">{item.conditionFlagNote}</p>
+                  )}
+                </div>
               </div>
             )}
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">

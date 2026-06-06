@@ -144,6 +144,29 @@ export default function Dashboard() {
         </div>
       )}
 
+      {(() => {
+        const flagged = items.filter((i) => i.condition === 'needs_investigating' || i.condition === 'needs_attention' || i.condition === 'damaged');
+        if (flagged.length === 0) return null;
+        return (
+          <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="shrink-0 text-orange-600" />
+              <p className="text-sm font-semibold text-orange-800">{flagged.length} item{flagged.length > 1 ? 's' : ''} flagged for inspection</p>
+            </div>
+            <ul className="space-y-1">
+              {flagged.map((i) => (
+                <li key={i.id} className="flex items-center gap-2 text-xs text-orange-800">
+                  <span className="font-medium">• {i.name}</span>
+                  <span className="text-orange-600 capitalize">{i.condition?.replace(/_/g, ' ')}</span>
+                  {i.conditionFlagNote && <span className="text-orange-500 truncate max-w-xs">— {i.conditionFlagNote}</span>}
+                  <Link to={`/items/${i.id}`} className="ml-auto underline hover:no-underline shrink-0">Inspect →</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, color, bg, href }) => (

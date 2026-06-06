@@ -28,7 +28,8 @@ export interface Item {
   category: string;
   serialNumber?: string;
   assetNumber?: string;
-  condition?: 'good' | 'needs_attention' | 'damaged';
+  condition?: 'good' | 'needs_attention' | 'needs_investigating' | 'damaged';
+  conditionFlagNote?: string;
   status: ItemStatus;
   photoURLs: string[];
   location?: string;

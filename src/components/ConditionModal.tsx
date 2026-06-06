@@ -39,9 +39,20 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
         returnedAt: serverTimestamp(),
         status: 'returned',
       });
-      // Free up item statuses
+      // Update item statuses; auto-flag if condition is poor or damaged
+      const autoFlagCondition =
+        condition === 'damaged' ? 'damaged' :
+        condition === 'poor' ? 'needs_investigating' :
+        null;
       for (const itemId of itemIds) {
-        await updateDoc(doc(db, 'items', itemId), { status: 'available', updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, 'items', itemId), {
+          status: 'available',
+          updatedAt: serverTimestamp(),
+          ...(autoFlagCondition ? {
+            condition: autoFlagCondition,
+            conditionFlagNote: `Flagged on return: "${condition}" — ${notes || 'no notes'}`,
+          } : {}),
+        });
       }
     } else {
       await updateDoc(checkoutRef, { checkoutCondition: report });

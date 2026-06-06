@@ -127,7 +127,7 @@ export default function ReservationForm() {
 
   function toggleItem(id: string) {
     const item = items.find((i) => i.id === id);
-    if (item?.condition === 'needs_attention' || item?.condition === 'damaged') return;
+    if (item?.condition === 'needs_attention' || item?.condition === 'needs_investigating' || item?.condition === 'damaged') return;
     setSelectedKitId(null);
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -219,7 +219,7 @@ export default function ReservationForm() {
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);
               const isSelected = selectedItems.includes(item.id);
-              const isBlocked = item.condition === 'needs_attention' || item.condition === 'damaged';
+              const isBlocked = item.condition === 'needs_attention' || item.condition === 'needs_investigating' || item.condition === 'damaged';
               return (
                 <button
                   key={item.id}

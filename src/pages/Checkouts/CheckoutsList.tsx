@@ -302,6 +302,7 @@ function NewCheckoutModal({
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
       i.condition !== 'needs_attention' &&
+      i.condition !== 'needs_investigating' &&
       i.condition !== 'damaged' &&
       (i.name.toLowerCase().includes(search.toLowerCase()) ||
         (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||

@@ -163,6 +163,7 @@ export default function ItemForm() {
             >
               <option value="good">Good</option>
               <option value="needs_attention">Needs attention</option>
+              <option value="needs_investigating">Needs investigating</option>
               <option value="damaged">Damaged</option>
             </select>
           </div>

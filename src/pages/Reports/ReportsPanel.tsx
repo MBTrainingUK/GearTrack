@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import type { Item, Checkout } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { BarChart2 } from 'lucide-react';
+import { startOfDay } from 'date-fns';
 
 interface ItemStat {
   id: string;
@@ -107,9 +108,14 @@ export default function ReportsPanel() {
         .map((c) => (c.returnedAt!.toMillis() - c.checkedOutAt.toMillis()) / (1000 * 60 * 60 * 24));
       setAvgDuration(durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0);
 
-      // --- Overdue rate ---
+      // --- Overdue rate --- only count as late if returned on a later calendar day than due date
       const returned = checkouts.filter((c) => c.status === 'returned').length;
-      const overdueCount = checkouts.filter((c) => c.returnCondition && c.returnedAt && c.dueDate && c.returnedAt.toMillis() > c.dueDate.toMillis()).length;
+      const overdueCount = checkouts.filter((c) =>
+        c.status === 'returned' &&
+        c.returnedAt &&
+        c.dueDate &&
+        startOfDay(c.returnedAt.toDate()) > startOfDay(c.dueDate.toDate())
+      ).length;
       setOverdueRate(returned > 0 ? (overdueCount / returned) * 100 : 0);
 
       setLoading(false);

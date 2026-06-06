@@ -188,7 +188,7 @@ export default function ReportsPanel() {
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={conditionStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                    <Pie data={conditionStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={false} labelLine={false} fontSize={11}>
                       {conditionStats.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}

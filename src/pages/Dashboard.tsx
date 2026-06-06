@@ -15,6 +15,7 @@ import {
   ArrowLeftRight,
   AlertTriangle,
   TrendingUp,
+  X,
 } from 'lucide-react';
 import {
   BarChart,
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [recentCheckouts, setRecentCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [chartData, setChartData] = useState<{ day: string; checkouts: number }[]>([]);
+  const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
 
   useEffect(() => {
     const sevenDaysAgo = Timestamp.fromDate(subDays(new Date(), 7));
@@ -225,7 +227,7 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {checkouts.slice(0, 8).map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
+                  <tr key={c.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedCheckout(c)}>
                     <td className="px-5 py-3 font-medium text-gray-900">{c.userName}</td>
                     <td className="px-5 py-3 text-gray-600">{c.itemIds.length} item{c.itemIds.length > 1 ? 's' : ''}</td>
                     <td className="px-5 py-3 text-gray-600">{formatTS(c.dueDate)}</td>
@@ -239,6 +241,54 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {selectedCheckout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedCheckout(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">{selectedCheckout.userName}</h2>
+                <p className="text-xs text-gray-500">{selectedCheckout.userEmail}</p>
+              </div>
+              <button onClick={() => setSelectedCheckout(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Checked Out</p>
+                  <p className="font-medium text-gray-900">{formatTS(selectedCheckout.checkedOutAt)}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Due Back</p>
+                  <p className="font-medium text-gray-900">{formatTS(selectedCheckout.dueDate)}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Items ({selectedCheckout.itemIds.length})</p>
+                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                  {selectedCheckout.itemIds.map((id) => {
+                    const item = items.find((i) => i.id === id);
+                    return (
+                      <li key={id} className="flex items-center justify-between px-3 py-2.5 text-sm">
+                        <span className="font-medium text-gray-900">{item?.name ?? id}</span>
+                        <span className="text-xs text-gray-400">{item?.category ?? ''}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+              {selectedCheckout.notes && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
+                  <p className="text-sm text-gray-700">{selectedCheckout.notes}</p>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-gray-100 px-6 py-3">
+              <Link to="/checkouts" onClick={() => setSelectedCheckout(null)} className="text-sm text-blue-600 hover:underline">View in Checkouts →</Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

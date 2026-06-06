@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   Shield,
+  BarChart2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/reservations', label: 'Reservations', icon: CalendarRange, adminOnly: false },
   { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, adminOnly: false },
   { to: '/history', label: 'My History', icon: History, adminOnly: false },
+  { to: '/reports', label: 'Reports', icon: BarChart2, adminOnly: true },
   { to: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ];
 

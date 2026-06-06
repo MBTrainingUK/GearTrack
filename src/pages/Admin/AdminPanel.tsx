@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import type { AppUser, UserRole } from '../../types';
-import { Shield, UserCheck, User, ChevronDown } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -25,6 +25,8 @@ export default function AdminPanel() {
   const { appUser, currentUser } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<AppUser | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   // Guard: only admins can access this page
   if (appUser && appUser.role !== 'admin') {
@@ -52,6 +54,19 @@ export default function AdminPanel() {
       toast.error('Failed to update role');
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  async function removeUser(u: AppUser) {
+    setRemovingId(u.uid);
+    setConfirmRemove(null);
+    try {
+      await deleteDoc(doc(db, 'users', u.uid));
+      toast.success(`${u.displayName} removed`);
+    } catch {
+      toast.error('Failed to remove user');
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -95,6 +110,7 @@ export default function AdminPanel() {
               <th className="px-5 py-3 text-left font-medium">Registered</th>
               <th className="px-5 py-3 text-left font-medium">Role</th>
               <th className="px-5 py-3 text-left font-medium">Change Role</th>
+              <th className="px-5 py-3 text-left font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -136,6 +152,18 @@ export default function AdminPanel() {
                     <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />
                   </div>
                 </td>
+                <td className="px-5 py-3">
+                  {u.uid !== currentUser?.uid && (
+                    <button
+                      onClick={() => setConfirmRemove(u)}
+                      disabled={removingId === u.uid}
+                      className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-100 disabled:opacity-50"
+                    >
+                      <Trash2 size={12} />
+                      Remove
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -146,6 +174,38 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {confirmRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmRemove(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">Remove User</h2>
+              <button onClick={() => setConfirmRemove(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">
+                Are you sure you want to remove <strong>{confirmRemove.displayName}</strong>?
+              </p>
+              <p className="text-xs text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                This removes their account from GearTrack. If they log in again they will be added back as a basic user.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                onClick={() => setConfirmRemove(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => removeUser(confirmRemove)}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Remove User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

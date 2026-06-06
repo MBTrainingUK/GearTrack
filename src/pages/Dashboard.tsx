@@ -3,7 +3,6 @@ import {
   collection,
   onSnapshot,
   query,
-  orderBy,
   where,
   Timestamp,
 } from 'firebase/firestore';
@@ -33,10 +32,12 @@ export default function Dashboard() {
   const { appUser } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
+  const [recentCheckouts, setRecentCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [chartData, setChartData] = useState<{ day: string; checkouts: number }[]>([]);
 
   useEffect(() => {
+    const sevenDaysAgo = Timestamp.fromDate(subDays(new Date(), 7));
     const unsubs = [
       onSnapshot(collection(db, 'items'), (s) =>
         setItems(s.docs.map((d) => ({ id: d.id, ...d.data() } as Item)))
@@ -46,12 +47,17 @@ export default function Dashboard() {
         (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
       onSnapshot(
-        query(
-          collection(db, 'reservations'),
-          where('status', 'in', ['pending', 'approved']),
-          orderBy('startDate', 'asc')
-        ),
-        (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation)))
+        query(collection(db, 'checkouts'), where('checkedOutAt', '>=', sevenDaysAgo)),
+        (s) => setRecentCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
+      ),
+      onSnapshot(
+        query(collection(db, 'reservations'), where('status', 'in', ['pending', 'approved'])),
+        (s) => {
+          const sorted = s.docs
+            .map((d) => ({ id: d.id, ...d.data() } as Reservation))
+            .sort((a, b) => (a.startDate?.toMillis() ?? 0) - (b.startDate?.toMillis() ?? 0));
+          setReservations(sorted);
+        }
       ),
     ];
     return () => unsubs.forEach((u) => u());
@@ -73,7 +79,7 @@ export default function Dashboard() {
       return { day: label, checkouts: count };
     });
     setChartData(data);
-  }, [checkouts]);
+  }, [recentCheckouts]);
 
   const available = items.filter((i) => i.status === 'available').length;
   const checkedOut = items.filter((i) => i.status === 'checked_out').length;

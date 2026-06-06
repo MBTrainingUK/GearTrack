@@ -6,12 +6,13 @@ import {
   orderBy,
   updateDoc,
   doc,
+  getDocs,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Reservation } from '../../types';
+import type { Reservation, Item } from '../../types';
 import { Link } from 'react-router-dom';
-import { Plus, Calendar, List } from 'lucide-react';
+import { Plus, Calendar, List, X } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
@@ -28,12 +29,22 @@ export default function ReservationsList() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<Reservation['status'] | 'all'>('all');
+  const [items, setItems] = useState<Record<string, Item>>({});
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
   useEffect(() => {
     return onSnapshot(
       query(collection(db, 'reservations'), orderBy('startDate', 'desc')),
       (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation)))
     );
+  }, []);
+
+  useEffect(() => {
+    getDocs(collection(db, 'items')).then((snap) => {
+      const map: Record<string, Item> = {};
+      snap.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
+      setItems(map);
+    });
   }, []);
 
   async function handleApprove(id: string) {
@@ -172,10 +183,9 @@ export default function ReservationsList() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50">
+                    <tr key={r.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedReservation(r)}>
                       <td className="px-5 py-3">
                         <p className="font-medium text-gray-900">{r.userName}</p>
-                        <p className="text-xs text-gray-500">{r.userEmail}</p>
                       </td>
                       <td className="px-5 py-3 text-gray-700">{r.itemIds.length} item{r.itemIds.length !== 1 ? 's' : ''}</td>
                       <td className="px-5 py-3 text-gray-600">{formatTS(r.startDate)}</td>
@@ -184,7 +194,7 @@ export default function ReservationsList() {
                         <StatusBadge status={r.status} type="reservation" />
                       </td>
                       {appUser?.role !== 'user' && (
-                        <td className="px-5 py-3">
+                        <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2">
                             {r.status === 'pending' && (
                               <button
@@ -220,6 +230,46 @@ export default function ReservationsList() {
             )}
           </div>
         </>
+      )}
+      {selectedReservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedReservation(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">Reservation Details</h2>
+              <button onClick={() => setSelectedReservation(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{selectedReservation.userName}</p>
+                  <p className="text-xs text-gray-500">{selectedReservation.userEmail}</p>
+                </div>
+                <StatusBadge status={selectedReservation.status} type="reservation" />
+              </div>
+              <div className="rounded-lg bg-gray-50 px-4 py-3 text-sm">
+                <p className="text-xs font-medium text-gray-500 mb-1">Period</p>
+                <p className="text-gray-800">{formatTS(selectedReservation.startDate)} → {formatTS(selectedReservation.endDate)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Reserved Items ({selectedReservation.itemIds.length})</p>
+                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                  {selectedReservation.itemIds.map((id) => (
+                    <li key={id} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <span className="font-medium text-gray-900">{items[id]?.name ?? id}</span>
+                      <span className="text-xs text-gray-400">{items[id]?.category ?? ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {selectedReservation.notes && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
+                  <p className="text-sm text-gray-700">{selectedReservation.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

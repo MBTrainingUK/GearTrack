@@ -17,7 +17,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, AlertTriangle, X, Check } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
-import { format, isPast } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
@@ -54,7 +54,7 @@ export default function CheckoutsList() {
   const filtered =
     filter === 'all' ? checkouts : checkouts.filter((c) => c.status === filter);
 
-  const overdue = checkouts.filter((c) => c.status === 'active' && isPast(c.dueDate.toDate())).length;
+  const overdue = checkouts.filter((c) => c.status === 'active' && startOfDay(new Date()) > c.dueDate.toDate()).length;
 
   return (
     <div className="space-y-5">
@@ -119,7 +119,7 @@ export default function CheckoutsList() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((c) => {
-                const isOverdue = c.status === 'active' && isPast(c.dueDate.toDate());
+                const isOverdue = c.status === 'active' && startOfDay(new Date()) > c.dueDate.toDate();
                 const displayStatus = isOverdue ? 'overdue' : c.status;
                 return (
                   <tr key={c.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50/40' : ''}`}>

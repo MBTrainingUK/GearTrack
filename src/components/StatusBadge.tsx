@@ -32,7 +32,7 @@ const labels: Record<string, string> = {
   approved: 'Approved',
   completed: 'Completed',
   cancelled: 'Cancelled',
-  active: 'Active',
+  active: 'Checked Out',
   overdue: 'Overdue',
   returned: 'Returned',
 };

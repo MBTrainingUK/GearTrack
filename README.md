@@ -1,73 +1,104 @@
-# React + TypeScript + Vite
+# GearTrack
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Equipment management system for tracking gear checkouts, reservations, and condition reporting.
 
-Currently, two official plugins are available:
+Built for media and AV environments where kit needs to be signed out, tracked, and returned in good condition.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Inventory management** — add items with photos, serial numbers, asset numbers, categories, and custom fields
+- **Kits** — group items into named kits that can be reserved and checked out together
+- **Reservations** — book equipment for a date range, with approval workflow
+- **Checkouts** — sign gear out with a condition report; Quick Grab for instant end-of-day loans
+- **Check-in** — log return condition; poor or damaged returns automatically flag the item for inspection
+- **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and upcoming reservations
+- **Reports** — usage analytics per item and per user, checkout duration, late return rate, and unused items
+- **Admin panel** — manage user roles and access
 
-## Expanding the ESLint configuration
+## Roles
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Role | Permissions |
+|---|---|
+| **User** | Browse inventory, make reservations |
+| **Manager** | All of the above, plus create/edit items, manage checkouts and check-ins |
+| **Admin** | Full access, including Reports and Admin Panel |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite |
+| Styling | Tailwind CSS v4 |
+| Backend / DB | Firebase (Firestore, Auth, Storage) |
+| Charts | Recharts |
+| Routing | React Router v7 |
+| Deployment | GitHub Pages via gh-pages |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- A Firebase project with Firestore, Authentication (Email/Password), and Storage enabled
+
+### Setup
+
+1. Clone the repo
+
+```bash
+git clone https://github.com/MBTrainingUK/GearTrack.git
+cd GearTrack
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+3. Create a `.env.local` file in the project root with your Firebase config:
+
+```env
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+4. Start the dev server
+
+```bash
+npm run dev
+```
+
+### Deploy
+
+```bash
+npm run deploy
+```
+
+This builds the project and pushes the `dist` folder to the `gh-pages` branch.
+
+## Firestore Structure
+
+```
+items/          — inventory items
+kits/           — named groups of items
+reservations/   — date-range bookings
+checkouts/      — active and historical checkouts with condition reports
+users/          — user profiles and roles
+flags/          — item condition flags
+auditLogs/      — action history
+```
+
+## Firestore Security Rules
+
+Rules are defined in `firestore.rules`. Storage rules are in `storage.rules`. Review and tighten these before going to production.
+
+## Licence
+
+MIT

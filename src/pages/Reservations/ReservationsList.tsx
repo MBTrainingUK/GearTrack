@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Reservation, Item } from '../../types';
+import type { Reservation, Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Calendar, List, X } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -30,6 +30,7 @@ export default function ReservationsList() {
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<Reservation['status'] | 'all'>('all');
   const [items, setItems] = useState<Record<string, Item>>({});
+  const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
   useEffect(() => {
@@ -40,10 +41,16 @@ export default function ReservationsList() {
   }, []);
 
   useEffect(() => {
-    getDocs(collection(db, 'items')).then((snap) => {
-      const map: Record<string, Item> = {};
-      snap.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
-      setItems(map);
+    Promise.all([
+      getDocs(collection(db, 'items')),
+      getDocs(collection(db, 'kits')),
+    ]).then(([itemSnap, kitSnap]) => {
+      const iMap: Record<string, Item> = {};
+      itemSnap.docs.forEach((d) => { iMap[d.id] = { id: d.id, ...d.data() } as Item; });
+      setItems(iMap);
+      const kMap: Record<string, Kit> = {};
+      kitSnap.docs.forEach((d) => { kMap[d.id] = { id: d.id, ...d.data() } as Kit; });
+      setKits(kMap);
     });
   }, []);
 
@@ -77,7 +84,7 @@ export default function ReservationsList() {
 
   const calendarEvents = reservations.map((r) => ({
     id: r.id,
-    title: `${r.userName} (${r.itemIds.length} items)`,
+    title: `${r.userName} — ${bookingLabel(r, items, kits)}`,
     start: r.startDate.toDate(),
     end: r.endDate.toDate(),
     backgroundColor: statusColor(r.status),
@@ -135,9 +142,8 @@ export default function ReservationsList() {
             events={calendarEvents}
             height={600}
             eventClick={(info) => {
-              const id = info.event.id;
-              const res = reservations.find((r) => r.id === id);
-              if (res) alert(`${res.userName}\n${formatTS(res.startDate)} → ${formatTS(res.endDate)}\nStatus: ${res.status}`);
+              const res = reservations.find((r) => r.id === info.event.id);
+              if (res) setSelectedReservation(res);
             }}
           />
         </div>
@@ -187,7 +193,12 @@ export default function ReservationsList() {
                       <td className="px-5 py-3">
                         <p className="font-medium text-gray-900">{r.userName}</p>
                       </td>
-                      <td className="px-5 py-3 text-gray-700">{r.itemIds.length} item{r.itemIds.length !== 1 ? 's' : ''}</td>
+                      <td className="px-5 py-3">
+                        <p className="text-sm text-gray-900">{bookingLabel(r, items, kits)}</p>
+                        {r.itemIds.length > 2 && !r.kitId && (
+                          <p className="text-xs text-gray-400">+{r.itemIds.length - 2} more</p>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-gray-600">{formatTS(r.startDate)}</td>
                       <td className="px-5 py-3 text-gray-600">{formatTS(r.endDate)}</td>
                       <td className="px-5 py-3">
@@ -251,6 +262,11 @@ export default function ReservationsList() {
                 <p className="text-gray-800">{formatTS(selectedReservation.startDate)} → {formatTS(selectedReservation.endDate)}</p>
               </div>
               <div>
+                {selectedReservation.kitId && kits[selectedReservation.kitId] && (
+                  <p className="mb-2 text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5">
+                    Kit: {kits[selectedReservation.kitId].name}
+                  </p>
+                )}
                 <p className="text-xs font-medium text-gray-500 mb-2">Reserved Items ({selectedReservation.itemIds.length})</p>
                 <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
                   {selectedReservation.itemIds.map((id) => (
@@ -273,6 +289,12 @@ export default function ReservationsList() {
       )}
     </div>
   );
+}
+
+function bookingLabel(r: Reservation, items: Record<string, Item>, kits: Record<string, Kit>): string {
+  if (r.kitId && kits[r.kitId]) return kits[r.kitId].name;
+  const names = r.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Unknown item');
+  return names.join(', ') || `${r.itemIds.length} items`;
 }
 
 function statusColor(s: Reservation['status']) {

@@ -7,6 +7,7 @@ import {
   updateDoc,
   collection,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item } from '../../types';
@@ -27,6 +28,7 @@ export default function ItemForm() {
     serialNumber: '',
     assetNumber: '',
     location: '',
+    purchaseDate: '',
     purchasePrice: '',
     condition: 'good',
     notes: '',
@@ -46,6 +48,7 @@ export default function ItemForm() {
           serialNumber: d.serialNumber ?? '',
           assetNumber: d.assetNumber ?? '',
           location: d.location ?? '',
+          purchaseDate: d.purchaseDate ? d.purchaseDate.toDate().toISOString().slice(0, 10) : '',
           purchasePrice: d.purchasePrice?.toString() ?? '',
           condition: d.condition ?? 'good',
           notes: d.notes ?? '',
@@ -64,6 +67,7 @@ export default function ItemForm() {
     setSaving(true);
     const data = {
       ...form,
+      purchaseDate: form.purchaseDate ? Timestamp.fromDate(new Date(form.purchaseDate)) : null,
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
       updatedAt: serverTimestamp(),
     };
@@ -167,6 +171,15 @@ export default function ItemForm() {
               <option value="needs_investigating">Needs investigating</option>
               <option value="damaged">Damaged</option>
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Purchase Date</label>
+            <input
+              type="date"
+              value={form.purchaseDate}
+              onChange={(e) => set('purchaseDate', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Purchase Price (£)</label>

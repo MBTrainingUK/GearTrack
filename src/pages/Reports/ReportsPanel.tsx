@@ -4,7 +4,8 @@ import { db } from '../../lib/firebase';
 import type { Item, Checkout } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { BarChart2 } from 'lucide-react';
-import { startOfDay } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
+import type { Timestamp } from 'firebase/firestore';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 
@@ -12,6 +13,7 @@ interface ItemStat {
   id: string;
   name: string;
   category: string;
+  purchaseDate?: Timestamp;
   checkoutCount: number;
   totalDaysOut: number;
   conditionCounts: Record<string, number>;
@@ -49,7 +51,7 @@ export default function ReportsPanel() {
       // --- Item stats ---
       const iMap: Record<string, ItemStat> = {};
       items.forEach((i) => {
-        iMap[i.id] = { id: i.id, name: i.name, category: i.category, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {} };
+        iMap[i.id] = { id: i.id, name: i.name, category: i.category, purchaseDate: i.purchaseDate, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {} };
       });
 
       checkouts.forEach((c) => {
@@ -243,6 +245,7 @@ export default function ReportsPanel() {
                 <tr className="border-b border-gray-100 text-xs text-gray-500">
                   <th className="px-5 py-3 text-left font-medium">Item</th>
                   <th className="px-5 py-3 text-left font-medium">Category</th>
+                  <th className="px-5 py-3 text-left font-medium">Purchased</th>
                   <th className="px-5 py-3 text-left font-medium">Times Booked</th>
                   <th className="px-5 py-3 text-left font-medium">Avg. Days Out</th>
                   <th className="px-5 py-3 text-left font-medium">Top Return Condition</th>
@@ -258,6 +261,9 @@ export default function ReportsPanel() {
                     <tr key={i.id} className="hover:bg-gray-50">
                       <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
                       <td className="px-5 py-3 text-gray-500">{i.category}</td>
+                      <td className="px-5 py-3 text-gray-500">
+                        {i.purchaseDate ? format(i.purchaseDate.toDate(), 'dd MMM yyyy') : '—'}
+                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <div className="h-2 rounded-full bg-blue-100 flex-1 max-w-[80px]">

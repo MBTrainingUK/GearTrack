@@ -11,7 +11,7 @@ import {
 import { db } from '../../lib/firebase';
 import type { Item, Checkout } from '../../types';
 import StatusBadge from '../../components/StatusBadge';
-import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle, CalendarDays } from 'lucide-react';
 import ConditionBadge from '../../components/ConditionBadge';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
@@ -111,6 +111,9 @@ export default function ItemDetail() {
               {item.assetNumber && <InfoRow icon={Hash} label="Asset No." value={item.assetNumber} />}
               {item.serialNumber && <InfoRow icon={Hash} label="Serial No." value={item.serialNumber} />}
               {item.location && <InfoRow icon={MapPin} label="Location" value={item.location} />}
+              {item.purchaseDate && (
+                <InfoRow icon={CalendarDays} label="Purchased" value={formatTS(item.purchaseDate)} />
+              )}
               {item.purchasePrice && (
                 <InfoRow icon={PoundSterling} label="Value" value={`£${item.purchasePrice.toLocaleString('en-GB')}`} />
               )}

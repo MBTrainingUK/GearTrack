@@ -225,7 +225,7 @@ export default function ReservationsList() {
                             )}
                             {r.status === 'approved' && (
                               <Link
-                                to={`/checkouts/new?reservationId=${r.id}`}
+                                to={`/checkouts?reservationId=${r.id}`}
                                 className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
                               >
                                 Check Out

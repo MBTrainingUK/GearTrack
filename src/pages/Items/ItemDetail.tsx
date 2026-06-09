@@ -7,14 +7,17 @@ import {
   query,
   where,
   getDocs,
+  updateDoc,
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item, Checkout } from '../../types';
 import StatusBadge from '../../components/StatusBadge';
-import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle, CalendarDays, Gauge } from 'lucide-react';
 import ConditionBadge from '../../components/ConditionBadge';
-import { format } from 'date-fns';
-import type { Timestamp } from 'firebase/firestore';
+import { format, differenceInMonths } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -22,6 +25,9 @@ export default function ItemDetail() {
   const [item, setItem] = useState<Item | null>(null);
   const [history, setHistory] = useState<Checkout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [newInterval, setNewInterval] = useState('');
+  const [actionSaving, setActionSaving] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -39,6 +45,49 @@ export default function ItemDetail() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  async function flagForInspection() {
+    if (!item) return;
+    setActionSaving(true);
+    try {
+      await updateDoc(doc(db, 'items', item.id), {
+        condition: 'needs_investigating',
+        conditionFlagNote: 'Inspection interval exceeded — pending review.',
+        updatedAt: serverTimestamp(),
+      });
+      setItem((p) => p ? { ...p, condition: 'needs_investigating', conditionFlagNote: 'Inspection interval exceeded — pending review.' } : p);
+      toast.success('Item flagged for inspection');
+    } catch {
+      toast.error('Failed to flag item');
+    } finally {
+      setActionSaving(false);
+    }
+  }
+
+  async function passInspection() {
+    if (!item || !newInterval) return;
+    const months = Number(newInterval);
+    if (!months || months < 1) { toast.error('Enter a valid number of months'); return; }
+    setActionSaving(true);
+    try {
+      const resetDate = Timestamp.fromDate(new Date());
+      await updateDoc(doc(db, 'items', item.id), {
+        condition: 'good',
+        conditionFlagNote: '',
+        lifespanResetDate: resetDate,
+        expectedLifespanMonths: months,
+        updatedAt: serverTimestamp(),
+      });
+      setItem((p) => p ? { ...p, condition: 'good', conditionFlagNote: '', lifespanResetDate: resetDate, expectedLifespanMonths: months } : p);
+      setShowResetModal(false);
+      setNewInterval('');
+      toast.success('Inspection logged — meter reset');
+    } catch {
+      toast.error('Failed to reset lifespan');
+    } finally {
+      setActionSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -131,6 +180,97 @@ export default function ItemDetail() {
               </div>
             )}
           </div>
+
+          {/* Lifespan meter */}
+          {item.purchaseDate && item.expectedLifespanMonths && (() => {
+            const startDate = (item.lifespanResetDate ?? item.purchaseDate)!.toDate();
+            const ageMonths = Math.max(0, differenceInMonths(new Date(), startDate));
+            const pct = Math.round((ageMonths / item.expectedLifespanMonths) * 100);
+            const isDue = pct >= 100;
+            const isAwaitingReset = isDue && item.condition === 'needs_investigating';
+            const barColor = pct < 50 ? 'bg-emerald-500' : pct < 80 ? 'bg-amber-500' : 'bg-red-500';
+
+            const fmtMonths = (m: number) => {
+              const y = Math.floor(m / 12); const mo = m % 12;
+              if (y > 0 && mo > 0) return `${y} yr${y > 1 ? 's' : ''} ${mo} month${mo > 1 ? 's' : ''}`;
+              if (y > 0) return `${y} yr${y > 1 ? 's' : ''}`;
+              return `${mo} month${mo !== 1 ? 's' : ''}`;
+            };
+
+            return (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                    <Gauge size={15} /> Lifespan
+                  </h2>
+                  {isDue && !isAwaitingReset && (
+                    <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Inspection Due</span>
+                  )}
+                  {isAwaitingReset && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Awaiting Inspection</span>
+                  )}
+                </div>
+
+                <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div className={`h-3 rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{fmtMonths(ageMonths)} old</span>
+                  <span>{Math.min(pct, 999)}% of {fmtMonths(item.expectedLifespanMonths)} interval</span>
+                </div>
+
+                {isDue && !isAwaitingReset && (
+                  <button
+                    onClick={flagForInspection}
+                    disabled={actionSaving}
+                    className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 py-2 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+                  >
+                    Flag for Inspection
+                  </button>
+                )}
+
+                {isAwaitingReset && !showResetModal && (
+                  <button
+                    onClick={() => setShowResetModal(true)}
+                    className="mt-3 w-full rounded-lg border border-emerald-200 bg-emerald-50 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                  >
+                    ✓ Pass Inspection &amp; Reset
+                  </button>
+                )}
+
+                {isAwaitingReset && showResetModal && (
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+                    <p className="text-xs font-medium text-gray-700">How many months until the next inspection?</p>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newInterval}
+                      onChange={(e) => setNewInterval(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="e.g. 12"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setShowResetModal(false); setNewInterval(''); }}
+                        className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-600 hover:bg-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={passInspection}
+                        disabled={actionSaving || !newInterval}
+                        className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {actionSaving ? 'Saving…' : 'Confirm'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Checkout history */}
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

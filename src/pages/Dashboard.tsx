@@ -9,7 +9,9 @@ import {
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/useAuth';
 import type { Item, Checkout, Reservation } from '../types';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
 import {
   Package,
   ArrowLeftRight,
@@ -32,6 +34,7 @@ import { isOverdue } from '../lib/checkout';
 
 export default function Dashboard() {
   const { appUser } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Item[]>([]);
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [recentCheckouts, setRecentCheckouts] = useState<Checkout[]>([]);
@@ -81,6 +84,15 @@ export default function Dashboard() {
       return { day: label, checkouts: count };
     });
   }, [recentCheckouts]);
+
+  const calendarEvents = reservations.map((r) => ({
+    id: r.id,
+    title: r.userName,
+    start: r.startDate.toDate(),
+    end: r.endDate.toDate(),
+    backgroundColor: r.status === 'approved' ? '#10b981' : '#f59e0b',
+    borderColor: r.status === 'approved' ? '#10b981' : '#f59e0b',
+  }));
 
   const available = items.filter((i) => i.status === 'available').length;
   const checkedOut = items.filter((i) => i.status === 'checked_out').length;
@@ -263,6 +275,22 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {/* Reservations calendar */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Reservations Calendar</h2>
+          <Link to="/reservations" className="text-xs text-blue-600 hover:underline">Manage →</Link>
+        </div>
+        <FullCalendar
+          plugins={[dayGridPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
+          events={calendarEvents}
+          height={480}
+          eventClick={() => navigate('/reservations')}
+        />
+      </div>
+
       {selectedCheckout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSelectedCheckout(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>

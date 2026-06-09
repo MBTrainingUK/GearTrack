@@ -14,7 +14,7 @@ import type { Item } from '../../types';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 
-const CATEGORIES = ['Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Other'];
+const CATEGORIES = ['Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
 
 export default function ItemForm() {
   const { id } = useParams();
@@ -30,6 +30,7 @@ export default function ItemForm() {
     location: '',
     purchaseDate: '',
     purchasePrice: '',
+    expectedLifespanMonths: '',
     condition: 'good',
     notes: '',
   });
@@ -50,6 +51,7 @@ export default function ItemForm() {
           location: d.location ?? '',
           purchaseDate: d.purchaseDate ? d.purchaseDate.toDate().toISOString().slice(0, 10) : '',
           purchasePrice: d.purchasePrice?.toString() ?? '',
+          expectedLifespanMonths: d.expectedLifespanMonths?.toString() ?? '',
           condition: d.condition ?? 'good',
           notes: d.notes ?? '',
         });
@@ -69,6 +71,7 @@ export default function ItemForm() {
       ...form,
       purchaseDate: form.purchaseDate ? Timestamp.fromDate(new Date(form.purchaseDate)) : null,
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
+      expectedLifespanMonths: form.expectedLifespanMonths ? Number(form.expectedLifespanMonths) : null,
       updatedAt: serverTimestamp(),
     };
     try {
@@ -191,6 +194,18 @@ export default function ItemForm() {
               onChange={(e) => set('purchasePrice', e.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="2499.00"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Inspection Interval (months)</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={form.expectedLifespanMonths}
+              onChange={(e) => set('expectedLifespanMonths', e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="e.g. 24"
             />
           </div>
           <div className="sm:col-span-2">

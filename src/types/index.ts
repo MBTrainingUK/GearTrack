@@ -32,6 +32,8 @@ export interface Item {
   location?: string;
   purchaseDate?: Timestamp;
   purchasePrice?: number;
+  expectedLifespanMonths?: number;
+  lifespanResetDate?: Timestamp;
   kitId?: string;
   customFields?: Record<string, string>;
   qrCode?: string;

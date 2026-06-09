@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Item, Checkout } from '../../types';
+import type { Item, Checkout, Reservation } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { BarChart2 } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
@@ -38,13 +38,20 @@ export default function ReportsPanel() {
   const [avgDuration, setAvgDuration] = useState(0);
   const [overdueRate, setOverdueRate] = useState(0);
   const [neverUsed, setNeverUsed] = useState<Item[]>([]);
-  const [tab, setTab] = useState<'items' | 'users' | 'overview'>('overview');
+  const [tab, setTab] = useState<'overview' | 'items' | 'users' | 'reservations'>('overview');
+  const [totalReservations, setTotalReservations] = useState(0);
+  const [reservationsByStatus, setReservationsByStatus] = useState<{ name: string; value: number }[]>([]);
+  const [cancellationRate, setCancellationRate] = useState(0);
+  const [approvalRate, setApprovalRate] = useState(0);
+  const [avgLeadTime, setAvgLeadTime] = useState(0);
+  const [topReservedItems, setTopReservedItems] = useState<{ name: string; count: number }[]>([]);
 
   useEffect(() => {
     Promise.all([
       getDocs(collection(db, 'items')),
       getDocs(collection(db, 'checkouts')),
-    ]).then(([itemsSnap, checkoutsSnap]) => {
+      getDocs(collection(db, 'reservations')),
+    ]).then(([itemsSnap, checkoutsSnap, reservationsSnap]) => {
       const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
       const checkouts = checkoutsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout));
 
@@ -123,6 +130,34 @@ export default function ReportsPanel() {
       ).length;
       setOverdueRate(returned > 0 ? (overdueCount / returned) * 100 : 0);
 
+      // --- Reservation stats ---
+      const reservations = reservationsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation));
+      setTotalReservations(reservations.length);
+
+      const statusMap: Record<string, number> = {};
+      reservations.forEach((r) => { statusMap[r.status] = (statusMap[r.status] ?? 0) + 1; });
+      const statusLabels: Record<string, string> = { pending: 'Pending', approved: 'Approved', checked_out: 'Checked Out', completed: 'Completed', cancelled: 'Cancelled' };
+      setReservationsByStatus(Object.entries(statusMap).map(([k, v]) => ({ name: statusLabels[k] ?? k, value: v })));
+
+      const cancelled = statusMap['cancelled'] ?? 0;
+      const approved = (statusMap['approved'] ?? 0) + (statusMap['checked_out'] ?? 0) + (statusMap['completed'] ?? 0);
+      setCancellationRate(reservations.length > 0 ? (cancelled / reservations.length) * 100 : 0);
+      setApprovalRate(reservations.length > 0 ? (approved / reservations.length) * 100 : 0);
+
+      const leadTimes = reservations
+        .filter((r) => r.createdAt && r.startDate)
+        .map((r) => (r.startDate.toMillis() - r.createdAt.toMillis()) / (1000 * 60 * 60 * 24));
+      setAvgLeadTime(leadTimes.length ? leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length : 0);
+
+      const itemFreq: Record<string, number> = {};
+      reservations.forEach((r) => { r.itemIds.forEach((id) => { itemFreq[id] = (itemFreq[id] ?? 0) + 1; }); });
+      setTopReservedItems(
+        Object.entries(itemFreq)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([id, count]) => ({ name: iMap[id]?.name ?? 'Unknown', count }))
+      );
+
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -154,7 +189,7 @@ export default function ReportsPanel() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        {(['overview', 'items', 'users'] as const).map((t) => (
+        {(['overview', 'items', 'users', 'reservations'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -176,6 +211,10 @@ export default function ReportsPanel() {
             <StatCard label="Avg. Duration" value={`${avgDuration.toFixed(1)} days`} />
             <StatCard label="Late Return Rate" value={`${overdueRate.toFixed(0)}%`} color={overdueRate > 20 ? 'text-red-600' : 'text-emerald-600'} />
             <StatCard label="Unused Items" value={neverUsed.length} color={neverUsed.length > 0 ? 'text-amber-600' : 'text-emerald-600'} />
+            <StatCard label="Total Reservations" value={totalReservations} />
+            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600" />
+            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600' : 'text-emerald-600'} />
+            <StatCard label="Avg. Lead Time" value={`${avgLeadTime.toFixed(1)} days`} />
           </div>
 
           {/* Category chart + Condition pie */}
@@ -328,6 +367,63 @@ export default function ReportsPanel() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+      {/* ── RESERVATIONS TAB ── */}
+      {tab === 'reservations' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Total Reservations" value={totalReservations} />
+            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600" />
+            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600' : 'text-emerald-600'} />
+            <StatCard label="Avg. Lead Time" value={`${avgLeadTime.toFixed(1)} days`} />
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-gray-900">Reservations by Status</h2>
+              {reservationsByStatus.length === 0 ? (
+                <p className="text-sm text-gray-400">No data yet</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={reservationsByStatus} barSize={28}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Reservations" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-gray-900">Most Reserved Items</h2>
+              {topReservedItems.length === 0 ? (
+                <p className="text-sm text-gray-400">No reservation data yet</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {topReservedItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <span className="w-4 text-right text-xs text-gray-400 tabular-nums">{idx + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="h-2 w-20 rounded-full bg-violet-100">
+                          <div
+                            className="h-2 rounded-full bg-violet-500"
+                            style={{ width: `${Math.min(100, (item.count / (topReservedItems[0]?.count || 1)) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="w-6 text-right text-sm font-semibold text-gray-900 tabular-nums">{item.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

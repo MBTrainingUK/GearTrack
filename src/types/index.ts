@@ -93,6 +93,7 @@ export interface Checkout {
   userName: string;
   userEmail: string;
   itemIds: string[];
+  kitId?: string;
   checkedOutAt: Timestamp;
   dueDate: Timestamp;
   returnedAt?: Timestamp;

@@ -12,7 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Checkout, Item, Reservation } from '../../types';
+import type { Checkout, Item, Reservation, Kit } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, AlertTriangle, X, Check, Zap } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -29,6 +29,7 @@ export default function CheckoutsList() {
 
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
+  const [kits, setKits] = useState<Record<string, Kit>>({});
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'returned'>('all');
   const [conditionModal, setConditionModal] = useState<{
     checkoutId: string;
@@ -47,6 +48,11 @@ export default function CheckoutsList() {
         const map: Record<string, Item> = {};
         s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
         setItems(map);
+      }),
+      onSnapshot(collection(db, 'kits'), (s) => {
+        const map: Record<string, Kit> = {};
+        s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Kit; });
+        setKits(map);
       }),
     ];
     return () => unsubs.forEach((u) => u());
@@ -194,6 +200,7 @@ export default function CheckoutsList() {
       {showNewModal && (
         <NewCheckoutModal
           items={Object.values(items)}
+          kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
           onClose={() => setShowNewModal(false)}
           onCreated={(id, itemIds) => {
@@ -208,11 +215,13 @@ export default function CheckoutsList() {
 
 function NewCheckoutModal({
   items,
+  kits,
   reservationId,
   onClose,
   onCreated,
 }: {
   items: Item[];
+  kits: Kit[];
   reservationId?: string;
   onClose: () => void;
   onCreated: (id: string, itemIds: string[]) => void;
@@ -223,6 +232,8 @@ function NewCheckoutModal({
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [checkoutTab, setCheckoutTab] = useState<'items' | 'kit'>('items');
+  const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!reservationId) return;
@@ -235,6 +246,18 @@ function NewCheckoutModal({
     });
   }, [reservationId]);
 
+  function selectKit(kit: Kit) {
+    const availableIds = kit.itemIds.filter((id) => {
+      const item = items.find((i) => i.id === id);
+      return item && item.status === 'available' &&
+        item.condition !== 'needs_attention' &&
+        item.condition !== 'needs_investigating' &&
+        item.condition !== 'damaged';
+    });
+    setSelectedKitId(kit.id);
+    setSelectedItems(availableIds);
+  }
+
   async function quickGrab(itemIds: string[]) {
     if (!currentUser || !appUser || itemIds.length === 0) return;
     setSaving(true);
@@ -243,6 +266,7 @@ function NewCheckoutModal({
       endOfToday.setHours(23, 59, 0, 0);
       const docRef = await addDoc(collection(db, 'checkouts'), {
         reservationId: null,
+        kitId: selectedKitId ?? null,
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
@@ -272,6 +296,7 @@ function NewCheckoutModal({
     try {
       const docRef = await addDoc(collection(db, 'checkouts'), {
         reservationId: reservationId ?? null,
+        kitId: selectedKitId ?? null,
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
@@ -333,47 +358,104 @@ function NewCheckoutModal({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Items ({selectedItems.length} selected) *
-            </label>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, asset no, serial no…"
-              className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
-              {available.map((item) => {
-                const isSel = selectedItems.includes(item.id);
-                return (
-                  <div key={item.id} className={`flex w-full items-center justify-between px-3 py-2 text-sm ${isSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedItems((p) => p.includes(item.id) ? p.filter((x) => x !== item.id) : [...p, item.id])}
-                      className="flex-1 text-left min-w-0"
-                    >
-                      <p className="font-medium text-gray-900 truncate">{item.name}</p>
-                      {(item.assetNumber || item.serialNumber) && (
-                        <p className="text-xs text-gray-400">{item.assetNumber ? `Asset: ${item.assetNumber}` : `S/N: ${item.serialNumber}`}</p>
-                      )}
-                    </button>
-                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                      <button
-                        type="button"
-                        title="Quick Grab — check out now, due end of today"
-                        onClick={() => quickGrab([item.id])}
-                        disabled={saving}
-                        className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
-                      >
-                        <Zap size={11} />
-                        Quick Grab
-                      </button>
-                      {isSel && <Check size={13} className="text-blue-600" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {!reservationId && (
+              <div className="mb-3 flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => { setCheckoutTab('items'); setSelectedKitId(null); setSelectedItems([]); }}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'items' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  Individual Items
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCheckoutTab('kit'); setSelectedItems([]); setSelectedKitId(null); }}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'kit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  Kit
+                </button>
+              </div>
+            )}
+
+            {checkoutTab === 'items' ? (
+              <>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Items ({selectedItems.length} selected) *
+                </label>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name, asset no, serial no…"
+                  className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+                  {available.map((item) => {
+                    const isSel = selectedItems.includes(item.id);
+                    return (
+                      <div key={item.id} className={`flex w-full items-center justify-between px-3 py-2 text-sm ${isSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItems((p) => p.includes(item.id) ? p.filter((x) => x !== item.id) : [...p, item.id])}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                          {(item.assetNumber || item.serialNumber) && (
+                            <p className="text-xs text-gray-400">{item.assetNumber ? `Asset: ${item.assetNumber}` : `S/N: ${item.serialNumber}`}</p>
+                          )}
+                        </button>
+                        <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                          <button
+                            type="button"
+                            title="Quick Grab — check out now, due end of today"
+                            onClick={() => quickGrab([item.id])}
+                            disabled={saving}
+                            className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            <Zap size={11} />
+                            Quick Grab
+                          </button>
+                          {isSel && <Check size={13} className="text-blue-600" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Select a Kit</label>
+                <div className="max-h-48 overflow-y-auto space-y-1.5">
+                  {kits.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-gray-400">No kits available</p>
+                  ) : (
+                    kits.map((kit) => {
+                      const availableCount = kit.itemIds.filter((id) => {
+                        const item = items.find((i) => i.id === id);
+                        return item && item.status === 'available' &&
+                          item.condition !== 'needs_attention' &&
+                          item.condition !== 'needs_investigating' &&
+                          item.condition !== 'damaged';
+                      }).length;
+                      const isSelected = selectedKitId === kit.id;
+                      return (
+                        <button
+                          key={kit.id}
+                          type="button"
+                          onClick={() => selectKit(kit)}
+                          className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}
+                        >
+                          <p className="text-sm font-medium text-gray-900">{kit.name}</p>
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            {availableCount} of {kit.itemIds.length} items available
+                            {isSelected && selectedItems.length > 0 && ` · ${selectedItems.length} ready to check out`}
+                          </p>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>

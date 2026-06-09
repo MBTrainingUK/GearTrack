@@ -5,8 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
+  sendEmailVerification,
   type User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -63,14 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function loginWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  }
-
   async function register(email: string, password: string, displayName: string) {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(user, { displayName });
+    await sendEmailVerification(user);
     // ensureUserDoc backfills the name if the auth listener already created the doc
     // with the 'User' fallback; apply the result so in-memory state is correct too.
     const data = await ensureUserDoc(user, displayName);
@@ -83,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ currentUser, appUser, loading, login, loginWithGoogle, register, logout }}
+      value={{ currentUser, appUser, loading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

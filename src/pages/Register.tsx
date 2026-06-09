@@ -21,7 +21,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, name);
-      navigate('/');
+      navigate('/verify-email');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
       toast.error(msg.replace('Firebase: ', '').replace(/\(auth.*\)\.?/, ''));

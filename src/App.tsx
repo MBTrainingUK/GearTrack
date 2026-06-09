@@ -19,6 +19,9 @@ import UserHistory from './pages/History/UserHistory';
 import AdminPanel from './pages/Admin/AdminPanel';
 import ReportsPanel from './pages/Reports/ReportsPanel';
 import ActivityLog from './pages/Activity/ActivityLog';
+import MobileLayout from './pages/Mobile/MobileLayout';
+import MyGear from './pages/Mobile/MyGear';
+import Browse from './pages/Mobile/Browse';
 
 export default function App() {
   return (
@@ -35,6 +38,22 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Mobile PWA — protected, own layout */}
+          <Route
+            path="/m/*"
+            element={
+              <ProtectedRoute>
+                <MobileLayout>
+                  <Routes>
+                    <Route path="gear" element={<MyGear />} />
+                    <Route path="browse" element={<Browse />} />
+                    <Route path="*" element={<MyGear />} />
+                  </Routes>
+                </MobileLayout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected — wrapped in Layout */}
           <Route

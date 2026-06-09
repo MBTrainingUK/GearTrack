@@ -71,15 +71,17 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
         await updateDoc(checkoutRef, { checkoutCondition: report });
       }
 
-      await writeAuditLog({
-        action: mode === 'return' ? 'checkin' : 'checkout',
-        performedBy: currentUser.uid,
-        performedByName: appUser.displayName,
-        targetType: 'checkout',
-        targetId: checkoutId,
-        targetName,
-        details: { condition, notes },
-      });
+      if (mode === 'return') {
+        await writeAuditLog({
+          action: 'checkin',
+          performedBy: currentUser.uid,
+          performedByName: appUser.displayName,
+          targetType: 'checkout',
+          targetId: checkoutId,
+          targetName,
+          details: { condition, notes },
+        });
+      }
 
       onConfirm();
     } catch {

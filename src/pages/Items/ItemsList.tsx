@@ -9,13 +9,22 @@ import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 
-const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Other'];
+const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
+
+const CONDITIONS = [
+  { value: 'all', label: 'All Conditions' },
+  { value: 'good', label: 'Good' },
+  { value: 'needs_attention', label: 'Needs Attention' },
+  { value: 'needs_investigating', label: 'Needs Investigating' },
+  { value: 'damaged', label: 'Damaged' },
+] as const;
 
 export default function ItemsList() {
   const { appUser } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [condition, setCondition] = useState<'all' | 'good' | 'needs_attention' | 'needs_investigating' | 'damaged'>('all');
 
   useEffect(() => {
     return onSnapshot(collection(db, 'items'), (s) =>
@@ -40,7 +49,10 @@ export default function ItemsList() {
       item.assetNumber?.toLowerCase().includes(search.toLowerCase()) ||
       item.category.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'All' || item.category === category;
-    return matchSearch && matchCat;
+    const matchCondition =
+      condition === 'all' ||
+      (condition === 'good' ? !item.condition || item.condition === 'good' : item.condition === condition);
+    return matchSearch && matchCat && matchCondition;
   });
 
   return (
@@ -84,6 +96,21 @@ export default function ItemsList() {
               }`}
             >
               {c}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CONDITIONS.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => setCondition(c.value)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                condition === c.value
+                  ? 'border-rose-500 bg-rose-50 text-rose-700'
+                  : 'border-gray-200 text-gray-600 hover:border-rose-300'
+              }`}
+            >
+              {c.label}
             </button>
           ))}
         </div>

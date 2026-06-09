@@ -82,7 +82,9 @@ export default function ReservationsList() {
   const filtered =
     filter === 'all' ? reservations : reservations.filter((r) => r.status === filter);
 
-  const calendarEvents = reservations.map((r) => ({
+  const calendarEvents = reservations
+    .filter((r) => r.status !== 'cancelled' && r.status !== 'completed')
+    .map((r) => ({
     id: r.id,
     title: `${r.userName} — ${bookingLabel(r, items, kits)}`,
     start: r.startDate.toDate(),

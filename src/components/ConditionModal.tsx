@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/useAuth';
-import type { ConditionReport, Checkout, AuditLog } from '../types';
+import type { ConditionReport, Checkout } from '../types';
+import { writeAuditLog } from '../lib/auditLog';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
   checkoutId: string;
   itemIds: string[];
+  targetName: string;
   mode: 'checkout' | 'return';
   onClose: () => void;
   onConfirm: () => void;
@@ -16,7 +18,7 @@ interface Props {
 
 const conditions = ['excellent', 'good', 'fair', 'poor', 'damaged'] as const;
 
-export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onConfirm }: Props) {
+export default function ConditionModal({ checkoutId, itemIds, targetName, mode, onClose, onConfirm }: Props) {
   const { currentUser, appUser } = useAuth();
   const [condition, setCondition] = useState<ConditionReport['condition']>('good');
   const [notes, setNotes] = useState('');
@@ -69,17 +71,15 @@ export default function ConditionModal({ checkoutId, itemIds, mode, onClose, onC
         await updateDoc(checkoutRef, { checkoutCondition: report });
       }
 
-      // Audit log
-      const auditEntry: Omit<AuditLog, 'id' | 'timestamp'> = {
+      await writeAuditLog({
         action: mode === 'return' ? 'checkin' : 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
         targetId: checkoutId,
-        targetName: `Checkout ${checkoutId}`,
+        targetName,
         details: { condition, notes },
-      };
-      await addDoc(collection(db, 'auditLog'), { ...auditEntry, timestamp: serverTimestamp() });
+      });
 
       onConfirm();
     } catch {

@@ -35,6 +35,7 @@ export default function CheckoutsList() {
   const [conditionModal, setConditionModal] = useState<{
     checkoutId: string;
     itemIds: string[];
+    targetName: string;
     mode: 'checkout' | 'return';
   } | null>(null);
   const [showNewModal, setShowNewModal] = useState(Boolean(reservationId));
@@ -161,8 +162,11 @@ export default function CheckoutsList() {
                     <td className="px-5 py-3">
                       {c.status === 'active' && appUser?.role !== 'user' && (
                         <button
-                          onClick={() =>
-                            setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, mode: 'return' })
+                          onClick={() => {
+                            const names = c.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Item').join(', ');
+                            const extra = c.itemIds.length > 2 ? ` +${c.itemIds.length - 2} more` : '';
+                            setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return' });
+                          }
                           }
                           className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
                         >
@@ -188,6 +192,7 @@ export default function CheckoutsList() {
         <ConditionModal
           checkoutId={conditionModal.checkoutId}
           itemIds={conditionModal.itemIds}
+          targetName={conditionModal.targetName}
           mode={conditionModal.mode}
           onClose={() => setConditionModal(null)}
           onConfirm={() => {
@@ -204,9 +209,9 @@ export default function CheckoutsList() {
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
           onClose={() => setShowNewModal(false)}
-          onCreated={(id, itemIds) => {
+          onCreated={(id, itemIds, targetName) => {
             setShowNewModal(false);
-            setConditionModal({ checkoutId: id, itemIds, mode: 'checkout' });
+            setConditionModal({ checkoutId: id, itemIds, targetName, mode: 'checkout' });
           }}
         />
       )}
@@ -225,7 +230,7 @@ function NewCheckoutModal({
   kits: Kit[];
   reservationId?: string;
   onClose: () => void;
-  onCreated: (id: string, itemIds: string[]) => void;
+  onCreated: (id: string, itemIds: string[], targetName: string) => void;
 }) {
   const { currentUser, appUser } = useAuth();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -280,17 +285,19 @@ function NewCheckoutModal({
       for (const itemId of itemIds) {
         await updateDoc(doc(db, 'items', itemId), { status: 'checked_out', updatedAt: serverTimestamp() });
       }
+      const quickName = selectedKitId
+        ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+        : itemIds.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
+          (itemIds.length > 2 ? ` +${itemIds.length - 2} more` : '');
       await writeAuditLog({
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
         targetId: docRef.id,
-        targetName: selectedKitId
-          ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
-          : `${itemIds.length} item${itemIds.length !== 1 ? 's' : ''} (Quick Grab)`,
+        targetName: quickName,
       });
-      onCreated(docRef.id, itemIds);
+      onCreated(docRef.id, itemIds, quickName);
     } catch {
       toast.error('Failed to create checkout');
     } finally {
@@ -331,17 +338,19 @@ function NewCheckoutModal({
           updatedAt: serverTimestamp(),
         });
       }
+      const checkoutName = selectedKitId
+        ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+        : selectedItems.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
+          (selectedItems.length > 2 ? ` +${selectedItems.length - 2} more` : '');
       await writeAuditLog({
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
         targetId: docRef.id,
-        targetName: selectedKitId
-          ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
-          : `${selectedItems.length} item${selectedItems.length !== 1 ? 's' : ''}`,
+        targetName: checkoutName,
       });
-      onCreated(docRef.id, selectedItems);
+      onCreated(docRef.id, selectedItems, checkoutName);
     } catch {
       toast.error('Failed to create checkout');
     } finally {

@@ -20,6 +20,7 @@ import ConditionModal from '../../components/ConditionModal';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 import { isOverdue } from '../../lib/checkout';
 
 export default function CheckoutsList() {
@@ -279,6 +280,16 @@ function NewCheckoutModal({
       for (const itemId of itemIds) {
         await updateDoc(doc(db, 'items', itemId), { status: 'checked_out', updatedAt: serverTimestamp() });
       }
+      await writeAuditLog({
+        action: 'checkout',
+        performedBy: currentUser.uid,
+        performedByName: appUser.displayName,
+        targetType: 'checkout',
+        targetId: docRef.id,
+        targetName: selectedKitId
+          ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+          : `${itemIds.length} item${itemIds.length !== 1 ? 's' : ''} (Quick Grab)`,
+      });
       onCreated(docRef.id, itemIds);
     } catch {
       toast.error('Failed to create checkout');
@@ -320,6 +331,16 @@ function NewCheckoutModal({
           updatedAt: serverTimestamp(),
         });
       }
+      await writeAuditLog({
+        action: 'checkout',
+        performedBy: currentUser.uid,
+        performedByName: appUser.displayName,
+        targetType: 'checkout',
+        targetId: docRef.id,
+        targetName: selectedKitId
+          ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+          : `${selectedItems.length} item${selectedItems.length !== 1 ? 's' : ''}`,
+      });
       onCreated(docRef.id, selectedItems);
     } catch {
       toast.error('Failed to create checkout');

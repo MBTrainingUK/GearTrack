@@ -8,6 +8,7 @@ import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 
 const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
 
@@ -20,7 +21,7 @@ const CONDITIONS = [
 ] as const;
 
 export default function ItemsList() {
-  const { appUser } = useAuth();
+  const { appUser, currentUser } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
@@ -34,8 +35,17 @@ export default function ItemsList() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this item? This cannot be undone.')) return;
+    const item = items.find((i) => i.id === id);
     try {
       await deleteDoc(doc(db, 'items', id));
+      await writeAuditLog({
+        action: 'delete_item',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'item',
+        targetId: id,
+        targetName: item?.name ?? 'Unknown item',
+      });
       toast.success('Item deleted');
     } catch {
       toast.error('Failed to delete item');

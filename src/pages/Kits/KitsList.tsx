@@ -15,9 +15,10 @@ import { Plus, Layers, X, Check, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 
 export default function KitsList() {
-  const { appUser } = useAuth();
+  const { appUser, currentUser } = useAuth();
   const [kits, setKits] = useState<Kit[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -43,6 +44,14 @@ export default function KitsList() {
         await updateDoc(doc(db, 'items', itemId), { kitId: null });
       }
       await deleteDoc(doc(db, 'kits', kit.id));
+      await writeAuditLog({
+        action: 'delete_kit',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'kit',
+        targetId: kit.id,
+        targetName: kit.name,
+      });
       toast.success('Kit deleted');
     } catch {
       toast.error('Failed to delete kit');
@@ -150,6 +159,8 @@ export default function KitsList() {
       {showForm && (
         <KitFormModal
           items={items}
+          currentUser={currentUser}
+          appUser={appUser}
           onClose={() => setShowForm(false)}
         />
       )}
@@ -157,7 +168,7 @@ export default function KitsList() {
   );
 }
 
-function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }) {
+function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[]; onClose: () => void; currentUser: { uid: string } | null; appUser: { displayName: string } | null }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -192,6 +203,14 @@ function KitFormModal({ items, onClose }: { items: Item[]; onClose: () => void }
       for (const itemId of selectedItems) {
         await updateDoc(doc(db, 'items', itemId), { kitId: ref.id });
       }
+      await writeAuditLog({
+        action: 'create_kit',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'kit',
+        targetId: ref.id,
+        targetName: name,
+      });
       toast.success('Kit created');
       onClose();
     } catch {

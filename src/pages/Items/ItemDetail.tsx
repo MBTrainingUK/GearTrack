@@ -18,10 +18,13 @@ import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle, Cal
 import ConditionBadge from '../../components/ConditionBadge';
 import { format, differenceInMonths } from 'date-fns';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 
 export default function ItemDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser, appUser } = useAuth();
   const [item, setItem] = useState<Item | null>(null);
   const [history, setHistory] = useState<Checkout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,14 @@ export default function ItemDetail() {
         updatedAt: serverTimestamp(),
       });
       setItem((p) => p ? { ...p, condition: 'needs_investigating', conditionFlagNote: 'Inspection interval exceeded — pending review.' } : p);
+      await writeAuditLog({
+        action: 'flag',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'item',
+        targetId: item.id,
+        targetName: item.name,
+      });
       toast.success('Item flagged for inspection');
     } catch {
       toast.error('Failed to flag item');
@@ -79,6 +90,15 @@ export default function ItemDetail() {
         updatedAt: serverTimestamp(),
       });
       setItem((p) => p ? { ...p, condition: 'good', conditionFlagNote: '', lifespanResetDate: resetDate, expectedLifespanMonths: months } : p);
+      await writeAuditLog({
+        action: 'resolve_flag',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'item',
+        targetId: item.id,
+        targetName: item.name,
+        details: { nextIntervalMonths: String(months) },
+      });
       setShowResetModal(false);
       setNewInterval('');
       toast.success('Inspection logged — meter reset');

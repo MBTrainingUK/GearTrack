@@ -13,12 +13,15 @@ import { db } from '../../lib/firebase';
 import type { Item } from '../../types';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 
 const CATEGORIES = ['Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
 
 export default function ItemForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser, appUser } = useAuth();
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState({
@@ -78,13 +81,29 @@ export default function ItemForm() {
       if (isEdit) {
         // Don't write photoURLs on edit — it would wipe any existing photos.
         await updateDoc(doc(db, 'items', id!), data);
+        await writeAuditLog({
+          action: 'update_item',
+          performedBy: currentUser!.uid,
+          performedByName: appUser!.displayName,
+          targetType: 'item',
+          targetId: id!,
+          targetName: form.name,
+        });
         toast.success('Item updated');
       } else {
-        await addDoc(collection(db, 'items'), {
+        const docRef = await addDoc(collection(db, 'items'), {
           ...data,
           photoURLs: [],
           status: 'available',
           createdAt: serverTimestamp(),
+        });
+        await writeAuditLog({
+          action: 'create_item',
+          performedBy: currentUser!.uid,
+          performedByName: appUser!.displayName,
+          targetType: 'item',
+          targetId: docRef.id,
+          targetName: form.name,
         });
         toast.success('Item added');
       }

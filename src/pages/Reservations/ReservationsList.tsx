@@ -23,9 +23,10 @@ import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
+import { writeAuditLog } from '../../lib/auditLog';
 
 export default function ReservationsList() {
-  const { appUser } = useAuth();
+  const { appUser, currentUser } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<Reservation['status'] | 'all'>('all');
@@ -60,6 +61,15 @@ export default function ReservationsList() {
         status: 'approved',
         updatedAt: serverTimestamp(),
       });
+      const res = reservations.find((r) => r.id === id);
+      await writeAuditLog({
+        action: 'approve_reservation',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'reservation',
+        targetId: id,
+        targetName: `${res?.userName ?? 'Unknown'}'s reservation`,
+      });
       toast.success('Reservation approved');
     } catch {
       toast.error('Failed to approve');
@@ -72,6 +82,15 @@ export default function ReservationsList() {
       await updateDoc(doc(db, 'reservations', id), {
         status: 'cancelled',
         updatedAt: serverTimestamp(),
+      });
+      const res = reservations.find((r) => r.id === id);
+      await writeAuditLog({
+        action: 'cancel_reservation',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'reservation',
+        targetId: id,
+        targetName: `${res?.userName ?? 'Unknown'}'s reservation`,
       });
       toast.success('Reservation cancelled');
     } catch {

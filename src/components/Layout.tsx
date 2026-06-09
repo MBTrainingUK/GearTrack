@@ -10,20 +10,22 @@ import {
   Menu,
   Shield,
   BarChart2,
+  Activity,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/useAuth';
 import type { AppUser } from '../types';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, adminOnly: false },
-  { to: '/items', label: 'Items', icon: Package, adminOnly: false },
-  { to: '/kits', label: 'Kits', icon: Layers, adminOnly: false },
-  { to: '/reservations', label: 'Reservations', icon: CalendarRange, adminOnly: false },
-  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, adminOnly: false },
-  { to: '/history', label: 'My History', icon: History, adminOnly: false },
-  { to: '/reports', label: 'Reports', icon: BarChart2, adminOnly: true },
-  { to: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, minRole: 'user' },
+  { to: '/items', label: 'Items', icon: Package, minRole: 'user' },
+  { to: '/kits', label: 'Kits', icon: Layers, minRole: 'user' },
+  { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'user' },
+  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'user' },
+  { to: '/history', label: 'My History', icon: History, minRole: 'user' },
+  { to: '/activity', label: 'Activity', icon: Activity, minRole: 'manager' },
+  { to: '/reports', label: 'Reports', icon: BarChart2, minRole: 'admin' },
+  { to: '/admin', label: 'Admin', icon: Shield, minRole: 'admin' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -101,7 +103,11 @@ function SidebarContent({
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {navItems.filter(item => !item.adminOnly || appUser?.role === 'admin').map(({ to, label, icon: Icon, exact }) => (
+          {navItems.filter(({ minRole }) => {
+            if (minRole === 'admin') return appUser?.role === 'admin';
+            if (minRole === 'manager') return appUser?.role === 'admin' || appUser?.role === 'manager';
+            return true;
+          }).map(({ to, label, icon: Icon, exact }) => (
             <li key={to}>
               <NavLink
                 to={to}

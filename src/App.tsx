@@ -18,6 +18,7 @@ import CheckoutsList from './pages/Checkouts/CheckoutsList';
 import UserHistory from './pages/History/UserHistory';
 import AdminPanel from './pages/Admin/AdminPanel';
 import ReportsPanel from './pages/Reports/ReportsPanel';
+import ActivityLog from './pages/Activity/ActivityLog';
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
                     <Route path="/checkouts" element={<CheckoutsList />} />
                     <Route path="/history" element={<UserHistory />} />
                     <Route path="/reports" element={<ReportsPanel />} />
+                    <Route path="/activity" element={<ActivityLog />} />
                     <Route path="/admin" element={<AdminPanel />} />
                   </Routes>
                 </Layout>

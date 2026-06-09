@@ -119,7 +119,8 @@ export type AuditAction =
   | 'delete_item'
   | 'create_kit'
   | 'update_kit'
-  | 'delete_kit';
+  | 'delete_kit'
+  | 'approve_reservation';
 
 export interface AuditLog {
   id: string;

@@ -16,6 +16,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
+import { writeAuditLog } from '../../lib/auditLog';
 
 export default function ReservationForm() {
   const { currentUser, appUser } = useAuth();
@@ -107,7 +108,7 @@ export default function ReservationForm() {
         return;
       }
 
-      await addDoc(collection(db, 'reservations'), {
+      const resRef = await addDoc(collection(db, 'reservations'), {
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
@@ -119,6 +120,19 @@ export default function ReservationForm() {
         notes,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+
+      const targetName = selectedKitId
+        ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+        : selectedItems.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
+          (selectedItems.length > 2 ? ` +${selectedItems.length - 2} more` : '');
+      await writeAuditLog({
+        action: 'reserve',
+        performedBy: currentUser.uid,
+        performedByName: appUser.displayName,
+        targetType: 'reservation',
+        targetId: resRef.id,
+        targetName,
       });
 
       toast.success('Reservation created');

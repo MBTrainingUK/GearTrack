@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, appUser, loading } = useAuth();
 
   if (loading) {
     return (
@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return <Navigate to="/login" replace />;
   }
 
-  if (!currentUser.emailVerified) {
+  if (appUser?.emailVerified === false) {
     return <Navigate to="/verify-email" replace />;
   }
 

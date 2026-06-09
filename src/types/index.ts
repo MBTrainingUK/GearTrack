@@ -9,6 +9,7 @@ export interface AppUser {
   displayName: string;
   role: UserRole;
   photoURL?: string;
+  emailVerified?: boolean;
   createdAt: Timestamp;
   lastLogin?: Timestamp;
 }

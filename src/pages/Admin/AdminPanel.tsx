@@ -63,6 +63,15 @@ export default function AdminPanel() {
     }
   }
 
+  async function verifyUser(uid: string) {
+    try {
+      await updateDoc(doc(db, 'users', uid), { emailVerified: true });
+      toast.success('User verified');
+    } catch {
+      toast.error('Failed to verify user');
+    }
+  }
+
   async function removeUser(u: AppUser) {
     setRemovingId(u.uid);
     setConfirmRemove(null);
@@ -159,16 +168,26 @@ export default function AdminPanel() {
                   </div>
                 </td>
                 <td className="px-5 py-3">
-                  {u.uid !== currentUser?.uid && (
-                    <button
-                      onClick={() => setConfirmRemove(u)}
-                      disabled={removingId === u.uid}
-                      className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-100 disabled:opacity-50"
-                    >
-                      <Trash2 size={12} />
-                      Remove
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {u.emailVerified === false && (
+                      <button
+                        onClick={() => verifyUser(u.uid)}
+                        className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-100"
+                      >
+                        Verify
+                      </button>
+                    )}
+                    {u.uid !== currentUser?.uid && (
+                      <button
+                        onClick={() => setConfirmRemove(u)}
+                        disabled={removingId === u.uid}
+                        className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <Trash2 size={12} />
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

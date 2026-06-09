@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { sendEmailVerification } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../context/useAuth';
 import { Package, Mail, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,13 +14,13 @@ export default function VerifyEmail() {
   const [sending, setSending] = useState(false);
 
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (currentUser.emailVerified) return <Navigate to="/" replace />;
 
   async function checkVerified() {
     setChecking(true);
     try {
       await auth.currentUser?.reload();
       if (auth.currentUser?.emailVerified) {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), { emailVerified: true });
         navigate('/');
       } else {
         toast.error('Not verified yet — please check your inbox and click the link');

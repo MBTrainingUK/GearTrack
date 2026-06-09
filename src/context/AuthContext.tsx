@@ -8,7 +8,7 @@ import {
   sendEmailVerification,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { AppUser } from '../types';
 import { AuthContext } from './useAuth';
@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: user.email ?? '',
         displayName: displayName ?? user.displayName ?? 'User',
         role: 'user' as const,
+        emailVerified: false,
         createdAt: serverTimestamp(),
         // Only include photoURL if it actually exists — Firestore rejects undefined
         ...(user.photoURL ? { photoURL: user.photoURL } : {}),
@@ -45,17 +46,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
+    let unsubDoc: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (unsubDoc) { unsubDoc(); unsubDoc = null; }
       setCurrentUser(user);
       if (user) {
-        const data = await ensureUserDoc(user);
-        setAppUser(data);
+        await ensureUserDoc(user);
+        unsubDoc = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+          if (snap.exists()) setAppUser(snap.data() as AppUser);
+          setLoading(false);
+        });
       } else {
         setAppUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsub;
+
+    return () => { unsubAuth(); if (unsubDoc) unsubDoc(); };
   }, []);
 
   async function login(email: string, password: string) {

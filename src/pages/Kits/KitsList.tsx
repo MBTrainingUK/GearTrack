@@ -21,6 +21,7 @@ export default function KitsList() {
   const [kits, setKits] = useState<Kit[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubs = [
@@ -80,6 +81,8 @@ export default function KitsList() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {kits.map((kit) => {
             const kitItems = items.filter((i) => kit.itemIds.includes(i.id));
+            const isExpanded = expandedKits.has(kit.id);
+            const visibleItems = isExpanded ? kitItems : kitItems.slice(0, 4);
             return (
               <div key={kit.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
@@ -102,7 +105,7 @@ export default function KitsList() {
                   <p className="mt-3 text-sm text-gray-600 line-clamp-2">{kit.description}</p>
                 )}
                 <ul className="mt-3 space-y-1">
-                  {kitItems.slice(0, 4).map((i) => (
+                  {visibleItems.map((i) => (
                     <li key={i.id} className="flex items-center justify-between text-xs">
                       <span className="text-gray-700">{i.name}</span>
                       <div className="flex items-center gap-2">
@@ -114,7 +117,20 @@ export default function KitsList() {
                     </li>
                   ))}
                   {kitItems.length > 4 && (
-                    <li className="text-xs text-gray-400">+{kitItems.length - 4} more</li>
+                    <li>
+                      <button
+                        onClick={() =>
+                          setExpandedKits((prev) => {
+                            const next = new Set(prev);
+                            isExpanded ? next.delete(kit.id) : next.add(kit.id);
+                            return next;
+                          })
+                        }
+                        className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
+                      >
+                        {isExpanded ? 'Show less' : `+${kitItems.length - 4} more`}
+                      </button>
+                    </li>
                   )}
                 </ul>
                 <div className="mt-4">

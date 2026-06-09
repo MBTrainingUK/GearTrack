@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -33,6 +33,8 @@ export default function AdminPanel() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<AppUser | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirmClearData, setConfirmClearData] = useState(false);
+  const [clearingData, setClearingData] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), (snap) => {
@@ -73,6 +75,28 @@ export default function AdminPanel() {
       toast.error('Failed to remove user');
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function clearTestData() {
+    setClearingData(true);
+    setConfirmClearData(false);
+    try {
+      const collectionsToWipe = ['auditLog', 'checkouts', 'reservations'];
+      for (const name of collectionsToWipe) {
+        const snap = await getDocs(collection(db, name));
+        const batches: ReturnType<typeof writeBatch>[] = [];
+        snap.docs.forEach((d, i) => {
+          if (i % 500 === 0) batches.push(writeBatch(db));
+          batches[batches.length - 1].delete(d.ref);
+        });
+        await Promise.all(batches.map((b) => b.commit()));
+      }
+      toast.success('Test data cleared — activity log, checkouts, and reservations wiped');
+    } catch {
+      toast.error('Failed to clear test data');
+    } finally {
+      setClearingData(false);
     }
   }
 
@@ -180,6 +204,63 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {/* Danger zone */}
+      <div className="rounded-xl border border-red-200 bg-red-50/40 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={16} className="text-red-600" />
+          <h2 className="text-sm font-semibold text-red-700">Danger Zone</h2>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-800">Clear test data</p>
+            <p className="text-xs text-gray-500 mt-0.5">Permanently deletes all activity logs, checkouts, and reservations. Items and kits are kept.</p>
+          </div>
+          <button
+            onClick={() => setConfirmClearData(true)}
+            disabled={clearingData}
+            className="shrink-0 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {clearingData ? 'Clearing…' : 'Clear test data'}
+          </button>
+        </div>
+      </div>
+
+      {confirmClearData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmClearData(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">Clear test data?</h2>
+              <button onClick={() => setConfirmClearData(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">This will permanently delete:</p>
+              <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
+                <li>All activity log entries</li>
+                <li>All checkouts</li>
+                <li>All reservations</li>
+              </ul>
+              <p className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
+                Items and kits will not be affected. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                onClick={() => setConfirmClearData(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={clearTestData}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Yes, clear it all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmRemove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmRemove(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>

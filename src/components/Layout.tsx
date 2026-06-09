@@ -137,7 +137,9 @@ function SidebarContent({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-gray-900">{appUser?.displayName}</p>
-            <p className="truncate text-xs text-gray-500 capitalize">{appUser?.role}</p>
+            <p className="truncate text-xs text-gray-500">
+              {appUser?.role === 'manager' ? 'Team Member' : appUser?.role === 'admin' ? 'Admin' : 'User'}
+            </p>
           </div>
           <button
             onClick={onLogout}

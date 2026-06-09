@@ -9,6 +9,12 @@ import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Admin',
+  manager: 'Team Member',
+  user: 'User',
+};
+
 const roleColors: Record<UserRole, string> = {
   admin: 'bg-red-100 text-red-700',
   manager: 'bg-violet-100 text-violet-700',
@@ -49,7 +55,7 @@ export default function AdminPanel() {
     setUpdatingId(uid);
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRole });
-      toast.success(`Role updated to ${newRole}`);
+      toast.success(`Role updated to ${ROLE_LABELS[newRole]}`);
     } catch {
       toast.error('Failed to update role');
     } finally {
@@ -92,7 +98,7 @@ export default function AdminPanel() {
         {(['admin', 'manager', 'user'] as UserRole[]).map((r) => (
           <div key={r} className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${roleColors[r]}`}>
             {roleIcons[r]}
-            <span className="capitalize">{r}</span>
+            <span>{ROLE_LABELS[r]}</span>
             <span className="opacity-60">—</span>
             <span className="font-normal opacity-80">
               {r === 'admin' ? 'Full access' : r === 'manager' ? 'Manage checkouts & reservations' : 'Book only'}
@@ -132,9 +138,9 @@ export default function AdminPanel() {
                 <td className="px-5 py-3 text-gray-500">{u.email}</td>
                 <td className="px-5 py-3 text-gray-500">{formatDate(u.createdAt)}</td>
                 <td className="px-5 py-3">
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${roleColors[u.role]}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${roleColors[u.role]}`}>
                     {roleIcons[u.role]}
-                    {u.role}
+                    {ROLE_LABELS[u.role]}
                   </span>
                 </td>
                 <td className="px-5 py-3">
@@ -146,7 +152,7 @@ export default function AdminPanel() {
                       className="appearance-none rounded-lg border border-gray-200 bg-white py-1.5 pl-3 pr-8 text-xs text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 cursor-pointer"
                     >
                       <option value="user">User</option>
-                      <option value="manager">Manager</option>
+                      <option value="manager">Team Member</option>
                       <option value="admin">Admin</option>
                     </select>
                     <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" />

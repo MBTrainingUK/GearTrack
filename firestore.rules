@@ -63,7 +63,8 @@ service cloud.firestore {
     match /auditLog/{logId} {
       allow read: if isManager();
       allow create: if isSignedIn();
-      allow update, delete: if false; // immutable
+      allow update: if false;
+      allow delete: if isAdmin();
     }
   }
 }

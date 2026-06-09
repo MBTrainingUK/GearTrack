@@ -54,11 +54,12 @@ export default function Browse() {
       await updateDoc(doc(db, 'items', checkoutItem.id), { status: 'checked_out' });
       await writeAuditLog({
         action: 'checkout',
-        userId: currentUser.uid,
-        userName: appUser.displayName,
+        performedBy: currentUser.uid,
+        performedByName: appUser.displayName,
+        targetType: 'checkout',
         targetId: checkoutItem.id,
         targetName: checkoutItem.name,
-        details: `Checked out via mobile. Due ${format(new Date(dueDate), 'd MMM yyyy')}`,
+        details: { source: 'mobile', due: format(new Date(dueDate), 'd MMM yyyy') },
       });
       toast.success(`${checkoutItem.name} checked out`);
       setCheckoutItem(null);

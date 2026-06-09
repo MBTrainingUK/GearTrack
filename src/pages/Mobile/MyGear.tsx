@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   collection, query, where, onSnapshot,
-  doc, updateDoc, getDoc, serverTimestamp,
+  doc, updateDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
@@ -58,12 +58,13 @@ export default function MyGear() {
         .map((id) => items[id]?.name ?? id)
         .join(', ');
       await writeAuditLog({
-        action: 'return',
-        userId: currentUser!.uid,
-        userName: appUser!.displayName,
+        action: 'checkin',
+        performedBy: currentUser!.uid,
+        performedByName: appUser!.displayName,
+        targetType: 'checkout',
         targetId: checkout.id,
         targetName: itemNames,
-        details: `Returned via mobile`,
+        details: { source: 'mobile' },
       });
       toast.success('Returned successfully');
     } catch {

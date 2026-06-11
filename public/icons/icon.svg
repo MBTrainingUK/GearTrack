@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <pattern id="stripes" width="76" height="76" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+      <rect width="76" height="76" fill="#ffffff"/>
+      <rect width="38" height="76" fill="#2563eb"/>
+    </pattern>
+    <clipPath id="stickClip">
+      <rect x="112" y="160" width="288" height="56" rx="12"/>
+    </clipPath>
+    <clipPath id="topStripClip">
+      <rect x="112" y="230" width="288" height="44" rx="0"/>
+    </clipPath>
+  </defs>
+
+  <!-- full-bleed background (maskable safe) -->
+  <rect width="512" height="512" fill="#2563eb"/>
+
+  <!-- moving clapper stick, open at an angle, hinged at left -->
+  <g transform="rotate(-14 122 226)">
+    <rect x="112" y="160" width="288" height="56" rx="12" fill="#ffffff"/>
+    <g clip-path="url(#stickClip)">
+      <rect x="60" y="120" width="400" height="140" fill="url(#stripes)"/>
+    </g>
+    <rect x="112" y="160" width="288" height="56" rx="12" fill="none" stroke="#ffffff" stroke-width="8"/>
+  </g>
+
+  <!-- board body -->
+  <rect x="112" y="230" width="288" height="166" rx="16" fill="#ffffff"/>
+  <!-- striped strip fixed to top of body -->
+  <g clip-path="url(#topStripClip)">
+    <rect x="60" y="190" width="400" height="130" fill="url(#stripes)"/>
+  </g>
+  <rect x="112" y="230" width="288" height="166" rx="16" fill="none" stroke="#ffffff" stroke-width="8"/>
+
+  <!-- text lines on the board -->
+  <rect x="144" y="306" width="160" height="16" rx="8" fill="#bfdbfe"/>
+  <rect x="144" y="344" width="110" height="16" rx="8" fill="#bfdbfe"/>
+</svg>

@@ -68,9 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
-            <Package size={14} className="text-white" />
-          </div>
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="GearTrack" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-gray-900">GearTrack</span>
         </header>
 
@@ -94,9 +92,7 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-          <Package size={16} className="text-white" />
-        </div>
+        <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="GearTrack" className="h-8 w-8 rounded-lg" />
         <span className="text-base font-bold text-gray-900">GearTrack</span>
       </div>
 

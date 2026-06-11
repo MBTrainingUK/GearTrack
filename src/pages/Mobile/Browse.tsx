@@ -49,7 +49,7 @@ export default function Browse() {
         targetType: 'checkout',
         targetId: checkoutId,
         targetName: checkoutItem.name,
-        details: { source: 'mobile', quickGrab: true },
+        details: { source: 'mobile', quickGrab: 'true' },
       });
       toast.success(`${checkoutItem.name} grabbed — due end of today`);
       setCheckoutItem(null);

@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import ConditionModal from '../../components/ConditionModal';
 
 export default function MyGear() {
-  const { currentUser, appUser } = useAuth();
+  const { currentUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { byId: items } = useItems();
   const [loading, setLoading] = useState(true);

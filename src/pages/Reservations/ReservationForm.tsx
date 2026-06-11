@@ -12,11 +12,12 @@ import {
 import { db } from '../../lib/firebase';
 import type { Item, Kit, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { writeAuditLog } from '../../lib/auditLog';
+import { isFlagged } from '../../lib/items';
 
 export default function ReservationForm() {
   const { currentUser, appUser } = useAuth();
@@ -34,6 +35,7 @@ export default function ReservationForm() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
+  const [kitWarnings, setKitWarnings] = useState<string[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -41,43 +43,62 @@ export default function ReservationForm() {
       getDocs(collection(db, 'items')),
       getDocs(collection(db, 'kits')),
     ]).then(([itemsSnap, kitsSnap]) => {
-      setItems(itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
+      const loadedItems = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
+      setItems(loadedItems);
       const loadedKits = kitsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Kit));
       setKits(loadedKits);
-      // Pre-select items for a kit passed in via ?kitId= once kits have loaded.
+      // Pre-select items for a kit passed in via ?kitId=
       if (preselectedKitId) {
         const kit = loadedKits.find((k) => k.id === preselectedKitId);
-        if (kit) setSelectedItems(kit.itemIds);
+        if (kit) applyKitSelection(kit, loadedItems);
       }
     });
   }, [preselectedKitId]);
 
+  function applyKitSelection(kit: Kit, itemList: Item[]) {
+    const available: string[] = [];
+    const warned: string[] = [];
+    kit.itemIds.forEach((id) => {
+      const item = itemList.find((i) => i.id === id);
+      if (!item || isFlagged(item) || item.status !== 'available') {
+        warned.push(item?.name ?? id);
+      } else {
+        available.push(id);
+      }
+    });
+    setSelectedItems(available);
+    setKitWarnings(warned);
+  }
+
   function selectKit(kit: Kit) {
-    const next = selectedKitId === kit.id ? null : kit.id;
-    setSelectedKitId(next);
-    if (next) setSelectedItems(kit.itemIds);
+    if (selectedKitId === kit.id) {
+      // Deselect
+      setSelectedKitId(null);
+      setSelectedItems([]);
+      setKitWarnings([]);
+      return;
+    }
+    setSelectedKitId(kit.id);
+    applyKitSelection(kit, items);
   }
 
   async function checkConflicts(itemIds: string[], start: Date, end: Date): Promise<string[]> {
-    const conflicted: string[] = [];
-    for (const itemId of itemIds) {
-      const q = query(
-        collection(db, 'reservations'),
-        where('itemIds', 'array-contains', itemId),
-        where('status', 'in', ['pending', 'approved', 'checked_out'])
-      );
-      const snap = await getDocs(q);
-      for (const d of snap.docs) {
-        const r = d.data() as Reservation;
-        const rStart = r.startDate.toDate();
-        const rEnd = r.endDate.toDate();
-        if (start < rEnd && end > rStart) {
-          conflicted.push(itemId);
-          break;
-        }
-      }
-    }
-    return conflicted;
+    const results = await Promise.all(
+      itemIds.map(async (itemId) => {
+        const q = query(
+          collection(db, 'reservations'),
+          where('itemIds', 'array-contains', itemId),
+          where('status', 'in', ['pending', 'approved', 'checked_out'])
+        );
+        const snap = await getDocs(q);
+        const clash = snap.docs.some((d) => {
+          const r = d.data() as Reservation;
+          return start < r.endDate.toDate() && end > r.startDate.toDate();
+        });
+        return clash ? itemId : null;
+      })
+    );
+    return results.filter((id): id is string => id !== null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -146,8 +167,9 @@ export default function ReservationForm() {
 
   function toggleItem(id: string) {
     const item = items.find((i) => i.id === id);
-    if (item?.condition === 'needs_attention' || item?.condition === 'needs_investigating' || item?.condition === 'damaged') return;
-    setSelectedKitId(null);
+    if (item && isFlagged(item)) return;
+    // Manually picking an item deselects any active kit
+    if (selectedKitId) { setSelectedKitId(null); setKitWarnings([]); }
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
@@ -155,9 +177,8 @@ export default function ReservationForm() {
 
   const filteredItems = items.filter(
     (i) =>
-      !i.kitId &&
-      (i.name.toLowerCase().includes(search.toLowerCase()) ||
-        i.category.toLowerCase().includes(search.toLowerCase()))
+      i.name.toLowerCase().includes(search.toLowerCase()) ||
+      i.category.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -218,6 +239,16 @@ export default function ReservationForm() {
                 </button>
               ))}
             </div>
+            {kitWarnings.length > 0 && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-600" />
+                <span>
+                  {selectedItems.length} of {selectedItems.length + kitWarnings.length} items selected —{' '}
+                  <strong>{kitWarnings.join(', ')}</strong>{' '}
+                  {kitWarnings.length === 1 ? 'is' : 'are'} currently unavailable and won't be included.
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -236,7 +267,7 @@ export default function ReservationForm() {
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);
               const isSelected = selectedItems.includes(item.id);
-              const isBlocked = item.condition === 'needs_attention' || item.condition === 'needs_investigating' || item.condition === 'damaged';
+              const isBlocked = isFlagged(item);
               return (
                 <button
                   key={item.id}

@@ -1,32 +1,25 @@
-import { useEffect, useState } from 'react';
-import {
-  collection, onSnapshot, addDoc, updateDoc,
-  doc, serverTimestamp, Timestamp,
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { useState } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '../../context/useAuth';
 import type { Item } from '../../types';
 import { writeAuditLog } from '../../lib/auditLog';
+import { createCheckout } from '../../lib/checkout';
+import { isFlagged } from '../../lib/items';
+import { useItems } from '../../store/items';
 import { Search, Package, X, Loader2 } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import toast from 'react-hot-toast';
 
 export default function Browse() {
   const { currentUser, appUser } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
+  const { items } = useItems();
   const [query, setQuery] = useState('');
   const [checkoutItem, setCheckoutItem] = useState<Item | null>(null);
   const [dueDate, setDueDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
   const [checkingOut, setCheckingOut] = useState(false);
 
-  useEffect(() => {
-    return onSnapshot(collection(db, 'items'), (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
-    });
-  }, []);
-
   const filtered = items.filter((item) => {
-    if (item.status !== 'available') return false;
+    if (item.status !== 'available' || isFlagged(item)) return false;
     if (!query) return true;
     const q = query.toLowerCase();
     return (
@@ -41,31 +34,27 @@ export default function Browse() {
     if (!checkoutItem || !currentUser || !appUser) return;
     setCheckingOut(true);
     try {
-      const due = Timestamp.fromDate(new Date(dueDate + 'T23:59:59'));
-      await addDoc(collection(db, 'checkouts'), {
+      const checkoutId = await createCheckout({
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
         itemIds: [checkoutItem.id],
-        checkedOutAt: serverTimestamp(),
-        dueDate: due,
-        status: 'active',
+        dueDate: Timestamp.fromDate(new Date(dueDate + 'T23:59:59')),
       });
-      await updateDoc(doc(db, 'items', checkoutItem.id), { status: 'checked_out' });
       await writeAuditLog({
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
-        targetId: checkoutItem.id,
+        targetId: checkoutId,
         targetName: checkoutItem.name,
         details: { source: 'mobile', due: format(new Date(dueDate), 'd MMM yyyy') },
       });
       toast.success(`${checkoutItem.name} checked out`);
       setCheckoutItem(null);
       setDueDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
-    } catch {
-      toast.error('Checkout failed — try again');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Checkout failed — try again');
     } finally {
       setCheckingOut(false);
     }

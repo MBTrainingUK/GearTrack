@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/useAuth';
-import type { ConditionReport, Checkout } from '../types';
+import type { ConditionReport } from '../types';
 import { writeAuditLog } from '../lib/auditLog';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,13 +12,14 @@ interface Props {
   itemIds: string[];
   targetName: string;
   mode: 'checkout' | 'return';
+  reservationId?: string;
   onClose: () => void;
   onConfirm: () => void;
 }
 
 const conditions = ['excellent', 'good', 'fair', 'poor', 'damaged'] as const;
 
-export default function ConditionModal({ checkoutId, itemIds, targetName, mode, onClose, onConfirm }: Props) {
+export default function ConditionModal({ checkoutId, itemIds, targetName, mode, reservationId, onClose, onConfirm }: Props) {
   const { currentUser, appUser } = useAuth();
   const [condition, setCondition] = useState<ConditionReport['condition']>('good');
   const [notes, setNotes] = useState('');
@@ -38,7 +39,10 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
     const checkoutRef = doc(db, 'checkouts', checkoutId);
     try {
       if (mode === 'return') {
-        await updateDoc(checkoutRef, {
+        // One atomic batch: the checkout, every item, and any linked
+        // reservation all change together or not at all.
+        const batch = writeBatch(db);
+        batch.update(checkoutRef, {
           returnCondition: report,
           returnedAt: serverTimestamp(),
           status: 'returned',
@@ -49,7 +53,7 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
           condition === 'poor' ? 'needs_investigating' :
           null;
         for (const itemId of itemIds) {
-          await updateDoc(doc(db, 'items', itemId), {
+          batch.update(doc(db, 'items', itemId), {
             status: 'available',
             updatedAt: serverTimestamp(),
             ...(autoFlagCondition ? {
@@ -59,14 +63,13 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
           });
         }
         // If this checkout came from a reservation, mark it completed on return.
-        const snap = await getDoc(checkoutRef);
-        const reservationId = (snap.data() as Checkout | undefined)?.reservationId;
         if (reservationId) {
-          await updateDoc(doc(db, 'reservations', reservationId), {
+          batch.update(doc(db, 'reservations', reservationId), {
             status: 'completed',
             updatedAt: serverTimestamp(),
           });
         }
+        await batch.commit();
       } else {
         await updateDoc(checkoutRef, { checkoutCondition: report });
       }

@@ -8,7 +8,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/useAuth';
-import type { Item, Checkout, Reservation } from '../types';
+import type { Checkout, Reservation } from '../types';
+import { isFlagged } from '../lib/items';
+import { useItems } from '../store/items';
 import { Link, useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -35,7 +37,7 @@ import { isOverdue } from '../lib/checkout';
 export default function Dashboard() {
   const { appUser } = useAuth();
   const navigate = useNavigate();
-  const [items, setItems] = useState<Item[]>([]);
+  const { items } = useItems();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [recentCheckouts, setRecentCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -44,11 +46,9 @@ export default function Dashboard() {
   useEffect(() => {
     const sevenDaysAgo = Timestamp.fromDate(subDays(new Date(), 7));
     const unsubs = [
-      onSnapshot(collection(db, 'items'), (s) =>
-        setItems(s.docs.map((d) => ({ id: d.id, ...d.data() } as Item)))
-      ),
       onSnapshot(
-        query(collection(db, 'checkouts'), where('status', 'in', ['active', 'overdue'])),
+        // 'overdue' is never persisted — active covers everything still out
+        query(collection(db, 'checkouts'), where('status', '==', 'active')),
         (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
       onSnapshot(
@@ -156,7 +156,7 @@ export default function Dashboard() {
       )}
 
       {(() => {
-        const flagged = items.filter((i) => i.condition === 'needs_investigating' || i.condition === 'needs_attention' || i.condition === 'damaged');
+        const flagged = items.filter(isFlagged);
         if (flagged.length === 0) return null;
         return (
           <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 space-y-2">

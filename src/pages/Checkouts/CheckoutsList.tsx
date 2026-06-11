@@ -4,24 +4,23 @@ import {
   onSnapshot,
   query,
   orderBy,
-  addDoc,
-  updateDoc,
   doc,
   getDoc,
-  serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Checkout, Item, Reservation, Kit } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, AlertTriangle, X, Check, Zap } from 'lucide-react';
+import { Plus, AlertTriangle, X, Check, Zap, AlertCircle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
-import { isOverdue } from '../../lib/checkout';
+import { isOverdue, createCheckout } from '../../lib/checkout';
+import { isFlagged } from '../../lib/items';
+import { useItems } from '../../store/items';
 
 export default function CheckoutsList() {
   const { appUser } = useAuth();
@@ -29,7 +28,7 @@ export default function CheckoutsList() {
   const reservationId = searchParams.get('reservationId');
 
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
-  const [items, setItems] = useState<Record<string, Item>>({});
+  const { items: itemsList, byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'returned'>('all');
   const [conditionModal, setConditionModal] = useState<{
@@ -37,6 +36,7 @@ export default function CheckoutsList() {
     itemIds: string[];
     targetName: string;
     mode: 'checkout' | 'return';
+    reservationId?: string;
   } | null>(null);
   const [showNewModal, setShowNewModal] = useState(Boolean(reservationId));
 
@@ -46,11 +46,6 @@ export default function CheckoutsList() {
         query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc')),
         (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
-      onSnapshot(collection(db, 'items'), (s) => {
-        const map: Record<string, Item> = {};
-        s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
-        setItems(map);
-      }),
       onSnapshot(collection(db, 'kits'), (s) => {
         const map: Record<string, Kit> = {};
         s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Kit; });
@@ -165,7 +160,7 @@ export default function CheckoutsList() {
                           onClick={() => {
                             const names = c.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Item').join(', ');
                             const extra = c.itemIds.length > 2 ? ` +${c.itemIds.length - 2} more` : '';
-                            setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return' });
+                            setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return', reservationId: c.reservationId ?? undefined });
                           }
                           }
                           className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
@@ -194,6 +189,7 @@ export default function CheckoutsList() {
           itemIds={conditionModal.itemIds}
           targetName={conditionModal.targetName}
           mode={conditionModal.mode}
+          reservationId={conditionModal.reservationId}
           onClose={() => setConditionModal(null)}
           onConfirm={() => {
             setConditionModal(null);
@@ -205,7 +201,7 @@ export default function CheckoutsList() {
       {/* New checkout modal */}
       {showNewModal && (
         <NewCheckoutModal
-          items={Object.values(items)}
+          items={itemsList}
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
           onClose={() => setShowNewModal(false)}
@@ -240,6 +236,7 @@ function NewCheckoutModal({
   const [search, setSearch] = useState('');
   const [checkoutTab, setCheckoutTab] = useState<'items' | 'kit'>('items');
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
+  const [kitWarnings, setKitWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (!reservationId) return;
@@ -247,123 +244,85 @@ function NewCheckoutModal({
       if (snap.exists()) {
         const r = snap.data() as Reservation;
         setSelectedItems(r.itemIds);
-        setDueDate(r.endDate.toDate().toISOString().slice(0, 16));
+        // datetime-local expects local time, not the UTC that toISOString gives
+        setDueDate(format(r.endDate.toDate(), "yyyy-MM-dd'T'HH:mm"));
       }
     });
   }, [reservationId]);
 
   function selectKit(kit: Kit) {
-    const availableIds = kit.itemIds.filter((id) => {
+    const available: string[] = [];
+    const warned: string[] = [];
+    kit.itemIds.forEach((id) => {
       const item = items.find((i) => i.id === id);
-      return item && item.status === 'available' &&
-        item.condition !== 'needs_attention' &&
-        item.condition !== 'needs_investigating' &&
-        item.condition !== 'damaged';
+      if (!item || isFlagged(item) || item.status !== 'available') {
+        warned.push(item?.name ?? id);
+      } else {
+        available.push(id);
+      }
     });
     setSelectedKitId(kit.id);
-    setSelectedItems(availableIds);
+    setSelectedItems(available);
+    setKitWarnings(warned);
   }
 
-  async function quickGrab(itemIds: string[]) {
-    if (!currentUser || !appUser || itemIds.length === 0) return;
+  function checkoutName(itemIds: string[]) {
+    return selectedKitId
+      ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
+      : itemIds.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
+        (itemIds.length > 2 ? ` +${itemIds.length - 2} more` : '');
+  }
+
+  async function create(itemIds: string[], due: Timestamp, checkoutNotes: string, linkReservation: boolean) {
+    if (!currentUser || !appUser) return;
     setSaving(true);
     try {
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 0, 0);
-      const docRef = await addDoc(collection(db, 'checkouts'), {
-        reservationId: null,
+      const id = await createCheckout({
+        reservationId: linkReservation ? reservationId ?? null : null,
         kitId: selectedKitId ?? null,
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
         itemIds,
-        checkedOutAt: serverTimestamp(),
-        dueDate: Timestamp.fromDate(endOfToday),
-        status: 'active',
-        notes: 'Quick Grab',
+        dueDate: due,
+        notes: checkoutNotes,
       });
-      for (const itemId of itemIds) {
-        await updateDoc(doc(db, 'items', itemId), { status: 'checked_out', updatedAt: serverTimestamp() });
-      }
-      const quickName = selectedKitId
-        ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
-        : itemIds.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
-          (itemIds.length > 2 ? ` +${itemIds.length - 2} more` : '');
+      const name = checkoutName(itemIds);
       await writeAuditLog({
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
-        targetId: docRef.id,
-        targetName: quickName,
+        targetId: id,
+        targetName: name,
       });
-      onCreated(docRef.id, itemIds, quickName);
-    } catch {
-      toast.error('Failed to create checkout');
+      onCreated(id, itemIds, name);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create checkout');
     } finally {
       setSaving(false);
     }
   }
 
+  async function quickGrab(itemIds: string[]) {
+    if (itemIds.length === 0) return;
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 0, 0);
+    await create(itemIds, Timestamp.fromDate(endOfToday), 'Quick Grab', false);
+  }
+
   async function handleSubmit() {
-    if (!currentUser || !appUser || selectedItems.length === 0 || !dueDate) {
+    if (selectedItems.length === 0 || !dueDate) {
       toast.error('Select items and due date');
       return;
     }
-    setSaving(true);
-    try {
-      const docRef = await addDoc(collection(db, 'checkouts'), {
-        reservationId: reservationId ?? null,
-        kitId: selectedKitId ?? null,
-        userId: currentUser.uid,
-        userName: appUser.displayName,
-        userEmail: appUser.email,
-        itemIds: selectedItems,
-        checkedOutAt: serverTimestamp(),
-        dueDate: Timestamp.fromDate(new Date(dueDate)),
-        status: 'active',
-        notes,
-      });
-      // Update item statuses
-      for (const itemId of selectedItems) {
-        await updateDoc(doc(db, 'items', itemId), {
-          status: 'checked_out',
-          updatedAt: serverTimestamp(),
-        });
-      }
-      // Update reservation status if linked
-      if (reservationId) {
-        await updateDoc(doc(db, 'reservations', reservationId), {
-          status: 'checked_out',
-          updatedAt: serverTimestamp(),
-        });
-      }
-      const checkoutName = selectedKitId
-        ? (kits.find((k) => k.id === selectedKitId)?.name ?? 'Kit')
-        : selectedItems.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
-          (selectedItems.length > 2 ? ` +${selectedItems.length - 2} more` : '');
-      await writeAuditLog({
-        action: 'checkout',
-        performedBy: currentUser.uid,
-        performedByName: appUser.displayName,
-        targetType: 'checkout',
-        targetId: docRef.id,
-        targetName: checkoutName,
-      });
-      onCreated(docRef.id, selectedItems, checkoutName);
-    } catch {
-      toast.error('Failed to create checkout');
-    } finally {
-      setSaving(false);
-    }
+    await create(selectedItems, Timestamp.fromDate(new Date(dueDate)), notes, true);
   }
 
   const available = items.filter(
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
-      i.condition !== 'needs_attention' &&
-      i.condition !== 'needs_investigating' &&
-      i.condition !== 'damaged' &&
+      !isFlagged(i) &&
       (i.name.toLowerCase().includes(search.toLowerCase()) ||
         (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (i.serialNumber ?? '').toLowerCase().includes(search.toLowerCase()))
@@ -392,14 +351,14 @@ function NewCheckoutModal({
               <div className="mb-3 flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
                 <button
                   type="button"
-                  onClick={() => { setCheckoutTab('items'); setSelectedKitId(null); setSelectedItems([]); }}
+                  onClick={() => { setCheckoutTab('items'); setSelectedKitId(null); setSelectedItems([]); setKitWarnings([]); }}
                   className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'items' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   Individual Items
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setCheckoutTab('kit'); setSelectedItems([]); setSelectedKitId(null); }}
+                  onClick={() => { setCheckoutTab('kit'); setSelectedItems([]); setSelectedKitId(null); setKitWarnings([]); }}
                   className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'kit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                 >
                   Kit
@@ -461,10 +420,7 @@ function NewCheckoutModal({
                     kits.map((kit) => {
                       const availableCount = kit.itemIds.filter((id) => {
                         const item = items.find((i) => i.id === id);
-                        return item && item.status === 'available' &&
-                          item.condition !== 'needs_attention' &&
-                          item.condition !== 'needs_investigating' &&
-                          item.condition !== 'damaged';
+                        return item && item.status === 'available' && !isFlagged(item);
                       }).length;
                       const isSelected = selectedKitId === kit.id;
                       return (
@@ -477,11 +433,19 @@ function NewCheckoutModal({
                           <p className="text-sm font-medium text-gray-900">{kit.name}</p>
                           <p className="mt-0.5 text-xs text-gray-500">
                             {availableCount} of {kit.itemIds.length} items available
-                            {isSelected && selectedItems.length > 0 && ` · ${selectedItems.length} ready to check out`}
                           </p>
                         </button>
                       );
                     })
+                  )}
+                  {checkoutTab === 'kit' && kitWarnings.length > 0 && (
+                    <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      <AlertCircle size={12} className="mt-0.5 shrink-0 text-amber-600" />
+                      <span>
+                        <strong>{kitWarnings.join(', ')}</strong>{' '}
+                        {kitWarnings.length === 1 ? 'is' : 'are'} unavailable and won't be included.
+                      </span>
+                    </div>
                   )}
                 </div>
               </>

@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   collection,
   onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   doc,
+  writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -16,34 +14,28 @@ import StatusBadge from '../../components/StatusBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
+import { useItems } from '../../store/items';
 
 export default function KitsList() {
   const { appUser, currentUser } = useAuth();
   const [kits, setKits] = useState<Kit[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
+  const { items } = useItems();
   const [showForm, setShowForm] = useState(false);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const unsubs = [
-      onSnapshot(collection(db, 'kits'), (s) =>
-        setKits(s.docs.map((d) => ({ id: d.id, ...d.data() } as Kit)))
-      ),
-      onSnapshot(collection(db, 'items'), (s) =>
-        setItems(s.docs.map((d) => ({ id: d.id, ...d.data() } as Item)))
-      ),
-    ];
-    return () => unsubs.forEach((u) => u());
+    return onSnapshot(collection(db, 'kits'), (s) =>
+      setKits(s.docs.map((d) => ({ id: d.id, ...d.data() } as Kit)))
+    );
   }, []);
 
   async function handleDelete(kit: Kit) {
     if (!confirm(`Delete kit "${kit.name}"?`)) return;
     try {
-      // Unlink items from this kit
-      for (const itemId of kit.itemIds) {
-        await updateDoc(doc(db, 'items', itemId), { kitId: null });
-      }
-      await deleteDoc(doc(db, 'kits', kit.id));
+      // Items are not owned by kits, so just delete the kit document
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'kits', kit.id));
+      await batch.commit();
       await writeAuditLog({
         action: 'delete_kit',
         performedBy: currentUser!.uid,
@@ -131,7 +123,8 @@ export default function KitsList() {
                         onClick={() =>
                           setExpandedKits((prev) => {
                             const next = new Set(prev);
-                            isExpanded ? next.delete(kit.id) : next.add(kit.id);
+                            if (isExpanded) next.delete(kit.id);
+                            else next.add(kit.id);
                             return next;
                           })
                         }
@@ -176,7 +169,7 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
   const [search, setSearch] = useState('');
 
   const availableItems = items.filter(
-    (i) => !i.kitId && i.name.toLowerCase().includes(search.toLowerCase())
+    (i) => i.name.toLowerCase().includes(search.toLowerCase())
   );
 
   function toggleItem(id: string) {
@@ -190,19 +183,18 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
     }
     setSaving(true);
     try {
-      const ref = await addDoc(collection(db, 'kits'), {
+      // Items are not owned by kits; just create the kit document
+      const ref = doc(collection(db, 'kits'));
+      const batch = writeBatch(db);
+      batch.set(ref, {
         name,
         description,
         itemIds: selectedItems,
         photoURLs: [],
-        status: 'available',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      // Link items to this kit
-      for (const itemId of selectedItems) {
-        await updateDoc(doc(db, 'items', itemId), { kitId: ref.id });
-      }
+      await batch.commit();
       await writeAuditLog({
         action: 'create_kit',
         performedBy: currentUser!.uid,
@@ -277,7 +269,7 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
                 </button>
               ))}
               {availableItems.length === 0 && (
-                <p className="px-3 py-4 text-center text-xs text-gray-400">No available items</p>
+                <p className="px-3 py-4 text-center text-xs text-gray-400">No items found</p>
               )}
             </div>
           </div>

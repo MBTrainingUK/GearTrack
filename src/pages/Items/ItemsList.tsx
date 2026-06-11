@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useState } from 'react';
+import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Item } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Package, Trash2 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -9,6 +8,7 @@ import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
+import { useItems } from '../../store/items';
 
 const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
 
@@ -22,16 +22,10 @@ const CONDITIONS = [
 
 export default function ItemsList() {
   const { appUser, currentUser } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
+  const { items } = useItems();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [condition, setCondition] = useState<'all' | 'good' | 'needs_attention' | 'needs_investigating' | 'damaged'>('all');
-
-  useEffect(() => {
-    return onSnapshot(collection(db, 'items'), (s) =>
-      setItems(s.docs.map((d) => ({ id: d.id, ...d.data() } as Item)))
-    );
-  }, []);
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this item? This cannot be undone.')) return;

@@ -10,7 +10,6 @@ export interface AppUser {
   role: UserRole;
   photoURL?: string;
   createdAt: Timestamp;
-  lastLogin?: Timestamp;
 }
 
 // ── Item ─────────────────────────────────────────────────────────────
@@ -34,9 +33,6 @@ export interface Item {
   purchasePrice?: number;
   expectedLifespanMonths?: number;
   lifespanResetDate?: Timestamp;
-  kitId?: string;
-  customFields?: Record<string, string>;
-  qrCode?: string;
   notes?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -49,7 +45,6 @@ export interface Kit {
   description: string;
   photoURL?: string;
   itemIds: string[];
-  status: ItemStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -102,7 +97,6 @@ export interface Checkout {
   status: CheckoutStatus;
   checkoutCondition?: ConditionReport;
   returnCondition?: ConditionReport;
-  signatureURL?: string;
   notes?: string;
 }
 
@@ -118,7 +112,6 @@ export type AuditAction =
   | 'update_item'
   | 'delete_item'
   | 'create_kit'
-  | 'update_kit'
   | 'delete_kit'
   | 'approve_reservation';
 

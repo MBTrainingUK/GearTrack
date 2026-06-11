@@ -75,6 +75,8 @@ export default function ItemForm() {
       purchaseDate: form.purchaseDate ? Timestamp.fromDate(new Date(form.purchaseDate)) : null,
       purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : null,
       expectedLifespanMonths: form.expectedLifespanMonths ? Number(form.expectedLifespanMonths) : null,
+      // Setting condition back to good clears any stale flag note
+      ...(form.condition === 'good' ? { conditionFlagNote: '' } : {}),
       updatedAt: serverTimestamp(),
     };
     try {

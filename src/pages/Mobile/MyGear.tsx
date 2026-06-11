@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
   collection, query, where, onSnapshot,
-  doc, updateDoc, serverTimestamp,
+  doc, writeBatch, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
-import type { Checkout, Item } from '../../types';
+import type { Checkout } from '../../types';
 import { isOverdue } from '../../lib/checkout';
 import { writeAuditLog } from '../../lib/auditLog';
+import { useItems } from '../../store/items';
 import { format } from 'date-fns';
 import { PackageCheck, RotateCcw, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -15,7 +16,7 @@ import toast from 'react-hot-toast';
 export default function MyGear() {
   const { currentUser, appUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
-  const [items, setItems] = useState<Record<string, Item>>({});
+  const { byId: items } = useItems();
   const [loading, setLoading] = useState(true);
   const [returningId, setReturningId] = useState<string | null>(null);
   const [confirmReturn, setConfirmReturn] = useState<Checkout | null>(null);
@@ -25,7 +26,7 @@ export default function MyGear() {
     const q = query(
       collection(db, 'checkouts'),
       where('userId', '==', currentUser.uid),
-      where('status', 'in', ['active', 'overdue']),
+      where('status', '==', 'active'),
     );
     const unsub = onSnapshot(q, (snap) => {
       setCheckouts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)));
@@ -34,26 +35,26 @@ export default function MyGear() {
     return unsub;
   }, [currentUser]);
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'items'), (snap) => {
-      const map: Record<string, Item> = {};
-      snap.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
-      setItems(map);
-    });
-    return unsub;
-  }, []);
-
   async function returnCheckout(checkout: Checkout) {
     setReturningId(checkout.id);
     setConfirmReturn(null);
     try {
-      await updateDoc(doc(db, 'checkouts', checkout.id), {
+      // One atomic batch: checkout, items, and any linked reservation.
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'checkouts', checkout.id), {
         status: 'returned',
         returnedAt: serverTimestamp(),
       });
-      await Promise.all(
-        checkout.itemIds.map((id) => updateDoc(doc(db, 'items', id), { status: 'available' }))
+      checkout.itemIds.forEach((id) =>
+        batch.update(doc(db, 'items', id), { status: 'available', updatedAt: serverTimestamp() })
       );
+      if (checkout.reservationId) {
+        batch.update(doc(db, 'reservations', checkout.reservationId), {
+          status: 'completed',
+          updatedAt: serverTimestamp(),
+        });
+      }
+      await batch.commit();
       const itemNames = checkout.itemIds
         .map((id) => items[id]?.name ?? id)
         .join(', ');

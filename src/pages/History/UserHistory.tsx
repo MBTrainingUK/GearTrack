@@ -6,8 +6,9 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Checkout, Reservation, Item } from '../../types';
+import type { Checkout, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
+import { useItems } from '../../store/items';
 import StatusBadge from '../../components/StatusBadge';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
@@ -17,7 +18,7 @@ export default function UserHistory() {
   const { currentUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [items, setItems] = useState<Record<string, Item>>({});
+  const { byId: items } = useItems();
   const [tab, setTab] = useState<'checkouts' | 'reservations'>('checkouts');
   const [loading, setLoading] = useState(true);
 
@@ -36,8 +37,7 @@ export default function UserHistory() {
           where('userId', '==', currentUser.uid)
         )
       ),
-      getDocs(collection(db, 'items')),
-    ]).then(([cSnap, rSnap, iSnap]) => {
+    ]).then(([cSnap, rSnap]) => {
       setCheckouts(
         cSnap.docs
           .map((d) => ({ id: d.id, ...d.data() } as Checkout))
@@ -48,9 +48,6 @@ export default function UserHistory() {
           .map((d) => ({ id: d.id, ...d.data() } as Reservation))
           .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0))
       );
-      const map: Record<string, Item> = {};
-      iSnap.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Item; });
-      setItems(map);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [currentUser]);

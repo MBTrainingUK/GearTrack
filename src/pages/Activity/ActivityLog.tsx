@@ -19,7 +19,6 @@ const ACTION_LABELS: Record<string, string> = {
   update_item: 'Updated item',
   delete_item: 'Deleted item',
   create_kit: 'Created kit',
-  update_kit: 'Updated kit',
   delete_kit: 'Deleted kit',
 };
 
@@ -35,7 +34,6 @@ const ACTION_COLOURS: Record<string, string> = {
   update_item: 'bg-gray-100 text-gray-600',
   delete_item: 'bg-red-50 text-red-700',
   create_kit: 'bg-violet-50 text-violet-700',
-  update_kit: 'bg-gray-100 text-gray-600',
   delete_kit: 'bg-red-50 text-red-700',
 };
 

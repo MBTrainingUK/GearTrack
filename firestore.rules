@@ -19,15 +19,23 @@ service cloud.firestore {
     // ── users ─────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      // New accounts always start as basic users.
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+      // Users may edit their own profile but never their own role.
+      allow update: if isAdmin()
+        || (isOwner(userId) && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
     }
 
     // ── items ─────────────────────────────────────────────
     match /items/{itemId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isManager();
+      allow create, delete: if isManager();
+      // Any signed-in user may flip availability when checking gear in/out
+      // (mobile self-service); only managers may edit anything else.
+      allow update: if isManager()
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
     }
 
     // ── kits ──────────────────────────────────────────────
@@ -40,22 +48,23 @@ service cloud.firestore {
     match /reservations/{resId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isManager() || (isOwner(resource.data.userId) && resource.data.status == 'pending');
+      // Owners may edit while pending, and may close out their own
+      // checked-out reservation when returning gear from mobile.
+      allow update: if isManager()
+        || (isOwner(resource.data.userId) && resource.data.status == 'pending')
+        || (isOwner(resource.data.userId)
+            && resource.data.status == 'checked_out'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
       allow delete: if isManager();
     }
 
     // ── checkouts ─────────────────────────────────────────
     match /checkouts/{checkoutId} {
       allow read: if isSignedIn();
-      allow create, update: if isManager();
-      allow delete: if isAdmin();
-    }
-
-    // ── flags ─────────────────────────────────────────────
-    match /flags/{flagId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isManager();
+      // Users may check gear out for themselves and return their own checkouts.
+      allow create: if isManager() || isOwner(request.resource.data.userId);
+      allow update: if isManager() || isOwner(resource.data.userId);
       allow delete: if isAdmin();
     }
 

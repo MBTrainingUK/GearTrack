@@ -141,13 +141,15 @@ export default function ItemDetail() {
           >
             Reserve
           </Link>
-          <Link
-            to={`/items/${item.id}/edit`}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            <Edit size={14} />
-            Edit
-          </Link>
+          {appUser?.role !== 'user' && (
+            <Link
+              to={`/items/${item.id}/edit`}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              <Edit size={14} />
+              Edit
+            </Link>
+          )}
         </div>
       </div>
 
@@ -183,7 +185,7 @@ export default function ItemDetail() {
               {item.purchaseDate && (
                 <InfoRow icon={CalendarDays} label="Purchased" value={formatTS(item.purchaseDate)} />
               )}
-              {item.purchasePrice && (
+              {item.purchasePrice != null && (
                 <InfoRow icon={PoundSterling} label="Value" value={`£${item.purchasePrice.toLocaleString('en-GB')}`} />
               )}
             </dl>

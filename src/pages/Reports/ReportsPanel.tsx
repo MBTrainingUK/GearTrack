@@ -80,7 +80,7 @@ export default function ReportsPanel() {
 
       const sortedItems = Object.values(iMap).sort((a, b) => b.checkoutCount - a.checkoutCount);
       setItemStats(sortedItems);
-      setNeverUsed(items.filter((i) => !iMap[i.id] || iMap[i.id].checkoutCount === 0));
+      setNeverUsed(items.filter((i) => iMap[i.id].checkoutCount === 0));
 
       // --- User stats ---
       const uMap: Record<string, UserStat> = {};

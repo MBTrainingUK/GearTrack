@@ -24,13 +24,14 @@ import interactionPlugin from '@fullcalendar/interaction';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
+import { useItems } from '../../store/items';
 
 export default function ReservationsList() {
   const { appUser, currentUser } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<Reservation['status'] | 'all'>('all');
-  const [items, setItems] = useState<Record<string, Item>>({});
+  const { byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
 
@@ -42,13 +43,7 @@ export default function ReservationsList() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      getDocs(collection(db, 'items')),
-      getDocs(collection(db, 'kits')),
-    ]).then(([itemSnap, kitSnap]) => {
-      const iMap: Record<string, Item> = {};
-      itemSnap.docs.forEach((d) => { iMap[d.id] = { id: d.id, ...d.data() } as Item; });
-      setItems(iMap);
+    getDocs(collection(db, 'kits')).then((kitSnap) => {
       const kMap: Record<string, Kit> = {};
       kitSnap.docs.forEach((d) => { kMap[d.id] = { id: d.id, ...d.data() } as Kit; });
       setKits(kMap);

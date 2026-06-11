@@ -6,8 +6,7 @@ import { writeAuditLog } from '../../lib/auditLog';
 import { createCheckout } from '../../lib/checkout';
 import { isFlagged } from '../../lib/items';
 import { useItems } from '../../store/items';
-import { Search, Package, X, Loader2 } from 'lucide-react';
-import { addDays, format } from 'date-fns';
+import { Search, Package, X, Loader2, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Browse() {
@@ -15,7 +14,6 @@ export default function Browse() {
   const { items } = useItems();
   const [query, setQuery] = useState('');
   const [checkoutItem, setCheckoutItem] = useState<Item | null>(null);
-  const [dueDate, setDueDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
   const [checkingOut, setCheckingOut] = useState(false);
 
   const filtered = items.filter((item) => {
@@ -30,16 +28,19 @@ export default function Browse() {
     );
   });
 
-  async function confirmCheckout() {
+  async function confirmQuickGrab() {
     if (!checkoutItem || !currentUser || !appUser) return;
     setCheckingOut(true);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 0, 0);
     try {
       const checkoutId = await createCheckout({
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
         itemIds: [checkoutItem.id],
-        dueDate: Timestamp.fromDate(new Date(dueDate + 'T23:59:59')),
+        dueDate: Timestamp.fromDate(endOfToday),
+        notes: 'Quick Grab',
       });
       await writeAuditLog({
         action: 'checkout',
@@ -48,11 +49,10 @@ export default function Browse() {
         targetType: 'checkout',
         targetId: checkoutId,
         targetName: checkoutItem.name,
-        details: { source: 'mobile', due: format(new Date(dueDate), 'd MMM yyyy') },
+        details: { source: 'mobile', quickGrab: true },
       });
-      toast.success(`${checkoutItem.name} checked out`);
+      toast.success(`${checkoutItem.name} grabbed — due end of today`);
       setCheckoutItem(null);
-      setDueDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Checkout failed — try again');
     } finally {
@@ -114,9 +114,10 @@ export default function Browse() {
             </div>
             <button
               onClick={() => setCheckoutItem(item)}
-              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700"
+              className="shrink-0 flex items-center gap-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-medium text-white hover:bg-amber-600"
             >
-              Check Out
+              <Zap size={12} />
+              Quick Grab
             </button>
           </div>
         ))}
@@ -143,17 +144,8 @@ export default function Browse() {
                 <X size={18} />
               </button>
             </div>
-            <div className="px-6 py-4 space-y-3">
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-gray-700">Due date</span>
-                <input
-                  type="date"
-                  value={dueDate}
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </label>
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-500">Due back by end of today.</p>
             </div>
             <div className="flex gap-3 px-6 pb-5">
               <button
@@ -163,12 +155,12 @@ export default function Browse() {
                 Cancel
               </button>
               <button
-                onClick={confirmCheckout}
+                onClick={confirmQuickGrab}
                 disabled={checkingOut}
-                className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 rounded-xl bg-amber-500 py-3 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {checkingOut && <Loader2 size={14} className="animate-spin" />}
-                Confirm
+                {checkingOut ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                Quick Grab
               </button>
             </div>
           </div>

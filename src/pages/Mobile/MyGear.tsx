@@ -1,24 +1,20 @@
 import { useEffect, useState } from 'react';
-import {
-  collection, query, where, onSnapshot,
-  doc, writeBatch, serverTimestamp,
-} from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { Checkout } from '../../types';
 import { isOverdue } from '../../lib/checkout';
-import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
 import { format } from 'date-fns';
 import { PackageCheck, RotateCcw, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConditionModal from '../../components/ConditionModal';
 
 export default function MyGear() {
   const { currentUser, appUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { byId: items } = useItems();
   const [loading, setLoading] = useState(true);
-  const [returningId, setReturningId] = useState<string | null>(null);
   const [confirmReturn, setConfirmReturn] = useState<Checkout | null>(null);
 
   useEffect(() => {
@@ -34,46 +30,6 @@ export default function MyGear() {
     });
     return unsub;
   }, [currentUser]);
-
-  async function returnCheckout(checkout: Checkout) {
-    setReturningId(checkout.id);
-    setConfirmReturn(null);
-    try {
-      // One atomic batch: checkout, items, and any linked reservation.
-      const batch = writeBatch(db);
-      batch.update(doc(db, 'checkouts', checkout.id), {
-        status: 'returned',
-        returnedAt: serverTimestamp(),
-      });
-      checkout.itemIds.forEach((id) =>
-        batch.update(doc(db, 'items', id), { status: 'available', updatedAt: serverTimestamp() })
-      );
-      if (checkout.reservationId) {
-        batch.update(doc(db, 'reservations', checkout.reservationId), {
-          status: 'completed',
-          updatedAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-      const itemNames = checkout.itemIds
-        .map((id) => items[id]?.name ?? id)
-        .join(', ');
-      await writeAuditLog({
-        action: 'checkin',
-        performedBy: currentUser!.uid,
-        performedByName: appUser!.displayName,
-        targetType: 'checkout',
-        targetId: checkout.id,
-        targetName: itemNames,
-        details: { source: 'mobile' },
-      });
-      toast.success('Returned successfully');
-    } catch {
-      toast.error('Failed to return — try again');
-    } finally {
-      setReturningId(null);
-    }
-  }
 
   function itemNamesFor(checkout: Checkout) {
     return checkout.itemIds.map((id) => items[id]?.name ?? '…').join(', ');
@@ -136,12 +92,9 @@ export default function MyGear() {
               </div>
               <button
                 onClick={() => setConfirmReturn(co)}
-                disabled={returningId === co.id}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
-                {returningId === co.id
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <RotateCcw size={14} />}
+                <RotateCcw size={14} />
                 Return
               </button>
             </div>
@@ -149,36 +102,19 @@ export default function MyGear() {
         );
       })}
 
-      {/* Return confirmation */}
       {confirmReturn && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4"
-          onClick={() => setConfirmReturn(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white shadow-xl mb-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-6 pt-6 pb-2 space-y-1">
-              <h2 className="font-semibold text-gray-900">Return gear?</h2>
-              <p className="text-sm text-gray-500">{itemNamesFor(confirmReturn)}</p>
-            </div>
-            <div className="flex gap-3 px-6 py-4">
-              <button
-                onClick={() => setConfirmReturn(null)}
-                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => returnCheckout(confirmReturn)}
-                className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-medium text-white"
-              >
-                Confirm Return
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConditionModal
+          checkoutId={confirmReturn.id}
+          itemIds={confirmReturn.itemIds}
+          targetName={itemNamesFor(confirmReturn)}
+          mode="return"
+          reservationId={confirmReturn.reservationId}
+          onClose={() => setConfirmReturn(null)}
+          onConfirm={() => {
+            setConfirmReturn(null);
+            toast.success('Returned successfully');
+          }}
+        />
       )}
     </div>
   );

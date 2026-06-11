@@ -15,6 +15,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '../context/useAuth';
 import type { AppUser } from '../types';
+import AppLogo from './AppLogo';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, minRole: 'user' },
@@ -68,7 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="GearTrack" className="h-7 w-7 rounded-lg" />
+          <AppLogo size={28} />
           <span className="font-bold text-gray-900">GearTrack</span>
         </header>
 
@@ -92,7 +93,7 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-5">
-        <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="GearTrack" className="h-8 w-8 rounded-lg" />
+        <AppLogo size={32} />
         <span className="text-base font-bold text-gray-900">GearTrack</span>
       </div>
 

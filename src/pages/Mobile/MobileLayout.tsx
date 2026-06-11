@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Package, PackageCheck, LogOut } from 'lucide-react';
+import AppLogo from '../../components/AppLogo';
 import { useAuth } from '../../context/useAuth';
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
@@ -16,9 +17,7 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
       {/* Header */}
       <header className="flex items-center justify-between bg-white border-b border-gray-100 px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
-            <Package size={14} className="text-white" />
-          </div>
+          <AppLogo size={28} />
           <span className="font-semibold text-gray-900 text-sm">GearTrack</span>
         </div>
         <div className="flex items-center gap-3">

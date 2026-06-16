@@ -15,13 +15,13 @@ import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
-
-const CATEGORIES = ['Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
+import { useCategories, addCategory } from '../../store/categories';
 
 export default function ItemForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, appUser } = useAuth();
+  const { categories } = useCategories();
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState({
@@ -65,6 +65,17 @@ export default function ItemForm() {
 
   function set(key: string, val: string) {
     setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  async function handleAddCategory() {
+    const name = window.prompt('New category name:')?.trim();
+    if (!name) return;
+    try {
+      await addCategory(name);
+      set('category', name);
+    } catch {
+      toast.error('Failed to add category');
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -148,13 +159,23 @@ export default function ItemForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Category *</label>
-            <select
-              value={form.category}
-              onChange={(e) => set('category', e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={form.category}
+                onChange={(e) => set('category', e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {categories.map((c) => <option key={c}>{c}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                title="Add a new category"
+                className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                + Add
+              </button>
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Asset No.</label>

@@ -38,6 +38,12 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
     }
 
+    // ── categories ────────────────────────────────────────
+    match /categories/{categoryId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManager();
+    }
+
     // ── kits ──────────────────────────────────────────────
     match /kits/{kitId} {
       allow read: if isSignedIn();

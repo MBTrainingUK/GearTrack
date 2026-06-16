@@ -9,8 +9,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
-
-const CATEGORIES = ['All', 'Camera', 'Lighting', 'Audio', 'Lens', 'Tripod', 'Computer', 'Memory Card', 'Other'];
+import { useCategories } from '../../store/categories';
 
 const CONDITIONS = [
   { value: 'all', label: 'All Conditions' },
@@ -23,6 +22,7 @@ const CONDITIONS = [
 export default function ItemsList() {
   const { appUser, currentUser } = useAuth();
   const { items } = useItems();
+  const { categories } = useCategories();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [condition, setCondition] = useState<'all' | 'good' | 'needs_attention' | 'needs_investigating' | 'damaged'>('all');
@@ -88,36 +88,21 @@ export default function ItemsList() {
             className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                category === c
-                  ? 'border-blue-600 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {CONDITIONS.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => setCondition(c.value)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                condition === c.value
-                  ? 'border-rose-500 bg-rose-50 text-rose-700'
-                  : 'border-gray-200 text-gray-600 hover:border-rose-300'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="All">All Categories</option>
+          {categories.map((c) => <option key={c}>{c}</option>)}
+        </select>
+        <select
+          value={condition}
+          onChange={(e) => setCondition(e.target.value as typeof condition)}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          {CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
       </div>
 
       {/* Grid */}

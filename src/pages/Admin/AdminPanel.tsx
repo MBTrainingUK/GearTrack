@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle } from 'lucide-react';
+import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -35,6 +36,10 @@ export default function AdminPanel() {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmClearData, setConfirmClearData] = useState(false);
   const [clearingData, setClearingData] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), (snap) => {
@@ -97,6 +102,45 @@ export default function AdminPanel() {
       toast.error('Failed to clear test data');
     } finally {
       setClearingData(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportBackup();
+      toast.success('Backup downloaded');
+    } catch {
+      toast.error('Failed to export backup');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const backup = parseBackupFile(text);
+      setPendingImport({ items: backup.items.length, kits: backup.kits.length, backup });
+    } catch {
+      toast.error('Could not read that file — is it a GearTrack backup?');
+    }
+  }
+
+  async function confirmImport() {
+    if (!pendingImport) return;
+    setImporting(true);
+    try {
+      const result = await importBackup(pendingImport.backup);
+      toast.success(`Restored ${result.items} items and ${result.kits} kits`);
+    } catch {
+      toast.error('Failed to import backup');
+    } finally {
+      setImporting(false);
+      setPendingImport(null);
     }
   }
 
@@ -204,6 +248,42 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {/* Backup & restore */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Download size={16} className="text-gray-600" />
+          <h2 className="text-sm font-semibold text-gray-800">Backup & Restore</h2>
+        </div>
+        <p className="text-xs text-gray-500">
+          Export all items and kits to a JSON file you can keep somewhere safe, and restore from it if your data is ever lost.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Download size={14} />
+            {exporting ? 'Exporting…' : 'Export backup'}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Upload size={14} />
+            {importing ? 'Restoring…' : 'Import backup'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
+        </div>
+      </div>
+
       {/* Danger zone */}
       <div className="rounded-xl border border-red-200 bg-red-50/40 p-5 space-y-3">
         <div className="flex items-center gap-2">
@@ -255,6 +335,39 @@ export default function AdminPanel() {
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
                 Yes, clear it all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPendingImport(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">Restore backup?</h2>
+              <button onClick={() => setPendingImport(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">
+                This file contains <strong>{pendingImport.items} items</strong> and <strong>{pendingImport.kits} kits</strong>.
+              </p>
+              <p className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
+                Any existing items or kits with matching IDs will be overwritten. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                onClick={() => setPendingImport(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmImport}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Restore
               </button>
             </div>
           </div>

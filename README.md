@@ -16,6 +16,7 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 - **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and upcoming reservations
 - **Reports** — usage analytics per item and per user, checkout duration, late return rate, and unused items
 - **Admin panel** — manage user roles and access
+- **Backup & restore** — export all items and kits to a JSON file, and re-import it to restore your inventory
 
 ## Roles
 
@@ -77,11 +78,16 @@ npm run dev
 
 ### Deploy
 
-```bash
-npm run deploy
-```
+Pushing to `main` triggers the `Deploy to GitHub Pages` GitHub Actions workflow, which builds the project and publishes `dist` to GitHub Pages.
 
-This builds the project and pushes the `dist` folder to the `gh-pages` branch.
+### Backup & Restore
+
+The Admin Panel has an Export/Import section for items and kits:
+
+- **Export** downloads a `geartrack-backup-<date>.json` file containing every item and kit (excluding photo files themselves — only metadata is included).
+- **Import** reads that file back in and restores items/kits by ID, overwriting any that already exist.
+
+This does not cover reservations, checkouts, the audit log, or users — only the inventory data (items and kits).
 
 ## Firestore Structure
 

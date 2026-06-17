@@ -426,7 +426,7 @@ export default function ReportsPanel() {
                     tickFormatter={(v: number) => `£${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
                     tick={{ fontSize: 11 }}
                   />
-                  <Tooltip formatter={(v: number) => [fmt(v), 'Value']} />
+                  <Tooltip />
                   <Bar dataKey="value" name="Value" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

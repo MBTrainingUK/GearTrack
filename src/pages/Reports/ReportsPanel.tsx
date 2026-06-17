@@ -56,6 +56,15 @@ export default function ReportsPanel() {
   const [itemsMissingPriceCount, setItemsMissingPriceCount] = useState(0);
   const [valueByCat, setValueByCat] = useState<{ name: string; value: number }[]>([]);
 
+  type FinSort = 'name' | 'category' | 'price' | 'age' | 'checkouts' | 'costPerCheckout' | 'utilisation';
+  const [finSort, setFinSort] = useState<FinSort>('costPerCheckout');
+  const [finAsc, setFinAsc] = useState(true);
+
+  function toggleFinSort(col: FinSort) {
+    if (finSort === col) setFinAsc((a) => !a);
+    else { setFinSort(col); setFinAsc(true); }
+  }
+
   useEffect(() => {
     Promise.all([
       getDocs(collection(db, 'items')),
@@ -447,54 +456,73 @@ export default function ReportsPanel() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-xs text-gray-500">
-                    <th className="px-5 py-3 text-left font-medium">Item</th>
-                    <th className="px-5 py-3 text-left font-medium">Category</th>
-                    <th className="px-5 py-3 text-left font-medium">Purchase Price</th>
-                    <th className="px-5 py-3 text-left font-medium">Age</th>
-                    <th className="px-5 py-3 text-left font-medium">Checkouts</th>
-                    <th className="px-5 py-3 text-left font-medium">Cost / Checkout</th>
-                    <th className="px-5 py-3 text-left font-medium">Utilisation</th>
+                    {(
+                      [
+                        ['name', 'Item'],
+                        ['category', 'Category'],
+                        ['price', 'Purchase Price'],
+                        ['age', 'Age'],
+                        ['checkouts', 'Checkouts'],
+                        ['costPerCheckout', 'Cost / Checkout'],
+                        ['utilisation', 'Utilisation'],
+                      ] as [FinSort, string][]
+                    ).map(([col, label]) => (
+                      <th
+                        key={col}
+                        onClick={() => toggleFinSort(col)}
+                        className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-gray-900 whitespace-nowrap"
+                      >
+                        {label}
+                        <span className="ml-1 text-gray-300">
+                          {finSort === col ? (finAsc ? '↑' : '↓') : '↕'}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {itemStats
                     .filter((i) => i.purchasePrice != null)
-                    .sort((a, b) => {
-                      const aCost = a.checkoutCount > 0 ? (a.purchasePrice ?? 0) / a.checkoutCount : Infinity;
-                      const bCost = b.checkoutCount > 0 ? (b.purchasePrice ?? 0) / b.checkoutCount : Infinity;
-                      return aCost - bCost;
-                    })
                     .map((i) => {
                       const ageDays = i.purchaseDate ? (Date.now() - i.purchaseDate.toMillis()) / 86400000 : null;
                       const ageMonths = ageDays ? ageDays / 30.44 : null;
                       const costPerCheckout = i.purchasePrice && i.checkoutCount > 0 ? i.purchasePrice / i.checkoutCount : null;
                       const utilisationPct = ageDays && i.totalDaysOut > 0 ? Math.min(100, (i.totalDaysOut / ageDays) * 100) : 0;
-                      return (
-                        <tr key={i.id} className="hover:bg-gray-50">
-                          <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
-                          <td className="px-5 py-3 text-gray-500">{i.category}</td>
-                          <td className="px-5 py-3 tabular-nums text-gray-900">{fmt(i.purchasePrice!)}</td>
-                          <td className="px-5 py-3 text-gray-500">
-                            {ageMonths != null ? `${Math.round(ageMonths)} mo` : '—'}
-                          </td>
-                          <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
-                          <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
-                            {costPerCheckout != null ? fmt(costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
-                          </td>
-                          <td className="px-5 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 w-16 rounded-full bg-emerald-100">
-                                <div
-                                  className="h-2 rounded-full bg-emerald-500"
-                                  style={{ width: `${utilisationPct}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-500 tabular-nums">{utilisationPct.toFixed(0)}%</span>
+                      return { ...i, ageMonths, costPerCheckout, utilisationPct };
+                    })
+                    .sort((a, b) => {
+                      if (finSort === 'name') { const r = a.name.localeCompare(b.name); return finAsc ? r : -r; }
+                      if (finSort === 'category') { const r = a.category.localeCompare(b.category); return finAsc ? r : -r; }
+                      let av: number, bv: number;
+                      if (finSort === 'price') { av = a.purchasePrice ?? 0; bv = b.purchasePrice ?? 0; }
+                      else if (finSort === 'age') { av = a.ageMonths ?? 0; bv = b.ageMonths ?? 0; }
+                      else if (finSort === 'checkouts') { av = a.checkoutCount; bv = b.checkoutCount; }
+                      else if (finSort === 'utilisation') { av = a.utilisationPct; bv = b.utilisationPct; }
+                      else { av = a.costPerCheckout ?? Infinity; bv = b.costPerCheckout ?? Infinity; }
+                      return finAsc ? av - bv : bv - av;
+                    })
+                    .map((i) => (
+                      <tr key={i.id} className="hover:bg-gray-50">
+                        <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
+                        <td className="px-5 py-3 text-gray-500">{i.category}</td>
+                        <td className="px-5 py-3 tabular-nums text-gray-900">{fmt(i.purchasePrice!)}</td>
+                        <td className="px-5 py-3 text-gray-500">
+                          {i.ageMonths != null ? `${Math.round(i.ageMonths)} mo` : '—'}
+                        </td>
+                        <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
+                        <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
+                          {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-16 rounded-full bg-emerald-100">
+                              <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${i.utilisationPct}%` }} />
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <span className="text-xs text-gray-500 tabular-nums">{i.utilisationPct.toFixed(0)}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             )}

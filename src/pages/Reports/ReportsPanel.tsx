@@ -14,6 +14,8 @@ interface ItemStat {
   name: string;
   category: string;
   purchaseDate?: Timestamp;
+  purchasePrice?: number;
+  status: string;
   checkoutCount: number;
   totalDaysOut: number;
   conditionCounts: Record<string, number>;
@@ -38,13 +40,21 @@ export default function ReportsPanel() {
   const [avgDuration, setAvgDuration] = useState(0);
   const [overdueRate, setOverdueRate] = useState(0);
   const [neverUsed, setNeverUsed] = useState<Item[]>([]);
-  const [tab, setTab] = useState<'overview' | 'items' | 'users' | 'reservations'>('overview');
+  const [tab, setTab] = useState<'overview' | 'items' | 'users' | 'reservations' | 'financials'>('overview');
   const [totalReservations, setTotalReservations] = useState(0);
   const [reservationsByStatus, setReservationsByStatus] = useState<{ name: string; value: number }[]>([]);
   const [cancellationRate, setCancellationRate] = useState(0);
   const [approvalRate, setApprovalRate] = useState(0);
   const [avgLeadTime, setAvgLeadTime] = useState(0);
   const [topReservedItems, setTopReservedItems] = useState<{ name: string; count: number }[]>([]);
+
+  // Financial state
+  const [totalInventoryValue, setTotalInventoryValue] = useState(0);
+  const [valueCurrentlyOut, setValueCurrentlyOut] = useState(0);
+  const [avgItemValue, setAvgItemValue] = useState(0);
+  const [avgActiveCheckoutValue, setAvgActiveCheckoutValue] = useState(0);
+  const [itemsMissingPriceCount, setItemsMissingPriceCount] = useState(0);
+  const [valueByCat, setValueByCat] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -58,7 +68,7 @@ export default function ReportsPanel() {
       // --- Item stats ---
       const iMap: Record<string, ItemStat> = {};
       items.forEach((i) => {
-        iMap[i.id] = { id: i.id, name: i.name, category: i.category, purchaseDate: i.purchaseDate, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {} };
+        iMap[i.id] = { id: i.id, name: i.name, category: i.category, purchaseDate: i.purchaseDate, purchasePrice: i.purchasePrice, status: i.status, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {} };
       });
 
       checkouts.forEach((c) => {
@@ -81,6 +91,24 @@ export default function ReportsPanel() {
       const sortedItems = Object.values(iMap).sort((a, b) => b.checkoutCount - a.checkoutCount);
       setItemStats(sortedItems);
       setNeverUsed(items.filter((i) => iMap[i.id].checkoutCount === 0));
+
+      // --- Financial stats ---
+      const priced = items.filter((i) => i.purchasePrice != null);
+      const totInvValue = items.reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
+      const valOut = items.filter((i) => i.status === 'checked_out').reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
+      const avgVal = priced.length > 0 ? priced.reduce((s, i) => s + (i.purchasePrice ?? 0), 0) / priced.length : 0;
+      const activeChks = checkouts.filter((c) => c.status === 'active');
+      const avgActChkVal = activeChks.length > 0
+        ? activeChks.reduce((s, c) => s + c.itemIds.reduce((sum, id) => sum + (iMap[id]?.purchasePrice ?? 0), 0), 0) / activeChks.length
+        : 0;
+      const catValueMap: Record<string, number> = {};
+      items.forEach((i) => { if (i.purchasePrice) catValueMap[i.category] = (catValueMap[i.category] ?? 0) + i.purchasePrice; });
+      setTotalInventoryValue(totInvValue);
+      setValueCurrentlyOut(valOut);
+      setAvgItemValue(avgVal);
+      setAvgActiveCheckoutValue(avgActChkVal);
+      setItemsMissingPriceCount(items.length - priced.length);
+      setValueByCat(Object.entries(catValueMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value));
 
       // --- User stats ---
       const uMap: Record<string, UserStat> = {};
@@ -189,7 +217,7 @@ export default function ReportsPanel() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        {(['overview', 'items', 'users', 'reservations'] as const).map((t) => (
+        {(['overview', 'items', 'users', 'reservations', 'financials'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -369,6 +397,138 @@ export default function ReportsPanel() {
           )}
         </div>
       )}
+      {/* ── FINANCIALS TAB ── */}
+      {tab === 'financials' && (
+        <div className="space-y-6">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Total Inventory Value" value={fmt(totalInventoryValue)} />
+            <StatCard label="Value Currently Out" value={fmt(valueCurrentlyOut)} color="text-blue-600" />
+            <StatCard label="Avg. Item Value" value={avgItemValue > 0 ? fmt(avgItemValue) : '—'} />
+            <StatCard
+              label="Avg. Value Per Checkout"
+              value={avgActiveCheckoutValue > 0 ? fmt(avgActiveCheckoutValue) : '—'}
+              color="text-violet-600"
+            />
+          </div>
+
+          {/* Inventory value by category */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold text-gray-900">Inventory Value by Category</h2>
+            {valueByCat.length === 0 ? (
+              <p className="text-sm text-gray-400">No purchase price data yet</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={valueByCat} barSize={28}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={(v: number) => `£${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip formatter={(v: number) => [fmt(v), 'Value']} />
+                  <Bar dataKey="value" name="Value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Cost per checkout (ROI) table */}
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900">Cost per Checkout</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Items with the lowest cost-per-checkout give the best return on investment. Utilisation shows % of time in use since purchase.
+              </p>
+            </div>
+            {itemStats.filter((i) => i.purchasePrice != null).length === 0 ? (
+              <div className="flex h-32 items-center justify-center text-sm text-gray-400">No purchase price data yet</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs text-gray-500">
+                    <th className="px-5 py-3 text-left font-medium">Item</th>
+                    <th className="px-5 py-3 text-left font-medium">Category</th>
+                    <th className="px-5 py-3 text-left font-medium">Purchase Price</th>
+                    <th className="px-5 py-3 text-left font-medium">Age</th>
+                    <th className="px-5 py-3 text-left font-medium">Checkouts</th>
+                    <th className="px-5 py-3 text-left font-medium">Cost / Checkout</th>
+                    <th className="px-5 py-3 text-left font-medium">Utilisation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {itemStats
+                    .filter((i) => i.purchasePrice != null)
+                    .sort((a, b) => {
+                      const aCost = a.checkoutCount > 0 ? (a.purchasePrice ?? 0) / a.checkoutCount : Infinity;
+                      const bCost = b.checkoutCount > 0 ? (b.purchasePrice ?? 0) / b.checkoutCount : Infinity;
+                      return aCost - bCost;
+                    })
+                    .map((i) => {
+                      const ageDays = i.purchaseDate ? (Date.now() - i.purchaseDate.toMillis()) / 86400000 : null;
+                      const ageMonths = ageDays ? ageDays / 30.44 : null;
+                      const costPerCheckout = i.purchasePrice && i.checkoutCount > 0 ? i.purchasePrice / i.checkoutCount : null;
+                      const utilisationPct = ageDays && i.totalDaysOut > 0 ? Math.min(100, (i.totalDaysOut / ageDays) * 100) : 0;
+                      return (
+                        <tr key={i.id} className="hover:bg-gray-50">
+                          <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
+                          <td className="px-5 py-3 text-gray-500">{i.category}</td>
+                          <td className="px-5 py-3 tabular-nums text-gray-900">{fmt(i.purchasePrice!)}</td>
+                          <td className="px-5 py-3 text-gray-500">
+                            {ageMonths != null ? `${Math.round(ageMonths)} mo` : '—'}
+                          </td>
+                          <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
+                          <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
+                            {costPerCheckout != null ? fmt(costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-16 rounded-full bg-emerald-100">
+                                <div
+                                  className="h-2 rounded-full bg-emerald-500"
+                                  style={{ width: `${utilisationPct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-500 tabular-nums">{utilisationPct.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Currently checked out */}
+          {(() => {
+            const outItems = itemStats.filter((i) => i.status === 'checked_out');
+            if (outItems.length === 0) return null;
+            const outTotal = outItems.reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
+            return (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+                <h2 className="mb-3 text-sm font-semibold text-blue-900">
+                  Currently Checked Out — {outItems.length} items — Total Value: {fmt(outTotal)}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {outItems.map((i) => (
+                    <span key={i.id} className="rounded-full bg-white border border-blue-200 px-3 py-1 text-xs text-blue-800">
+                      {i.name}{i.purchasePrice ? ` — ${fmt(i.purchasePrice)}` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {itemsMissingPriceCount > 0 && (
+            <p className="text-center text-xs text-gray-400">
+              {itemsMissingPriceCount} item{itemsMissingPriceCount !== 1 ? 's' : ''} without a purchase price are excluded from value calculations.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── RESERVATIONS TAB ── */}
       {tab === 'reservations' && (
         <div className="space-y-6">
@@ -428,6 +588,10 @@ export default function ReportsPanel() {
       )}
     </div>
   );
+}
+
+function fmt(n: number) {
+  return '£' + Math.round(n).toLocaleString('en-GB');
 }
 
 function StatCard({ label, value, color = 'text-gray-900' }: { label: string; value: string | number; color?: string }) {

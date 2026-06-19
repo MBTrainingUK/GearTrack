@@ -16,10 +16,11 @@ import type { Item, Checkout } from '../../types';
 import StatusBadge from '../../components/StatusBadge';
 import { ArrowLeft, Edit, MapPin, PoundSterling, Hash, Clock, AlertTriangle, CalendarDays, Gauge } from 'lucide-react';
 import ConditionBadge from '../../components/ConditionBadge';
-import { format, differenceInMonths } from 'date-fns';
+import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
+import { getLifespanStatus, formatMonths } from '../../lib/items';
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -204,20 +205,11 @@ export default function ItemDetail() {
           </div>
 
           {/* Lifespan meter */}
-          {item.purchaseDate && item.expectedLifespanMonths && (() => {
-            const startDate = (item.lifespanResetDate ?? item.purchaseDate)!.toDate();
-            const ageMonths = Math.max(0, differenceInMonths(new Date(), startDate));
-            const pct = Math.round((ageMonths / item.expectedLifespanMonths) * 100);
-            const isDue = pct >= 100;
-            const isAwaitingReset = isDue && item.condition === 'needs_investigating';
+          {(() => {
+            const status = getLifespanStatus(item);
+            if (!status) return null;
+            const { ageMonths, pct, isDue, isAwaitingReset } = status;
             const barColor = pct < 50 ? 'bg-emerald-500' : pct < 80 ? 'bg-amber-500' : 'bg-red-500';
-
-            const fmtMonths = (m: number) => {
-              const y = Math.floor(m / 12); const mo = m % 12;
-              if (y > 0 && mo > 0) return `${y} yr${y > 1 ? 's' : ''} ${mo} month${mo > 1 ? 's' : ''}`;
-              if (y > 0) return `${y} yr${y > 1 ? 's' : ''}`;
-              return `${mo} month${mo !== 1 ? 's' : ''}`;
-            };
 
             return (
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -238,8 +230,8 @@ export default function ItemDetail() {
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{fmtMonths(ageMonths)} old</span>
-                  <span>{Math.min(pct, 999)}% of {fmtMonths(item.expectedLifespanMonths)} interval</span>
+                  <span>{formatMonths(ageMonths)} old</span>
+                  <span>{Math.min(pct, 999)}% of {formatMonths(item.expectedLifespanMonths!)} interval</span>
                 </div>
 
                 {isDue && !isAwaitingReset && (

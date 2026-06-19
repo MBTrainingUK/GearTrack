@@ -6,8 +6,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { BarChart2 } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import { getLifespanStatus, formatMonths, type LifespanStatus } from '../../lib/items';
 
 interface ItemStat {
   id: string;
@@ -40,7 +41,8 @@ export default function ReportsPanel() {
   const [avgDuration, setAvgDuration] = useState(0);
   const [overdueRate, setOverdueRate] = useState(0);
   const [neverUsed, setNeverUsed] = useState<Item[]>([]);
-  const [tab, setTab] = useState<'overview' | 'items' | 'users' | 'reservations' | 'financials'>('overview');
+  const [tab, setTab] = useState<'overview' | 'items' | 'inspections' | 'users' | 'reservations' | 'financials'>('overview');
+  const [inspectionRows, setInspectionRows] = useState<{ item: Item; status: LifespanStatus }[]>([]);
   const [totalReservations, setTotalReservations] = useState(0);
   const [reservationsByStatus, setReservationsByStatus] = useState<{ name: string; value: number }[]>([]);
   const [cancellationRate, setCancellationRate] = useState(0);
@@ -65,6 +67,15 @@ export default function ReportsPanel() {
     else { setFinSort(col); setFinAsc(true); }
   }
 
+  type InspSort = 'name' | 'category' | 'status' | 'interval' | 'remaining';
+  const [inspSort, setInspSort] = useState<InspSort>('remaining');
+  const [inspAsc, setInspAsc] = useState(true);
+
+  function toggleInspSort(col: InspSort) {
+    if (inspSort === col) setInspAsc((a) => !a);
+    else { setInspSort(col); setInspAsc(true); }
+  }
+
   useEffect(() => {
     Promise.all([
       getDocs(collection(db, 'items')),
@@ -73,6 +84,16 @@ export default function ReportsPanel() {
     ]).then(([itemsSnap, checkoutsSnap, reservationsSnap]) => {
       const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
       const checkouts = checkoutsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout));
+
+      // --- Inspection / lifespan stats ---
+      setInspectionRows(
+        items
+          .map((item) => {
+            const status = getLifespanStatus(item);
+            return status ? { item, status } : null;
+          })
+          .filter((r): r is { item: Item; status: LifespanStatus } => r !== null)
+      );
 
       // --- Item stats ---
       const iMap: Record<string, ItemStat> = {};
@@ -226,7 +247,7 @@ export default function ReportsPanel() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        {(['overview', 'items', 'users', 'reservations', 'financials'] as const).map((t) => (
+        {(['overview', 'items', 'inspections', 'users', 'reservations', 'financials'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -361,6 +382,98 @@ export default function ReportsPanel() {
           )}
         </div>
       )}
+
+      {/* ── INSPECTIONS TAB ── */}
+      {tab === 'inspections' && (() => {
+        const dueCount = inspectionRows.filter((r) => r.status.isDue && !r.status.isAwaitingReset).length;
+        const awaitingCount = inspectionRows.filter((r) => r.status.isAwaitingReset).length;
+        const dueSoonCount = inspectionRows.filter((r) => !r.status.isDue && r.status.pct >= 80).length;
+
+        function bucket(status: LifespanStatus) {
+          if (status.isDue && !status.isAwaitingReset) return { label: 'Inspection Due', rank: 0, className: 'bg-red-100 text-red-700' };
+          if (status.isAwaitingReset) return { label: 'Awaiting Inspection', rank: 1, className: 'bg-amber-100 text-amber-700' };
+          if (status.pct >= 80) return { label: 'Due Soon', rank: 2, className: 'bg-yellow-100 text-yellow-700' };
+          return { label: 'OK', rank: 3, className: 'bg-emerald-100 text-emerald-700' };
+        }
+
+        const sorted = [...inspectionRows].sort((a, b) => {
+          if (inspSort === 'name') { const r = a.item.name.localeCompare(b.item.name); return inspAsc ? r : -r; }
+          if (inspSort === 'category') { const r = a.item.category.localeCompare(b.item.category); return inspAsc ? r : -r; }
+          if (inspSort === 'status') { const r = bucket(a.status).rank - bucket(b.status).rank; return inspAsc ? r : -r; }
+          let av: number, bv: number;
+          if (inspSort === 'interval') { av = a.item.expectedLifespanMonths ?? 0; bv = b.item.expectedLifespanMonths ?? 0; }
+          else { av = a.status.monthsRemaining; bv = b.status.monthsRemaining; }
+          return inspAsc ? av - bv : bv - av;
+        });
+
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="Inspection Due" value={dueCount} color={dueCount > 0 ? 'text-red-600' : 'text-emerald-600'} />
+              <StatCard label="Awaiting Inspection" value={awaitingCount} color={awaitingCount > 0 ? 'text-amber-600' : 'text-emerald-600'} />
+              <StatCard label="Due Soon" value={dueSoonCount} color={dueSoonCount > 0 ? 'text-amber-600' : 'text-emerald-600'} />
+              <StatCard label="Tracked Items" value={inspectionRows.length} />
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              {inspectionRows.length === 0 ? (
+                <div className="flex h-48 items-center justify-center text-sm text-gray-400">No items have inspection tracking configured</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-xs text-gray-500">
+                      {(
+                        [
+                          ['name', 'Item'],
+                          ['category', 'Category'],
+                          ['status', 'Status'],
+                          ['interval', 'Interval'],
+                          ['remaining', 'Time Remaining'],
+                        ] as [InspSort, string][]
+                      ).map(([col, label]) => (
+                        <th
+                          key={col}
+                          onClick={() => toggleInspSort(col)}
+                          className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-gray-900 whitespace-nowrap"
+                        >
+                          {label}
+                          <span className="ml-1 text-gray-300">
+                            {inspSort === col ? (inspAsc ? '↑' : '↓') : '↕'}
+                          </span>
+                        </th>
+                      ))}
+                      <th className="px-5 py-3 text-right font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {sorted.map(({ item, status }) => {
+                      const b = bucket(status);
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-5 py-3 font-medium text-gray-900">{item.name}</td>
+                          <td className="px-5 py-3 text-gray-500">{item.category}</td>
+                          <td className="px-5 py-3">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${b.className}`}>{b.label}</span>
+                          </td>
+                          <td className="px-5 py-3 text-gray-500">{formatMonths(item.expectedLifespanMonths!)}</td>
+                          <td className="px-5 py-3 tabular-nums text-gray-600">
+                            {status.monthsRemaining >= 0
+                              ? `${formatMonths(status.monthsRemaining)} left`
+                              : `${formatMonths(Math.abs(status.monthsRemaining))} overdue`}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <Link to={`/items/${item.id}`} className="text-xs font-medium text-blue-600 hover:underline">Inspect →</Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── USERS TAB ── */}
       {tab === 'users' && (

@@ -14,7 +14,7 @@ import type { Reservation, Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Calendar, List, X } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -34,6 +34,7 @@ export default function ReservationsList() {
   const { byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [dateRange, setDateRange] = useState<30 | 90>(30);
 
   useEffect(() => {
     return onSnapshot(
@@ -93,8 +94,14 @@ export default function ReservationsList() {
     }
   }
 
+  const cutoff = subDays(new Date(), dateRange);
+  const activeStatuses: Reservation['status'][] = ['pending', 'approved', 'checked_out'];
+  const visibleReservations = reservations.filter((r) => {
+    if (activeStatuses.includes(r.status)) return true;
+    try { return r.endDate.toDate() >= cutoff; } catch { return true; }
+  });
   const filtered =
-    filter === 'all' ? reservations : reservations.filter((r) => r.status === filter);
+    filter === 'all' ? visibleReservations : visibleReservations.filter((r) => r.status === filter);
 
   const calendarEvents = reservations
     .filter((r) => r.status !== 'cancelled' && r.status !== 'completed')
@@ -113,7 +120,7 @@ export default function ReservationsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reservations</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{reservations.length} total</p>
+          <p className="mt-0.5 text-sm text-gray-500">{visibleReservations.length} total</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View toggle */}
@@ -165,23 +172,41 @@ export default function ReservationsList() {
         </div>
       ) : (
         <>
-          {/* Status filter */}
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled'] as const).map(
-              (s) => (
-                <button
-                  key={s}
-                  onClick={() => setFilter(s)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
-                    filter === s
-                      ? 'border-blue-600 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  {s === 'all' ? 'All' : s.replace('_', ' ')}
-                </button>
-              )
-            )}
+          {/* Status filter + date range toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled'] as const).map(
+                (s) => (
+                  <button
+                    key={s}
+                    onClick={() => setFilter(s)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                      filter === s
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                    }`}
+                  >
+                    {s === 'all' ? 'All' : s.replace('_', ' ')}
+                  </button>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-gray-400">Show:</span>
+              <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+                {([30, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDateRange(d)}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                      dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {d === 30 ? 'Last 30 days' : 'Last 90 days'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

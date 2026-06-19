@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
 import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
@@ -38,6 +38,8 @@ export default function AdminPanel() {
   const [clearingData, setClearingData] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [purgingOld, setPurgingOld] = useState(false);
+  const [confirmPurgeOld, setConfirmPurgeOld] = useState(false);
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +50,30 @@ export default function AdminPanel() {
       setUsers(list);
     });
   }, []);
+
+  // Silently purge records older than 180 days whenever an admin visits this page
+  useEffect(() => {
+    if (!appUser || appUser.role !== 'admin') return;
+    const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
+    (async () => {
+      try {
+        for (const { col, field } of [
+          { col: 'checkouts', field: 'checkedOutAt' },
+          { col: 'reservations', field: 'createdAt' },
+        ]) {
+          const snap = await getDocs(query(collection(db, col), where(field, '<', cutoff)));
+          if (snap.empty) continue;
+          const batches: ReturnType<typeof writeBatch>[] = [];
+          snap.docs.forEach((d, i) => {
+            if (i % 500 === 0) batches.push(writeBatch(db));
+            batches[batches.length - 1].delete(d.ref);
+          });
+          await Promise.all(batches.map((b) => b.commit()));
+        }
+      } catch { /* silent */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appUser?.uid]);
 
   // Guard: only admins can access this page (checked after hooks to keep hook order stable)
   if (appUser && appUser.role !== 'admin') {
@@ -102,6 +128,35 @@ export default function AdminPanel() {
       toast.error('Failed to clear test data');
     } finally {
       setClearingData(false);
+    }
+  }
+
+  async function purgeOldRecords() {
+    setPurgingOld(true);
+    setConfirmPurgeOld(false);
+    const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
+    let total = 0;
+    try {
+      for (const { col, field } of [
+        { col: 'checkouts', field: 'checkedOutAt' },
+        { col: 'reservations', field: 'createdAt' },
+      ]) {
+        const snap = await getDocs(query(collection(db, col), where(field, '<', cutoff)));
+        if (snap.empty) continue;
+        const batches: ReturnType<typeof writeBatch>[] = [];
+        snap.docs.forEach((d, i) => {
+          if (i % 500 === 0) batches.push(writeBatch(db));
+          batches[batches.length - 1].delete(d.ref);
+        });
+        await Promise.all(batches.map((b) => b.commit()));
+        total += snap.size;
+      }
+      if (total > 0) toast.success(`Purged ${total} record${total !== 1 ? 's' : ''} older than 180 days`);
+      else toast.success('No records older than 180 days found');
+    } catch {
+      toast.error('Failed to purge old records');
+    } finally {
+      setPurgingOld(false);
     }
   }
 
@@ -292,6 +347,20 @@ export default function AdminPanel() {
         </div>
         <div className="flex items-center justify-between gap-4">
           <div>
+            <p className="text-sm font-medium text-gray-800">Purge old records</p>
+            <p className="text-xs text-gray-500 mt-0.5">Permanently deletes checkouts and reservations older than 180 days. This also runs automatically each time you visit this page.</p>
+          </div>
+          <button
+            onClick={() => setConfirmPurgeOld(true)}
+            disabled={purgingOld}
+            className="shrink-0 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {purgingOld ? 'Purging…' : 'Purge now'}
+          </button>
+        </div>
+        <div className="border-t border-red-200" />
+        <div className="flex items-center justify-between gap-4">
+          <div>
             <p className="text-sm font-medium text-gray-800">Clear test data</p>
             <p className="text-xs text-gray-500 mt-0.5">Permanently deletes all activity logs, checkouts, and reservations. Items and kits are kept.</p>
           </div>
@@ -335,6 +404,37 @@ export default function AdminPanel() {
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
                 Yes, clear it all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmPurgeOld && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmPurgeOld(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">Purge old records?</h2>
+              <button onClick={() => setConfirmPurgeOld(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">This will permanently delete all checkouts and reservations older than <strong>180 days</strong>.</p>
+              <p className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
+                Active checkouts and upcoming reservations will not be affected. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                onClick={() => setConfirmPurgeOld(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={purgeOldRecords}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Purge old records
               </button>
             </div>
           </div>

@@ -10,7 +10,7 @@ import type { Checkout, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
 import { useItems } from '../../store/items';
 import StatusBadge from '../../components/StatusBadge';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export default function UserHistory() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const { byId: items } = useItems();
   const [tab, setTab] = useState<'checkouts' | 'reservations'>('checkouts');
+  const [dateRange, setDateRange] = useState<30 | 90>(30);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,6 +53,14 @@ export default function UserHistory() {
     }).catch(() => setLoading(false));
   }, [currentUser]);
 
+  const cutoff = subDays(new Date(), dateRange);
+  const filteredCheckouts = checkouts.filter((c) => {
+    try { return c.checkedOutAt.toDate() >= cutoff; } catch { return true; }
+  });
+  const filteredReservations = reservations.filter((r) => {
+    try { return r.startDate.toDate() >= cutoff; } catch { return true; }
+  });
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -62,9 +71,27 @@ export default function UserHistory() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <History size={22} className="text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-900">My History</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <History size={22} className="text-blue-600" />
+          <h1 className="text-2xl font-bold text-gray-900">My History</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">Show:</span>
+          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+            {([30, 90] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDateRange(d)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {d === 30 ? 'Last 30 days' : 'Last 90 days'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -80,14 +107,14 @@ export default function UserHistory() {
             }`}
           >
             {t} (
-            {t === 'checkouts' ? checkouts.length : reservations.length})
+            {t === 'checkouts' ? filteredCheckouts.length : filteredReservations.length})
           </button>
         ))}
       </div>
 
       {tab === 'checkouts' && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {checkouts.length === 0 ? (
+          {filteredCheckouts.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-sm text-gray-400">No checkout history</div>
           ) : (
             <table className="w-full text-sm">
@@ -102,7 +129,7 @@ export default function UserHistory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {checkouts.map((c) => (
+                {filteredCheckouts.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-5 py-3">
                       <div className="space-y-0.5">
@@ -135,7 +162,7 @@ export default function UserHistory() {
 
       {tab === 'reservations' && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {reservations.length === 0 ? (
+          {filteredReservations.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-sm text-gray-400">No reservation history</div>
           ) : (
             <table className="w-full text-sm">
@@ -149,7 +176,7 @@ export default function UserHistory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {reservations.map((r) => (
+                {filteredReservations.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50">
                     <td className="px-5 py-3 text-xs text-gray-700">
                       {r.itemIds.length} item{r.itemIds.length !== 1 ? 's' : ''}

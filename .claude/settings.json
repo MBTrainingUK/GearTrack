@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(qlmanage -t -s 256 public/favicon.svg -o public)"
+    ]
+  }
+}

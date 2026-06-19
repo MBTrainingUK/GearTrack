@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helpers ──────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isManager() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager'];
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ── users ─────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      // New accounts always start as basic users.
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+      // Users may edit their own profile but never their own role.
+      allow update: if isAdmin()
+        || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // ── items ─────────────────────────────────────────────
+    match /items/{itemId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isManager();
+      // Any signed-in user may flip availability when checking gear in/out
+      // (mobile self-service); only managers may edit anything else.
+      allow update: if isManager()
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+    }
+
+    // ── kits ──────────────────────────────────────────────
+    match /kits/{kitId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isManager();
+    }
+
+    // ── reservations ──────────────────────────────────────
+    match /reservations/{resId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      // Owners may edit while pending, and may close out their own
+      // checked-out reservation when returning gear from mobile.
+      allow update: if isManager()
+        || (isOwner(resource.data.userId) && resource.data.status == 'pending')
+        || (isOwner(resource.data.userId)
+            && resource.data.status == 'checked_out'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if isManager();
+    }
+
+    // ── checkouts ─────────────────────────────────────────
+    match /checkouts/{checkoutId} {
+      allow read: if isSignedIn();
+      // Users may check gear out for themselves and return their own checkouts.
+      allow create: if isManager() || isOwner(request.resource.data.userId);
+      allow update: if isManager() || isOwner(resource.data.userId);
+      allow delete: if isAdmin();
+    }
+
+    // ── audit log ─────────────────────────────────────────
+    match /auditLog/{logId} {
+      allow read: if isManager();
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+  }
+}

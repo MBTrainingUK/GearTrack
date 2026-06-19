@@ -14,7 +14,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, AlertTriangle, X, Check, Zap, AlertCircle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
@@ -31,6 +31,7 @@ export default function CheckoutsList() {
   const { items: itemsList, byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'returned'>('all');
+  const [dateRange, setDateRange] = useState<30 | 90>(30);
   const [conditionModal, setConditionModal] = useState<{
     checkoutId: string;
     itemIds: string[];
@@ -55,7 +56,14 @@ export default function CheckoutsList() {
     return () => unsubs.forEach((u) => u());
   }, []);
 
-  const filtered = checkouts.filter((c) => {
+  const cutoff = subDays(new Date(), dateRange);
+  const dateFiltered = checkouts.filter((c) => {
+    if (c.status !== 'returned') return true;
+    const ts = c.returnedAt ?? c.checkedOutAt;
+    try { return ts.toDate() >= cutoff; } catch { return true; }
+  });
+
+  const filtered = dateFiltered.filter((c) => {
     if (filter === 'all') return true;
     if (filter === 'overdue') return isOverdue(c);
     if (filter === 'active') return c.status === 'active' && !isOverdue(c);
@@ -69,7 +77,7 @@ export default function CheckoutsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Checkouts</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{checkouts.length} total</p>
+          <p className="mt-0.5 text-sm text-gray-500">{dateFiltered.length} total</p>
         </div>
         {appUser?.role !== 'user' && (
           <button
@@ -91,21 +99,39 @@ export default function CheckoutsList() {
         </div>
       )}
 
-      {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'active', 'overdue', 'returned'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
-              filter === f
-                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600 hover:border-blue-300'
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      {/* Filter tabs + date range toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'active', 'overdue', 'returned'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                filter === f
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-gray-400">Show:</span>
+          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+            {([30, 90] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDateRange(d)}
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                  dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {d === 30 ? 'Last 30 days' : 'Last 90 days'}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

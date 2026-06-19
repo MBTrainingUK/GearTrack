@@ -6,7 +6,6 @@ import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
 import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload } from 'lucide-react';
 import { format, subDays } from 'date-fns';
-import type { Timestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 

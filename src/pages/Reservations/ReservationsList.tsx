@@ -59,6 +59,7 @@ export default function ReservationsList() {
       });
       const res = reservations.find((r) => r.id === id);
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'approve_reservation',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,
@@ -81,6 +82,7 @@ export default function ReservationsList() {
       });
       const res = reservations.find((r) => r.id === id);
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'cancel_reservation',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,

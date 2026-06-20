@@ -44,8 +44,8 @@ export function useCategories() {
   return { categories: all, loaded };
 }
 
-export async function addCategory(name: string) {
+export async function addCategory(name: string, orgId: string) {
   const trimmed = name.trim();
   if (!trimmed) return;
-  await addDoc(collection(db, 'categories'), { name: trimmed });
+  await addDoc(collection(db, 'categories'), { name: trimmed, orgId });
 }

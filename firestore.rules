@@ -6,6 +6,12 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    function isPlatformAdmin() {
+      return isSignedIn() && request.auth.token.platformAdmin == true;
+    }
+    function sameOrg(orgId) {
+      return isSignedIn() && request.auth.token.orgId == orgId;
+    }
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
@@ -16,70 +22,92 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // ── organizations ─────────────────────────────────────
+    match /organizations/{orgId} {
+      allow read: if isPlatformAdmin() || sameOrg(orgId);
+      // Created/managed only via Cloud Functions (Admin SDK), never directly.
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
     // ── users ─────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isSignedIn();
-      // New accounts always start as basic users.
-      allow create: if isOwner(userId) && request.resource.data.role == 'user';
-      // Users may edit their own profile but never their own role.
-      allow update: if isAdmin()
-        || (isOwner(userId) && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      // All account creation happens server-side via Cloud Functions
+      // (createOrganization / createOrgUser), which use the Admin SDK and
+      // bypass these rules entirely. No client may create a user doc.
+      allow create: if false;
+      // Users may edit their own profile but never their own role/org.
+      // Org admins may change role for users within their own org.
+      allow update: if isPlatformAdmin()
+        || (isAdmin() && sameOrg(resource.data.orgId)
+            && request.resource.data.orgId == resource.data.orgId)
+        || (isOwner(userId)
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.orgId == resource.data.orgId);
+      allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
     }
 
     // ── items ─────────────────────────────────────────────
     match /items/{itemId} {
-      allow read: if isSignedIn();
-      allow create, delete: if isManager();
-      // Any signed-in user may flip availability when checking gear in/out
-      // (mobile self-service); only managers may edit anything else.
-      allow update: if isManager()
-        || (isSignedIn()
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      allow create: if isPlatformAdmin() || (isManager() && sameOrg(request.resource.data.orgId));
+      allow delete: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
+      // Any signed-in user in the same org may flip availability when
+      // checking gear in/out (mobile self-service); only managers may
+      // edit anything else, and orgId itself may never change.
+      allow update: if isPlatformAdmin()
+        || (isManager() && sameOrg(resource.data.orgId) && request.resource.data.orgId == resource.data.orgId)
+        || (sameOrg(resource.data.orgId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
     }
 
     // ── categories ────────────────────────────────────────
     match /categories/{categoryId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isManager();
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      allow create: if isPlatformAdmin() || (isManager() && sameOrg(request.resource.data.orgId));
+      allow update, delete: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
     }
 
     // ── kits ──────────────────────────────────────────────
     match /kits/{kitId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isManager();
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      allow create: if isPlatformAdmin() || (isManager() && sameOrg(request.resource.data.orgId));
+      allow update, delete: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
     }
 
     // ── reservations ──────────────────────────────────────
     match /reservations/{resId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      allow create: if isPlatformAdmin() || (isSignedIn() && sameOrg(request.resource.data.orgId));
       // Owners may edit while pending, and may close out their own
       // checked-out reservation when returning gear from mobile.
-      allow update: if isManager()
-        || (isOwner(resource.data.userId) && resource.data.status == 'pending')
-        || (isOwner(resource.data.userId)
+      allow update: if isPlatformAdmin()
+        || (isManager() && sameOrg(resource.data.orgId))
+        || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId) && resource.data.status == 'pending')
+        || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId)
             && resource.data.status == 'checked_out'
             && request.resource.data.status == 'completed'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
-      allow delete: if isManager();
+      allow delete: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
     }
 
     // ── checkouts ─────────────────────────────────────────
     match /checkouts/{checkoutId} {
-      allow read: if isSignedIn();
+      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
       // Users may check gear out for themselves and return their own checkouts.
-      allow create: if isManager() || isOwner(request.resource.data.userId);
-      allow update: if isManager() || isOwner(resource.data.userId);
-      allow delete: if isAdmin();
+      allow create: if isPlatformAdmin()
+        || ((isManager() || isOwner(request.resource.data.userId)) && sameOrg(request.resource.data.orgId));
+      allow update: if isPlatformAdmin()
+        || ((isManager() || isOwner(resource.data.userId)) && sameOrg(resource.data.orgId));
+      allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
     }
 
     // ── audit log ─────────────────────────────────────────
     match /auditLog/{logId} {
-      allow read: if isManager();
-      allow create: if isSignedIn();
+      allow read: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
+      allow create: if isPlatformAdmin() || (isSignedIn() && sameOrg(request.resource.data.orgId));
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
     }
   }
 }

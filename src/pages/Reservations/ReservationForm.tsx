@@ -130,6 +130,7 @@ export default function ReservationForm() {
       }
 
       const resRef = await addDoc(collection(db, 'reservations'), {
+        orgId: appUser.orgId,
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
@@ -148,6 +149,7 @@ export default function ReservationForm() {
         : selectedItems.slice(0, 2).map((id) => items.find((i) => i.id === id)?.name ?? 'Item').join(', ') +
           (selectedItems.length > 2 ? ` +${selectedItems.length - 2} more` : '');
       await writeAuditLog({
+        orgId: appUser.orgId,
         action: 'reserve',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,

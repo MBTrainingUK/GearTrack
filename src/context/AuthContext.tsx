@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile,
   type User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -61,22 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function register(email: string, password: string, displayName: string) {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(user, { displayName });
-    // ensureUserDoc backfills the name if the auth listener already created the doc
-    // with the 'User' fallback; apply the result so in-memory state is correct too.
-    const data = await ensureUserDoc(user, displayName);
-    setAppUser(data);
-  }
-
   async function logout() {
     await signOut(auth);
   }
 
   return (
     <AuthContext.Provider
-      value={{ currentUser, appUser, loading, login, register, logout }}
+      value={{ currentUser, appUser, loading, login, logout }}
     >
       {children}
     </AuthContext.Provider>

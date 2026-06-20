@@ -33,6 +33,7 @@ export default function ItemsList() {
     try {
       await deleteDoc(doc(db, 'items', id));
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'delete_item',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,

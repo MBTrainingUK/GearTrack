@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
@@ -41,6 +42,7 @@ export default function AdminPanel() {
   const [confirmPurgeOld, setConfirmPurgeOld] = useState(false);
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [backfilling, setBackfilling] = useState(false);
 
   useEffect(() => {
     return onSnapshot(collection(db, 'users'), (snap) => {
@@ -159,6 +161,24 @@ export default function AdminPanel() {
     }
   }
 
+  async function runBackfill() {
+    if (!confirm(
+      'Run one-time multi-tenancy setup? This creates a default organization, ' +
+      'assigns all existing data to it, and makes you a platform admin. ' +
+      "You'll need to log out and back in afterwards for that to take effect. " +
+      'This can only run once.'
+    )) return;
+    setBackfilling(true);
+    try {
+      const result = await httpsCallable<{ orgName?: string }, { orgId: string }>(functions, 'backfillDefaultOrg')({});
+      toast.success(`Default organization created (${result.data.orgId}). Log out and back in to finish.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Backfill failed');
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   async function handleExport() {
     setExporting(true);
     try {
@@ -214,6 +234,27 @@ export default function AdminPanel() {
           <p className="text-sm text-gray-500">{users.length} registered user{users.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
+
+      {!appUser?.orgId && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield size={16} className="text-blue-600" />
+            <h2 className="text-sm font-semibold text-blue-900">One-time multi-tenancy setup</h2>
+          </div>
+          <p className="text-xs text-blue-800">
+            This account and all existing data haven't been assigned to an organization yet.
+            Running this once creates a default organization, assigns all existing items, kits,
+            checkouts, reservations, and audit logs to it, and makes this account a platform admin.
+          </p>
+          <button
+            onClick={runBackfill}
+            disabled={backfilling}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {backfilling ? 'Running…' : 'Run setup'}
+          </button>
+        </div>
+      )}
 
       {/* Role legend */}
       <div className="flex flex-wrap gap-3">

@@ -61,6 +61,7 @@ export default function ItemDetail() {
       });
       setItem((p) => p ? { ...p, condition: 'needs_investigating', conditionFlagNote: 'Inspection interval exceeded — pending review.' } : p);
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'flag',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,
@@ -92,6 +93,7 @@ export default function ItemDetail() {
       });
       setItem((p) => p ? { ...p, condition: 'good', conditionFlagNote: '', lifespanResetDate: resetDate, expectedLifespanMonths: months } : p);
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'resolve_flag',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,

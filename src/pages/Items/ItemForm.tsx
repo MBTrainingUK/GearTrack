@@ -71,7 +71,7 @@ export default function ItemForm() {
     const name = window.prompt('New category name:')?.trim();
     if (!name) return;
     try {
-      await addCategory(name);
+      await addCategory(name, appUser!.orgId);
       set('category', name);
     } catch {
       toast.error('Failed to add category');
@@ -95,6 +95,7 @@ export default function ItemForm() {
         // Don't write photoURLs on edit — it would wipe any existing photos.
         await updateDoc(doc(db, 'items', id!), data);
         await writeAuditLog({
+          orgId: appUser!.orgId,
           action: 'update_item',
           performedBy: currentUser!.uid,
           performedByName: appUser!.displayName,
@@ -106,11 +107,13 @@ export default function ItemForm() {
       } else {
         const docRef = await addDoc(collection(db, 'items'), {
           ...data,
+          orgId: appUser!.orgId,
           photoURLs: [],
           status: 'available',
           createdAt: serverTimestamp(),
         });
         await writeAuditLog({
+          orgId: appUser!.orgId,
           action: 'create_item',
           performedBy: currentUser!.uid,
           performedByName: appUser!.displayName,

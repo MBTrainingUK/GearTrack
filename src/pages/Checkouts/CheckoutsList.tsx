@@ -304,6 +304,7 @@ function NewCheckoutModal({
     setSaving(true);
     try {
       const id = await createCheckout({
+        orgId: appUser.orgId,
         reservationId: linkReservation ? reservationId ?? null : null,
         kitId: selectedKitId ?? null,
         userId: currentUser.uid,
@@ -315,6 +316,7 @@ function NewCheckoutModal({
       });
       const name = checkoutName(itemIds);
       await writeAuditLog({
+        orgId: appUser.orgId,
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,

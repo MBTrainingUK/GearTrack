@@ -1,5 +1,14 @@
 import { Timestamp } from 'firebase/firestore';
 
+// ── Organization ─────────────────────────────────────────────────────
+export interface Organization {
+  id: string;
+  name: string;
+  status: 'active' | 'suspended';
+  createdAt: Timestamp;
+  contactEmail?: string;
+}
+
 // ── User ─────────────────────────────────────────────────────────────
 export type UserRole = 'admin' | 'manager' | 'user';
 
@@ -8,6 +17,9 @@ export interface AppUser {
   email: string;
   displayName: string;
   role: UserRole;
+  orgId: string;
+  // True only for platform-level operators who can see/manage every org.
+  isPlatformAdmin?: boolean;
   photoURL?: string;
   createdAt: Timestamp;
 }
@@ -19,6 +31,7 @@ export type ItemStatus = 'available' | 'checked_out';
 
 export interface Item {
   id: string;
+  orgId: string;
   name: string;
   description: string;
   category: string;
@@ -41,6 +54,7 @@ export interface Item {
 // ── Kit ──────────────────────────────────────────────────────────────
 export interface Kit {
   id: string;
+  orgId: string;
   name: string;
   description: string;
   photoURL?: string;
@@ -59,6 +73,7 @@ export type ReservationStatus =
 
 export interface Reservation {
   id: string;
+  orgId: string;
   userId: string;
   userName: string;
   userEmail: string;
@@ -85,6 +100,7 @@ export interface ConditionReport {
 
 export interface Checkout {
   id: string;
+  orgId: string;
   reservationId?: string;
   userId: string;
   userName: string;
@@ -118,6 +134,7 @@ export type AuditAction =
 
 export interface AuditLog {
   id: string;
+  orgId: string;
   action: AuditAction;
   performedBy: string;
   performedByName: string;

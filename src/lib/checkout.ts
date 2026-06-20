@@ -22,6 +22,7 @@ export function isOverdue(c: Checkout): boolean {
 }
 
 export interface NewCheckout {
+  orgId: string;
   userId: string;
   userName: string;
   userEmail: string;
@@ -47,6 +48,7 @@ export async function createCheckout(input: NewCheckout): Promise<string> {
       }
     }
     tx.set(checkoutRef, {
+      orgId: input.orgId,
       reservationId: input.reservationId ?? null,
       kitId: input.kitId ?? null,
       userId: input.userId,

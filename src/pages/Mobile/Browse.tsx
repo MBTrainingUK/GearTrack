@@ -35,6 +35,7 @@ export default function Browse() {
     endOfToday.setHours(23, 59, 0, 0);
     try {
       const checkoutId = await createCheckout({
+        orgId: appUser.orgId,
         userId: currentUser.uid,
         userName: appUser.displayName,
         userEmail: appUser.email,
@@ -43,6 +44,7 @@ export default function Browse() {
         notes: 'Quick Grab',
       });
       await writeAuditLog({
+        orgId: appUser.orgId,
         action: 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,

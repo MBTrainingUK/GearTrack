@@ -39,6 +39,7 @@ export default function KitsList() {
       batch.delete(doc(db, 'kits', kit.id));
       await batch.commit();
       await writeAuditLog({
+        orgId: appUser!.orgId,
         action: 'delete_kit',
         performedBy: currentUser!.uid,
         performedByName: appUser!.displayName,
@@ -169,7 +170,7 @@ export default function KitsList() {
   );
 }
 
-function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { items: Item[]; onClose: () => void; currentUser: { uid: string } | null; appUser: { displayName: string } | null; editingKit?: Kit | null }) {
+function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { items: Item[]; onClose: () => void; currentUser: { uid: string } | null; appUser: { displayName: string; orgId: string } | null; editingKit?: Kit | null }) {
   const [name, setName] = useState(editingKit?.name ?? '');
   const [description, setDescription] = useState(editingKit?.description ?? '');
   const [selectedItems, setSelectedItems] = useState<string[]>(editingKit?.itemIds ?? []);
@@ -199,6 +200,7 @@ function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { it
           updatedAt: serverTimestamp(),
         });
         await writeAuditLog({
+          orgId: appUser!.orgId,
           action: 'update_kit',
           performedBy: currentUser!.uid,
           performedByName: appUser!.displayName,
@@ -212,6 +214,7 @@ function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { it
         const ref = doc(collection(db, 'kits'));
         const batch = writeBatch(db);
         batch.set(ref, {
+          orgId: appUser!.orgId,
           name,
           description,
           itemIds: selectedItems,
@@ -221,6 +224,7 @@ function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { it
         });
         await batch.commit();
         await writeAuditLog({
+          orgId: appUser!.orgId,
           action: 'create_kit',
           performedBy: currentUser!.uid,
           performedByName: appUser!.displayName,

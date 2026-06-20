@@ -76,6 +76,7 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
 
       if (mode === 'return') {
         await writeAuditLog({
+          orgId: appUser.orgId,
           action: 'checkin',
           performedBy: currentUser.uid,
           performedByName: appUser.displayName,

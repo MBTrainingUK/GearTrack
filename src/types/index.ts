@@ -14,7 +14,7 @@ export interface AppUser {
 
 // ── Item ─────────────────────────────────────────────────────────────
 // Items are only ever 'available' or 'checked_out'. Condition concerns
-// (needs_attention/damaged/etc.) are tracked separately on `Item.condition`.
+// (attention_needed/damaged/etc.) are tracked separately on `Item.condition`.
 export type ItemStatus = 'available' | 'checked_out';
 
 export interface Item {
@@ -24,7 +24,7 @@ export interface Item {
   category: string;
   serialNumber?: string;
   assetNumber?: string;
-  condition?: 'good' | 'needs_attention' | 'needs_investigating' | 'damaged';
+  condition?: 'good' | 'attention_needed' | 'needs_investigating' | 'damaged';
   conditionFlagNote?: string;
   status: ItemStatus;
   photoURLs: string[];

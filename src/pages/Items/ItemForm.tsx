@@ -212,7 +212,7 @@ export default function ItemForm() {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="good">Good</option>
-              <option value="needs_attention">Needs attention</option>
+              <option value="attention_needed">Attention needed</option>
               <option value="needs_investigating">Needs investigating</option>
               <option value="damaged">Damaged</option>
             </select>

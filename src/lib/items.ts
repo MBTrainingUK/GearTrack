@@ -1,11 +1,11 @@
 import type { Item } from '../types';
 import { differenceInMonths } from 'date-fns';
 
-// Items flagged for attention, inspection, or damage are blocked from
-// booking and checkout everywhere — desktop and mobile.
+// Items needing inspection or repair are blocked from booking and checkout
+// everywhere — desktop and mobile. 'attention_needed' (minor damage, still
+// usable) is informational only and does not block.
 export function isFlagged(item: Item): boolean {
   return (
-    item.condition === 'needs_attention' ||
     item.condition === 'needs_investigating' ||
     item.condition === 'damaged'
   );

@@ -1,14 +1,14 @@
 import { AlertTriangle, Search } from 'lucide-react';
 
-type ItemCondition = 'good' | 'needs_attention' | 'needs_investigating' | 'damaged';
+type ItemCondition = 'good' | 'attention_needed' | 'needs_investigating' | 'damaged';
 
 export default function ConditionBadge({ condition }: { condition?: ItemCondition | string }) {
   if (!condition || condition === 'good') return null;
-  if (condition === 'needs_attention') {
+  if (condition === 'attention_needed') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
         <AlertTriangle size={11} />
-        Needs attention
+        Attention needed
       </span>
     );
   }
@@ -20,10 +20,13 @@ export default function ConditionBadge({ condition }: { condition?: ItemConditio
       </span>
     );
   }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-      <AlertTriangle size={11} />
-      Damaged
-    </span>
-  );
+  if (condition === 'damaged') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        <AlertTriangle size={11} />
+        Damaged
+      </span>
+    );
+  }
+  return null;
 }

@@ -14,7 +14,7 @@ import { useCategories } from '../../store/categories';
 const CONDITIONS = [
   { value: 'all', label: 'All Conditions' },
   { value: 'good', label: 'Good' },
-  { value: 'needs_attention', label: 'Needs Attention' },
+  { value: 'attention_needed', label: 'Attention Needed' },
   { value: 'needs_investigating', label: 'Needs Investigating' },
   { value: 'damaged', label: 'Damaged' },
 ] as const;
@@ -25,7 +25,7 @@ export default function ItemsList() {
   const { categories } = useCategories();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
-  const [condition, setCondition] = useState<'all' | 'good' | 'needs_attention' | 'needs_investigating' | 'damaged'>('all');
+  const [condition, setCondition] = useState<'all' | 'good' | 'attention_needed' | 'needs_investigating' | 'damaged'>('all');
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this item? This cannot be undone.')) return;

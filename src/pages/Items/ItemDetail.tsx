@@ -167,10 +167,13 @@ export default function ItemDetail() {
                   <p>
                     This item is marked as{' '}
                     <strong>
-                      {item.condition === 'needs_attention' ? 'Needs attention' :
+                      {item.condition === 'attention_needed' ? 'Attention needed' :
                        item.condition === 'needs_investigating' ? 'Needs investigating' :
-                       'Damaged'}
-                    </strong>{' '}and is blocked from booking.
+                       item.condition === 'damaged' ? 'Damaged' : item.condition}
+                    </strong>
+                    {item.condition === 'attention_needed'
+                      ? '. It can still be booked.'
+                      : ' and is blocked from booking.'}
                   </p>
                   {item.conditionFlagNote && (
                     <p className="mt-1 text-xs text-amber-700">{item.conditionFlagNote}</p>

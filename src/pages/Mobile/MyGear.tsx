@@ -11,16 +11,17 @@ import toast from 'react-hot-toast';
 import ConditionModal from '../../components/ConditionModal';
 
 export default function MyGear() {
-  const { currentUser } = useAuth();
+  const { currentUser, appUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { byId: items } = useItems();
   const [loading, setLoading] = useState(true);
   const [confirmReturn, setConfirmReturn] = useState<Checkout | null>(null);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !appUser?.orgId) return;
     const q = query(
       collection(db, 'checkouts'),
+      where('orgId', '==', appUser.orgId),
       where('userId', '==', currentUser.uid),
       where('status', '==', 'active'),
     );
@@ -29,7 +30,7 @@ export default function MyGear() {
       setLoading(false);
     });
     return unsub;
-  }, [currentUser]);
+  }, [currentUser, appUser?.orgId]);
 
   function itemNamesFor(checkout: Checkout) {
     return checkout.itemIds.map((id) => items[id]?.name ?? '…').join(', ');

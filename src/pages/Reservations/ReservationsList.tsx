@@ -4,6 +4,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
   updateDoc,
   doc,
   getDocs,
@@ -37,19 +38,21 @@ export default function ReservationsList() {
   const [dateRange, setDateRange] = useState<30 | 90>(30);
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
     return onSnapshot(
-      query(collection(db, 'reservations'), orderBy('startDate', 'desc')),
+      query(collection(db, 'reservations'), where('orgId', '==', appUser.orgId), orderBy('startDate', 'desc')),
       (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation)))
     );
-  }, []);
+  }, [appUser?.orgId]);
 
   useEffect(() => {
-    getDocs(collection(db, 'kits')).then((kitSnap) => {
+    if (!appUser?.orgId) return;
+    getDocs(query(collection(db, 'kits'), where('orgId', '==', appUser.orgId))).then((kitSnap) => {
       const kMap: Record<string, Kit> = {};
       kitSnap.docs.forEach((d) => { kMap[d.id] = { id: d.id, ...d.data() } as Kit; });
       setKits(kMap);
     });
-  }, []);
+  }, [appUser?.orgId]);
 
   async function handleApprove(id: string) {
     try {

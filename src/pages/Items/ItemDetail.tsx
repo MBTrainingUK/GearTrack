@@ -34,11 +34,11 @@ export default function ItemDetail() {
   const [actionSaving, setActionSaving] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !appUser?.orgId) return;
     Promise.all([
       getDoc(doc(db, 'items', id)),
       getDocs(
-        query(collection(db, 'checkouts'), where('itemIds', 'array-contains', id))
+        query(collection(db, 'checkouts'), where('orgId', '==', appUser.orgId), where('itemIds', 'array-contains', id))
       ),
     ]).then(([itemSnap, checkoutsSnap]) => {
       if (itemSnap.exists()) setItem({ id: itemSnap.id, ...itemSnap.data() } as Item);
@@ -48,7 +48,7 @@ export default function ItemDetail() {
       setHistory(sorted);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [id]);
+  }, [id, appUser?.orgId]);
 
   async function flagForInspection() {
     if (!item) return;

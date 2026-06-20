@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { AuditLog } from '../../types';
 import { Navigate } from 'react-router-dom';
@@ -45,14 +45,15 @@ export default function ActivityLog() {
   const [actionFilter, setActionFilter] = useState('all');
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
     return onSnapshot(
-      query(collection(db, 'auditLog'), orderBy('timestamp', 'desc'), limit(300)),
+      query(collection(db, 'auditLog'), where('orgId', '==', appUser.orgId), orderBy('timestamp', 'desc'), limit(300)),
       (s) => {
         setLogs(s.docs.map((d) => ({ id: d.id, ...d.data() } as AuditLog)));
         setLoading(false);
       }
     );
-  }, []);
+  }, [appUser?.orgId]);
 
   if (appUser && appUser.role === 'user') return <Navigate to="/" replace />;
 

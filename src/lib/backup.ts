@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 
 const BACKUP_VERSION = 1;
@@ -34,10 +34,10 @@ function deserialize(doc: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export async function exportBackup(): Promise<void> {
+export async function exportBackup(orgId: string): Promise<void> {
   const [itemsSnap, kitsSnap] = await Promise.all([
-    getDocs(collection(db, 'items')),
-    getDocs(collection(db, 'kits')),
+    getDocs(query(collection(db, 'items'), where('orgId', '==', orgId))),
+    getDocs(query(collection(db, 'kits'), where('orgId', '==', orgId))),
   ]);
 
   const backup: BackupFile = {
@@ -65,7 +65,7 @@ export function parseBackupFile(text: string): BackupFile {
   return data as BackupFile;
 }
 
-export async function importBackup(backup: BackupFile): Promise<{ items: number; kits: number }> {
+export async function importBackup(backup: BackupFile, orgId: string): Promise<{ items: number; kits: number }> {
   const batches: ReturnType<typeof writeBatch>[] = [];
   let opCount = 0;
   function nextBatch() {
@@ -74,13 +74,15 @@ export async function importBackup(backup: BackupFile): Promise<{ items: number;
     return batches[batches.length - 1];
   }
 
+  // orgId is always set to the importing org, regardless of what's in the
+  // file — a backup should never be able to plant data into another org.
   for (const raw of backup.items) {
     const { id, ...rest } = deserialize(raw);
-    nextBatch().set(doc(db, 'items', id as string), rest, { merge: false });
+    nextBatch().set(doc(db, 'items', id as string), { ...rest, orgId }, { merge: false });
   }
   for (const raw of backup.kits) {
     const { id, ...rest } = deserialize(raw);
-    nextBatch().set(doc(db, 'kits', id as string), rest, { merge: false });
+    nextBatch().set(doc(db, 'kits', id as string), { ...rest, orgId }, { merge: false });
   }
 
   await Promise.all(batches.map((b) => b.commit()));

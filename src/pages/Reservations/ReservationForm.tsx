@@ -39,9 +39,11 @@ export default function ReservationForm() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
+    const orgId = appUser.orgId;
     Promise.all([
-      getDocs(collection(db, 'items')),
-      getDocs(collection(db, 'kits')),
+      getDocs(query(collection(db, 'items'), where('orgId', '==', orgId))),
+      getDocs(query(collection(db, 'kits'), where('orgId', '==', orgId))),
     ]).then(([itemsSnap, kitsSnap]) => {
       const loadedItems = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
       setItems(loadedItems);
@@ -53,7 +55,7 @@ export default function ReservationForm() {
         if (kit) applyKitSelection(kit, loadedItems);
       }
     });
-  }, [preselectedKitId]);
+  }, [preselectedKitId, appUser?.orgId]);
 
   function applyKitSelection(kit: Kit, itemList: Item[]) {
     const available: string[] = [];
@@ -87,6 +89,7 @@ export default function ReservationForm() {
       itemIds.map(async (itemId) => {
         const q = query(
           collection(db, 'reservations'),
+          where('orgId', '==', appUser!.orgId),
           where('itemIds', 'array-contains', itemId),
           where('status', 'in', ['pending', 'approved', 'checked_out'])
         );

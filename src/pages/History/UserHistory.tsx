@@ -15,7 +15,7 @@ import type { Timestamp } from 'firebase/firestore';
 import { History } from 'lucide-react';
 
 export default function UserHistory() {
-  const { currentUser } = useAuth();
+  const { currentUser, appUser } = useAuth();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const { byId: items } = useItems();
@@ -24,17 +24,19 @@ export default function UserHistory() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !appUser?.orgId) return;
     Promise.all([
       getDocs(
         query(
           collection(db, 'checkouts'),
+          where('orgId', '==', appUser.orgId),
           where('userId', '==', currentUser.uid)
         )
       ),
       getDocs(
         query(
           collection(db, 'reservations'),
+          where('orgId', '==', appUser.orgId),
           where('userId', '==', currentUser.uid)
         )
       ),
@@ -51,7 +53,7 @@ export default function UserHistory() {
       );
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [currentUser]);
+  }, [currentUser, appUser?.orgId]);
 
   const cutoff = subDays(new Date(), dateRange);
   const filteredCheckouts = checkouts.filter((c) => {

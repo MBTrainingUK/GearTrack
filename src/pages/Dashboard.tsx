@@ -44,19 +44,21 @@ export default function Dashboard() {
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
+    const orgId = appUser.orgId;
     const sevenDaysAgo = Timestamp.fromDate(subDays(new Date(), 7));
     const unsubs = [
       onSnapshot(
         // 'overdue' is never persisted — active covers everything still out
-        query(collection(db, 'checkouts'), where('status', '==', 'active')),
+        query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('status', '==', 'active')),
         (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
       onSnapshot(
-        query(collection(db, 'checkouts'), where('checkedOutAt', '>=', sevenDaysAgo)),
+        query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('checkedOutAt', '>=', sevenDaysAgo)),
         (s) => setRecentCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
       onSnapshot(
-        query(collection(db, 'reservations'), where('status', 'in', ['pending', 'approved'])),
+        query(collection(db, 'reservations'), where('orgId', '==', orgId), where('status', 'in', ['pending', 'approved'])),
         (s) => {
           const sorted = s.docs
             .map((d) => ({ id: d.id, ...d.data() } as Reservation))
@@ -66,7 +68,7 @@ export default function Dashboard() {
       ),
     ];
     return () => unsubs.forEach((u) => u());
-  }, []);
+  }, [appUser?.orgId]);
 
   // Build last-7-days chart from real checkout data
   const chartData = useMemo(() => {

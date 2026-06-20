@@ -45,16 +45,18 @@ export default function AdminPanel() {
   const [backfilling, setBackfilling] = useState(false);
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'users'), (snap) => {
+    if (!appUser?.orgId) return;
+    return onSnapshot(query(collection(db, 'users'), where('orgId', '==', appUser.orgId)), (snap) => {
       const list = snap.docs.map((d) => ({ ...d.data() } as AppUser));
       list.sort((a, b) => a.displayName.localeCompare(b.displayName));
       setUsers(list);
     });
-  }, []);
+  }, [appUser?.orgId]);
 
   // Silently purge records older than 180 days whenever an admin visits this page
   useEffect(() => {
-    if (!appUser || appUser.role !== 'admin') return;
+    if (!appUser || appUser.role !== 'admin' || !appUser.orgId) return;
+    const orgId = appUser.orgId;
     const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
     (async () => {
       try {
@@ -62,7 +64,7 @@ export default function AdminPanel() {
           { col: 'checkouts', field: 'checkedOutAt' },
           { col: 'reservations', field: 'createdAt' },
         ]) {
-          const snap = await getDocs(query(collection(db, col), where(field, '<', cutoff)));
+          const snap = await getDocs(query(collection(db, col), where('orgId', '==', orgId), where(field, '<', cutoff)));
           if (snap.empty) continue;
           const batches: ReturnType<typeof writeBatch>[] = [];
           snap.docs.forEach((d, i) => {
@@ -111,12 +113,13 @@ export default function AdminPanel() {
   }
 
   async function clearTestData() {
+    if (!appUser?.orgId) return;
     setClearingData(true);
     setConfirmClearData(false);
     try {
       const collectionsToWipe = ['auditLog', 'checkouts', 'reservations'];
       for (const name of collectionsToWipe) {
-        const snap = await getDocs(collection(db, name));
+        const snap = await getDocs(query(collection(db, name), where('orgId', '==', appUser.orgId)));
         const batches: ReturnType<typeof writeBatch>[] = [];
         snap.docs.forEach((d, i) => {
           if (i % 500 === 0) batches.push(writeBatch(db));
@@ -133,6 +136,7 @@ export default function AdminPanel() {
   }
 
   async function purgeOldRecords() {
+    if (!appUser?.orgId) return;
     setPurgingOld(true);
     setConfirmPurgeOld(false);
     const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
@@ -142,7 +146,7 @@ export default function AdminPanel() {
         { col: 'checkouts', field: 'checkedOutAt' },
         { col: 'reservations', field: 'createdAt' },
       ]) {
-        const snap = await getDocs(query(collection(db, col), where(field, '<', cutoff)));
+        const snap = await getDocs(query(collection(db, col), where('orgId', '==', appUser.orgId), where(field, '<', cutoff)));
         if (snap.empty) continue;
         const batches: ReturnType<typeof writeBatch>[] = [];
         snap.docs.forEach((d, i) => {
@@ -180,9 +184,10 @@ export default function AdminPanel() {
   }
 
   async function handleExport() {
+    if (!appUser?.orgId) return;
     setExporting(true);
     try {
-      await exportBackup();
+      await exportBackup(appUser.orgId);
       toast.success('Backup downloaded');
     } catch {
       toast.error('Failed to export backup');
@@ -205,10 +210,10 @@ export default function AdminPanel() {
   }
 
   async function confirmImport() {
-    if (!pendingImport) return;
+    if (!pendingImport || !appUser?.orgId) return;
     setImporting(true);
     try {
-      const result = await importBackup(pendingImport.backup);
+      const result = await importBackup(pendingImport.backup, appUser.orgId);
       toast.success(`Restored ${result.items} items and ${result.kits} kits`);
     } catch {
       toast.error('Failed to import backup');

@@ -1,4 +1,54 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "checkedOutAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "checkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "itemIds", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "startDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "itemIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "auditLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

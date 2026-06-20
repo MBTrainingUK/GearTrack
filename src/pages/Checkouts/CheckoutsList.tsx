@@ -4,6 +4,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
   doc,
   getDoc,
   Timestamp,
@@ -42,19 +43,21 @@ export default function CheckoutsList() {
   const [showNewModal, setShowNewModal] = useState(Boolean(reservationId));
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
+    const orgId = appUser.orgId;
     const unsubs = [
       onSnapshot(
-        query(collection(db, 'checkouts'), orderBy('checkedOutAt', 'desc')),
+        query(collection(db, 'checkouts'), where('orgId', '==', orgId), orderBy('checkedOutAt', 'desc')),
         (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
       ),
-      onSnapshot(collection(db, 'kits'), (s) => {
+      onSnapshot(query(collection(db, 'kits'), where('orgId', '==', orgId)), (s) => {
         const map: Record<string, Kit> = {};
         s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Kit; });
         setKits(map);
       }),
     ];
     return () => unsubs.forEach((u) => u());
-  }, []);
+  }, [appUser?.orgId]);
 
   const cutoff = subDays(new Date(), dateRange);
   const dateFiltered = checkouts.filter((c) => {

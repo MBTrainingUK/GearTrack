@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   collection,
   onSnapshot,
+  query,
+  where,
   doc,
   writeBatch,
   updateDoc,
@@ -26,10 +28,11 @@ export default function KitsList() {
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    return onSnapshot(collection(db, 'kits'), (s) =>
+    if (!appUser?.orgId) return;
+    return onSnapshot(query(collection(db, 'kits'), where('orgId', '==', appUser.orgId)), (s) =>
       setKits(s.docs.map((d) => ({ id: d.id, ...d.data() } as Kit)))
     );
-  }, []);
+  }, [appUser?.orgId]);
 
   async function handleDelete(kit: Kit) {
     if (!confirm(`Delete kit "${kit.name}"?`)) return;

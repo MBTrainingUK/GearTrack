@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item, Checkout, Reservation } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -77,10 +77,12 @@ export default function ReportsPanel() {
   }
 
   useEffect(() => {
+    if (!appUser?.orgId) return;
+    const orgId = appUser.orgId;
     Promise.all([
-      getDocs(collection(db, 'items')),
-      getDocs(collection(db, 'checkouts')),
-      getDocs(collection(db, 'reservations')),
+      getDocs(query(collection(db, 'items'), where('orgId', '==', orgId))),
+      getDocs(query(collection(db, 'checkouts'), where('orgId', '==', orgId))),
+      getDocs(query(collection(db, 'reservations'), where('orgId', '==', orgId))),
     ]).then(([itemsSnap, checkoutsSnap, reservationsSnap]) => {
       const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
       const checkouts = checkoutsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout));
@@ -218,7 +220,7 @@ export default function ReportsPanel() {
 
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [appUser?.orgId]);
 
   // Guard: Reports is admin-only (checked after hooks to keep hook order stable)
   if (appUser && appUser.role !== 'admin') {

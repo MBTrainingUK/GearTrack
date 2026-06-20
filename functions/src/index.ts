@@ -114,10 +114,11 @@ export const createOrgUser = onCall(async (request) => {
 
 /**
  * One-time bootstrap: creates a default organization for the data that
- * existed before multi-tenancy, backfills orgId onto every existing
- * document, and promotes the caller to platform admin. Self-disables
- * once any organization exists, and only the sole pre-existing user can
- * ever invoke it — there's no platform admin yet to gate this on.
+ * existed before multi-tenancy, moves every existing user into it
+ * (keeping their current role), backfills orgId onto every existing
+ * document, and promotes the caller specifically to platform admin.
+ * Self-disables once any organization exists. Callable by any
+ * pre-migration admin, since there's no platform admin yet to gate this on.
  */
 export const backfillDefaultOrg = onCall(async (request) => {
   if (!request.auth) {
@@ -132,11 +133,11 @@ export const backfillDefaultOrg = onCall(async (request) => {
     throw new HttpsError('failed-precondition', 'Backfill has already run — an organization already exists.');
   }
 
-  const allUsers = await db.collection('users').get();
-  if (allUsers.size !== 1 || allUsers.docs[0].id !== request.auth.uid) {
+  const callerDoc = await db.collection('users').doc(request.auth.uid).get();
+  if (!callerDoc.exists || callerDoc.data()?.role !== 'admin') {
     throw new HttpsError(
       'permission-denied',
-      'Backfill can only be run by the sole existing user, before any organizations exist.'
+      'Backfill can only be run by an existing admin, before any organizations exist.'
     );
   }
 
@@ -149,6 +150,8 @@ export const backfillDefaultOrg = onCall(async (request) => {
     createdAt: FieldValue.serverTimestamp(),
   });
 
+  // Promote the caller to platform admin; every other existing user joins
+  // the new default org too, keeping their current role.
   await auth.setCustomUserClaims(request.auth.uid, {
     orgId: orgRef.id,
     role: 'admin' satisfies Role,
@@ -158,6 +161,14 @@ export const backfillDefaultOrg = onCall(async (request) => {
     orgId: orgRef.id,
     isPlatformAdmin: true,
   });
+
+  const allUsers = await db.collection('users').get();
+  for (const userDoc of allUsers.docs) {
+    if (userDoc.id === request.auth.uid) continue;
+    const role = (userDoc.data().role as Role | undefined) ?? 'user';
+    await auth.setCustomUserClaims(userDoc.id, { orgId: orgRef.id, role });
+    await userDoc.ref.update({ orgId: orgRef.id });
+  }
 
   for (const col of ['items', 'kits', 'checkouts', 'reservations', 'auditLog', 'categories']) {
     const snap = await db.collection(col).get();

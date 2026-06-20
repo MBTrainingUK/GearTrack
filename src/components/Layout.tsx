@@ -11,6 +11,7 @@ import {
   Shield,
   BarChart2,
   Activity,
+  Building2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/useAuth';
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/activity', label: 'Activity', icon: Activity, minRole: 'manager' },
   { to: '/reports', label: 'Reports', icon: BarChart2, minRole: 'admin' },
   { to: '/admin', label: 'Admin', icon: Shield, minRole: 'admin' },
+  { to: '/organizations', label: 'Organizations', icon: Building2, minRole: 'platformAdmin' },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -101,6 +103,7 @@ function SidebarContent({
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
           {navItems.filter(({ minRole }) => {
+            if (minRole === 'platformAdmin') return appUser?.isPlatformAdmin === true;
             if (minRole === 'admin') return appUser?.role === 'admin';
             if (minRole === 'manager') return appUser?.role === 'admin' || appUser?.role === 'manager';
             return true;

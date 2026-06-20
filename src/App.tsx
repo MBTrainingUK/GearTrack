@@ -17,6 +17,7 @@ import ReservationForm from './pages/Reservations/ReservationForm';
 import CheckoutsList from './pages/Checkouts/CheckoutsList';
 import UserHistory from './pages/History/UserHistory';
 import AdminPanel from './pages/Admin/AdminPanel';
+import OrganizationsConsole from './pages/Organizations/OrganizationsConsole';
 import ReportsPanel from './pages/Reports/ReportsPanel';
 import ActivityLog from './pages/Activity/ActivityLog';
 import MobileLayout from './pages/Mobile/MobileLayout';
@@ -75,6 +76,7 @@ export default function App() {
                     <Route path="/reports" element={<ReportsPanel />} />
                     <Route path="/activity" element={<ActivityLog />} />
                     <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/organizations" element={<OrganizationsConsole />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

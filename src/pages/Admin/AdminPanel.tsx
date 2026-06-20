@@ -5,7 +5,7 @@ import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
@@ -43,6 +43,18 @@ export default function AdminPanel() {
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backfilling, setBackfilling] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [addingUser, setAddingUser] = useState(false);
+  const [newUserLink, setNewUserLink] = useState<string | null>(null);
+  const [addUserForm, setAddUserForm] = useState({ email: '', displayName: '', role: 'user' as UserRole });
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  function copyLink(link: string) {
+    navigator.clipboard.writeText(link).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  }
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -183,6 +195,36 @@ export default function AdminPanel() {
     }
   }
 
+  async function handleAddUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!appUser?.orgId) return;
+    setAddingUser(true);
+    try {
+      const result = await httpsCallable<
+        { orgId: string; email: string; displayName: string; role: UserRole },
+        { uid: string; resetLink: string }
+      >(functions, 'createOrgUser')({
+        orgId: appUser.orgId,
+        email: addUserForm.email,
+        displayName: addUserForm.displayName,
+        role: addUserForm.role,
+      });
+      setNewUserLink(result.data.resetLink);
+      toast.success(`${addUserForm.displayName} added`);
+    } catch (err) {
+      console.error('createOrgUser failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to add user');
+    } finally {
+      setAddingUser(false);
+    }
+  }
+
+  function closeAddUserModal() {
+    setShowAddUser(false);
+    setNewUserLink(null);
+    setAddUserForm({ email: '', displayName: '', role: 'user' });
+  }
+
   async function handleExport() {
     if (!appUser?.orgId) return;
     setExporting(true);
@@ -230,14 +272,23 @@ export default function AdminPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
-          <Shield size={18} className="text-red-600" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+            <Shield size={18} className="text-red-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="text-sm text-gray-500">{users.length} registered user{users.length !== 1 ? 's' : ''}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="text-sm text-gray-500">{users.length} registered user{users.length !== 1 ? 's' : ''}</p>
-        </div>
+        <button
+          onClick={() => setShowAddUser(true)}
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <UserPlus size={16} />
+          Add user
+        </button>
       </div>
 
       {!appUser?.orgId && (
@@ -548,6 +599,97 @@ export default function AdminPanel() {
                 Remove User
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAddUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeAddUserModal}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="font-semibold text-gray-900">{newUserLink ? 'User added' : 'Add user'}</h2>
+              <button onClick={closeAddUserModal} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            {newUserLink ? (
+              <div className="px-6 py-5 space-y-3">
+                <p className="text-sm text-gray-700">
+                  <strong>{addUserForm.displayName}</strong> has been added. Send them this link so they can set a password — there's no automated email, so share it yourself.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={newUserLink}
+                    onFocus={(e) => e.target.select()}
+                    className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+                  />
+                  <button
+                    onClick={() => copyLink(newUserLink)}
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {linkCopied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    {linkCopied ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <button
+                  onClick={closeAddUserModal}
+                  className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleAddUser} className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Full name</label>
+                  <input
+                    required
+                    value={addUserForm.displayName}
+                    onChange={(e) => setAddUserForm((f) => ({ ...f, displayName: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    required
+                    type="email"
+                    value={addUserForm.email}
+                    onChange={(e) => setAddUserForm((f) => ({ ...f, email: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="jane@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                  <select
+                    value={addUserForm.role}
+                    onChange={(e) => setAddUserForm((f) => ({ ...f, role: e.target.value as UserRole }))}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="user">User</option>
+                    <option value="manager">Team Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={closeAddUserModal}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingUser}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {addingUser ? 'Adding…' : 'Add user'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

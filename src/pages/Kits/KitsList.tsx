@@ -4,12 +4,13 @@ import {
   onSnapshot,
   doc,
   writeBatch,
+  updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
-import { Plus, Layers, X, Check, Trash2 } from 'lucide-react';
+import { Plus, Layers, X, Check, Trash2, Edit } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
@@ -21,6 +22,7 @@ export default function KitsList() {
   const [kits, setKits] = useState<Kit[]>([]);
   const { items } = useItems();
   const [showForm, setShowForm] = useState(false);
+  const [editingKit, setEditingKit] = useState<Kit | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -97,9 +99,14 @@ export default function KitsList() {
                     </div>
                   </div>
                   {appUser?.role !== 'user' && (
-                    <button onClick={() => handleDelete(kit)} className="text-gray-300 hover:text-red-500">
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setEditingKit(kit)} className="text-gray-300 hover:text-blue-500">
+                        <Edit size={15} />
+                      </button>
+                      <button onClick={() => handleDelete(kit)} className="text-gray-300 hover:text-red-500">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {kit.description && (
@@ -149,22 +156,23 @@ export default function KitsList() {
         </div>
       )}
 
-      {showForm && (
+      {(showForm || editingKit) && (
         <KitFormModal
           items={items}
           currentUser={currentUser}
           appUser={appUser}
-          onClose={() => setShowForm(false)}
+          editingKit={editingKit}
+          onClose={() => { setShowForm(false); setEditingKit(null); }}
         />
       )}
     </div>
   );
 }
 
-function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[]; onClose: () => void; currentUser: { uid: string } | null; appUser: { displayName: string } | null }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { items: Item[]; onClose: () => void; currentUser: { uid: string } | null; appUser: { displayName: string } | null; editingKit?: Kit | null }) {
+  const [name, setName] = useState(editingKit?.name ?? '');
+  const [description, setDescription] = useState(editingKit?.description ?? '');
+  const [selectedItems, setSelectedItems] = useState<string[]>(editingKit?.itemIds ?? []);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -183,30 +191,48 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
     }
     setSaving(true);
     try {
-      // Items are not owned by kits; just create the kit document
-      const ref = doc(collection(db, 'kits'));
-      const batch = writeBatch(db);
-      batch.set(ref, {
-        name,
-        description,
-        itemIds: selectedItems,
-        photoURLs: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      await batch.commit();
-      await writeAuditLog({
-        action: 'create_kit',
-        performedBy: currentUser!.uid,
-        performedByName: appUser!.displayName,
-        targetType: 'kit',
-        targetId: ref.id,
-        targetName: name,
-      });
-      toast.success('Kit created');
+      if (editingKit) {
+        await updateDoc(doc(db, 'kits', editingKit.id), {
+          name,
+          description,
+          itemIds: selectedItems,
+          updatedAt: serverTimestamp(),
+        });
+        await writeAuditLog({
+          action: 'update_kit',
+          performedBy: currentUser!.uid,
+          performedByName: appUser!.displayName,
+          targetType: 'kit',
+          targetId: editingKit.id,
+          targetName: name,
+        });
+        toast.success('Kit updated');
+      } else {
+        // Items are not owned by kits; just create the kit document
+        const ref = doc(collection(db, 'kits'));
+        const batch = writeBatch(db);
+        batch.set(ref, {
+          name,
+          description,
+          itemIds: selectedItems,
+          photoURLs: [],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        await batch.commit();
+        await writeAuditLog({
+          action: 'create_kit',
+          performedBy: currentUser!.uid,
+          performedByName: appUser!.displayName,
+          targetType: 'kit',
+          targetId: ref.id,
+          targetName: name,
+        });
+        toast.success('Kit created');
+      }
       onClose();
     } catch {
-      toast.error('Failed to create kit');
+      toast.error(editingKit ? 'Failed to update kit' : 'Failed to create kit');
     } finally {
       setSaving(false);
     }
@@ -216,7 +242,7 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <h2 className="font-semibold text-gray-900">Create Kit</h2>
+          <h2 className="font-semibold text-gray-900">{editingKit ? 'Edit Kit' : 'Create Kit'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <div className="overflow-y-auto px-6 py-4 space-y-4">
@@ -283,7 +309,7 @@ function KitFormModal({ items, onClose, currentUser, appUser }: { items: Item[];
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {saving ? 'Creating…' : 'Create Kit'}
+            {saving ? (editingKit ? 'Saving…' : 'Creating…') : (editingKit ? 'Save Changes' : 'Create Kit')}
           </button>
         </div>
       </div>

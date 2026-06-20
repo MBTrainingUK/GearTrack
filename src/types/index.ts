@@ -112,6 +112,7 @@ export type AuditAction =
   | 'update_item'
   | 'delete_item'
   | 'create_kit'
+  | 'update_kit'
   | 'delete_kit'
   | 'approve_reservation';
 

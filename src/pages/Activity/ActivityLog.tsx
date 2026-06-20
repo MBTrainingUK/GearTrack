@@ -51,6 +51,10 @@ export default function ActivityLog() {
       (s) => {
         setLogs(s.docs.map((d) => ({ id: d.id, ...d.data() } as AuditLog)));
         setLoading(false);
+      },
+      (err) => {
+        console.error('ActivityLog query failed:', err);
+        setLoading(false);
       }
     );
   }, [appUser?.orgId]);

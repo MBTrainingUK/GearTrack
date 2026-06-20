@@ -50,7 +50,7 @@ export default function AdminPanel() {
       const list = snap.docs.map((d) => ({ ...d.data() } as AppUser));
       list.sort((a, b) => a.displayName.localeCompare(b.displayName));
       setUsers(list);
-    });
+    }, (err) => console.error('Users query failed:', err));
   }, [appUser?.orgId]);
 
   // Silently purge records older than 180 days whenever an admin visits this page

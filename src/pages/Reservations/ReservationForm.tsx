@@ -54,6 +54,9 @@ export default function ReservationForm() {
         const kit = loadedKits.find((k) => k.id === preselectedKitId);
         if (kit) applyKitSelection(kit, loadedItems);
       }
+    }).catch((err) => {
+      console.error('Failed to load items/kits for reservation form:', err);
+      toast.error('Failed to load items and kits');
     });
   }, [preselectedKitId, appUser?.orgId]);
 

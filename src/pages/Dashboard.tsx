@@ -51,11 +51,13 @@ export default function Dashboard() {
       onSnapshot(
         // 'overdue' is never persisted — active covers everything still out
         query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('status', '==', 'active')),
-        (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
+        (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout))),
+        (err) => console.error('Active checkouts query failed:', err)
       ),
       onSnapshot(
         query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('checkedOutAt', '>=', sevenDaysAgo)),
-        (s) => setRecentCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
+        (s) => setRecentCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout))),
+        (err) => console.error('Recent checkouts query failed:', err)
       ),
       onSnapshot(
         query(collection(db, 'reservations'), where('orgId', '==', orgId), where('status', 'in', ['pending', 'approved'])),
@@ -64,7 +66,8 @@ export default function Dashboard() {
             .map((d) => ({ id: d.id, ...d.data() } as Reservation))
             .sort((a, b) => (a.startDate?.toMillis() ?? 0) - (b.startDate?.toMillis() ?? 0));
           setReservations(sorted);
-        }
+        },
+        (err) => console.error('Pending reservations query failed:', err)
       ),
     ];
     return () => unsubs.forEach((u) => u());

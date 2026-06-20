@@ -48,13 +48,14 @@ export default function CheckoutsList() {
     const unsubs = [
       onSnapshot(
         query(collection(db, 'checkouts'), where('orgId', '==', orgId), orderBy('checkedOutAt', 'desc')),
-        (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)))
+        (s) => setCheckouts(s.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout))),
+        (err) => console.error('Checkouts query failed:', err)
       ),
       onSnapshot(query(collection(db, 'kits'), where('orgId', '==', orgId)), (s) => {
         const map: Record<string, Kit> = {};
         s.docs.forEach((d) => { map[d.id] = { id: d.id, ...d.data() } as Kit; });
         setKits(map);
-      }),
+      }, (err) => console.error('Kits query failed:', err)),
     ];
     return () => unsubs.forEach((u) => u());
   }, [appUser?.orgId]);

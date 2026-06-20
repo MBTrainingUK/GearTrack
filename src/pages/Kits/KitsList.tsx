@@ -29,8 +29,10 @@ export default function KitsList() {
 
   useEffect(() => {
     if (!appUser?.orgId) return;
-    return onSnapshot(query(collection(db, 'kits'), where('orgId', '==', appUser.orgId)), (s) =>
-      setKits(s.docs.map((d) => ({ id: d.id, ...d.data() } as Kit)))
+    return onSnapshot(
+      query(collection(db, 'kits'), where('orgId', '==', appUser.orgId)),
+      (s) => setKits(s.docs.map((d) => ({ id: d.id, ...d.data() } as Kit))),
+      (err) => console.error('Kits query failed:', err)
     );
   }, [appUser?.orgId]);
 

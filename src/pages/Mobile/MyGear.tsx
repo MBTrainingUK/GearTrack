@@ -28,6 +28,9 @@ export default function MyGear() {
     const unsub = onSnapshot(q, (snap) => {
       setCheckouts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Checkout)));
       setLoading(false);
+    }, (err) => {
+      console.error('MyGear query failed:', err);
+      setLoading(false);
     });
     return unsub;
   }, [currentUser, appUser?.orgId]);

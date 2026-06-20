@@ -41,7 +41,8 @@ export default function ReservationsList() {
     if (!appUser?.orgId) return;
     return onSnapshot(
       query(collection(db, 'reservations'), where('orgId', '==', appUser.orgId), orderBy('startDate', 'desc')),
-      (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation)))
+      (s) => setReservations(s.docs.map((d) => ({ id: d.id, ...d.data() } as Reservation))),
+      (err) => console.error('Reservations query failed:', err)
     );
   }, [appUser?.orgId]);
 

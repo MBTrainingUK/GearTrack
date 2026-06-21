@@ -8,6 +8,22 @@ initializeApp();
 type Role = 'admin' | 'manager' | 'user';
 const VALID_ROLES: Role[] = ['admin', 'manager', 'user'];
 
+/** Wraps auth.createUser() so common failures reach the client as a clear message instead of being stripped to "internal". */
+async function createAuthUser(auth: ReturnType<typeof getAuth>, email: string, displayName: string) {
+  try {
+    return await auth.createUser({ email, displayName });
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'auth/email-already-exists') {
+      throw new HttpsError('already-exists', `An account with the email ${email} already exists.`);
+    }
+    if (code === 'auth/invalid-email') {
+      throw new HttpsError('invalid-argument', `"${email}" isn't a valid email address.`);
+    }
+    throw err;
+  }
+}
+
 /**
  * Platform-admin only. Creates a brand new organization plus its first
  * org admin user. orgId/role are set as custom claims (security-rule
@@ -31,16 +47,15 @@ export const createOrganization = onCall(async (request) => {
   const db = getFirestore();
   const auth = getAuth();
 
+  // Create the Auth user first — if this fails (bad/duplicate email), there's
+  // no org doc left orphaned behind it.
+  const userRecord = await createAuthUser(auth, adminEmail.trim(), adminDisplayName.trim());
+
   const orgRef = db.collection('organizations').doc();
   await orgRef.set({
     name: orgName.trim(),
     status: 'active',
     createdAt: FieldValue.serverTimestamp(),
-  });
-
-  const userRecord = await auth.createUser({
-    email: adminEmail.trim(),
-    displayName: adminDisplayName.trim(),
   });
 
   await auth.setCustomUserClaims(userRecord.uid, { orgId: orgRef.id, role: 'admin' satisfies Role });
@@ -91,10 +106,7 @@ export const createOrgUser = onCall(async (request) => {
   const db = getFirestore();
   const auth = getAuth();
 
-  const userRecord = await auth.createUser({
-    email: email.trim(),
-    displayName: displayName.trim(),
-  });
+  const userRecord = await createAuthUser(auth, email.trim(), displayName.trim());
 
   await auth.setCustomUserClaims(userRecord.uid, { orgId, role });
 

@@ -1,30 +1,44 @@
 # GearTrack
 
-Equipment management system for tracking gear checkouts, reservations, and condition reporting.
+Multi-tenant equipment management system for tracking gear checkouts, reservations, and condition reporting.
 
-Built for media and AV environments where kit needs to be signed out, tracked, and returned in good condition.
+Built for media and AV environments where kit needs to be signed out, tracked, and returned in good condition. A single deployment can serve multiple separate organisations, each with its own fully isolated inventory, users, and history.
 
 ---
 
 ## Features
 
-- **Inventory management** — add items with photos, serial numbers, asset numbers, categories, and custom fields
-- **Kits** — group items into named kits that can be reserved and checked out together
-- **Reservations** — book equipment for a date range, with approval workflow
+- **Inventory management** — add items with serial numbers, asset numbers, categories, custom fields, and dropdown filters
+- **Kits** — group items into named kits that can be reserved and checked out together, and edited in place rather than rebuilt
+- **Reservations** — book equipment for a date range, with approval workflow and a calendar view
 - **Checkouts** — sign gear out with a condition report; Quick Grab for instant end-of-day loans
-- **Check-in** — log return condition; poor or damaged returns automatically flag the item for inspection
-- **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and upcoming reservations
-- **Reports** — usage analytics per item and per user, checkout duration, late return rate, and unused items
-- **Admin panel** — manage user roles and access
-- **Backup & restore** — export all items and kits to a JSON file, and re-import it to restore your inventory
+- **Check-in** — log return condition; damaged or flagged-for-investigation returns block re-booking until cleared
+- **Mobile PWA** — installable mobile experience (`/m`) for browsing inventory and managing "My Gear" on the go
+- **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and a calendar of upcoming reservations
+- **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, and cost-per-checkout financials
+- **Activity log** — full audit trail of who did what, when
+- **Admin panel** — manage user roles, add new teammates, and run data maintenance
+- **Backup & restore** — export an organisation's items and kits to a JSON file, and re-import to restore
+- **Date-range filtering & retention** — 30/90-day filters on reservations, checkouts, and history; records older than 180 days are automatically purged
+
+## Multi-tenancy
+
+GearTrack is built so one deployment can host several separate customer organisations on a shared database, with strict data isolation between them:
+
+- Every record (items, kits, checkouts, reservations, users, audit log) belongs to exactly one **organisation** (`orgId`), enforced server-side by Firestore Security Rules — not just by application logic. A query that isn't provably scoped to the requesting user's own organisation is rejected by the database outright.
+- There is no open self-registration. Accounts are created only by an organisation's own admin (Admin Panel → **Add user**) or by the platform admin (creating a brand-new organisation via the **Organizations** console). New accounts are activated through a single-use password-reset link.
+- A **platform admin** (a Firebase custom claim, `platformAdmin: true`) can see and manage every organisation, for onboarding new customers and providing support.
+
+See [`legal/DPA.md`](./legal/DPA.md) for the data-processing terms this implies for customers, and [`legal/INCIDENT_RESPONSE_PLAN.md`](./legal/INCIDENT_RESPONSE_PLAN.md) for the operational playbook.
 
 ## Roles
 
 | Role | Permissions |
 |---|---|
-| **User** | Browse inventory, make reservations |
-| **Manager** | All of the above, plus create/edit items, manage checkouts and check-ins |
-| **Admin** | Full access, including Reports and Admin Panel |
+| **User** | Browse inventory, make reservations, manage their own checkouts |
+| **Manager** ("Team Member") | All of the above, plus create/edit items and kits, manage all checkouts and check-ins |
+| **Admin** | Full access within their own organisation, including Reports, Activity Log, and Admin Panel (add users, manage roles, data maintenance) |
+| **Platform Admin** | Cross-organisation access: the Organizations console (create new customer organisations), plus full access to every organisation's data for support |
 
 ## Tech Stack
 
@@ -32,17 +46,22 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 |---|---|
 | Frontend | React 19, TypeScript, Vite |
 | Styling | Tailwind CSS v4 |
-| Backend / DB | Firebase (Firestore, Auth, Storage) |
-| Charts | Recharts |
+| State | Zustand (shared items/categories stores) |
+| Backend / DB | Firebase (Firestore, Authentication) |
+| Server-side logic | Firebase Cloud Functions (TypeScript, Node 20) — organisation/user provisioning |
+| Charts & calendar | Recharts, FullCalendar |
 | Routing | React Router v7 |
-| Deployment | GitHub Pages via gh-pages |
+| Mobile | Vite PWA plugin |
+| Deployment | GitHub Pages, via GitHub Actions on every push to `main` |
+
+> Firebase Storage is configured (`storage.rules`) but currently unused — the photo-upload feature it backed has been removed from the app.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- A Firebase project with Firestore, Authentication (Email/Password), and Storage enabled
+- A Firebase project on the **Blaze** plan (required for Cloud Functions) with Firestore and Authentication (Email/Password) enabled
 
 ### Setup
 
@@ -57,6 +76,7 @@ cd GearTrack
 
 ```bash
 npm install
+cd functions && npm install && cd ..
 ```
 
 3. Create a `.env.local` file in the project root with your Firebase config:
@@ -70,7 +90,15 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 ```
 
-4. Start the dev server
+4. Deploy Firestore rules, indexes, and Cloud Functions:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,functions
+```
+
+5. Bootstrap the first organisation and platform admin: sign up your first user the old way (or create one directly in Firebase Console), then call the one-time `backfillDefaultOrg` Cloud Function as that user — it creates a default organisation, migrates any existing users into it, and promotes the caller to platform admin. It self-disables once any organisation exists.
+
+6. Start the dev server
 
 ```bash
 npm run dev
@@ -78,32 +106,45 @@ npm run dev
 
 ### Deploy
 
-Pushing to `main` triggers the `Deploy to GitHub Pages` GitHub Actions workflow, which builds the project and publishes `dist` to GitHub Pages.
+Pushing to `main` triggers the `Deploy to GitHub Pages` GitHub Actions workflow, which builds the project and publishes `dist` to GitHub Pages. Cloud Functions and Firestore rules/indexes are **not** part of that workflow — deploy them manually with `firebase deploy` when changed.
 
 ### Backup & Restore
 
-The Admin Panel has an Export/Import section for items and kits:
+The Admin Panel has an Export/Import section for items and kits, scoped to the signed-in admin's own organisation:
 
-- **Export** downloads a `geartrack-backup-<date>.json` file containing every item and kit (excluding photo files themselves — only metadata is included).
+- **Export** downloads a `geartrack-backup-<date>.json` file containing every item and kit in that organisation (metadata only).
 - **Import** reads that file back in and restores items/kits by ID, overwriting any that already exist.
 
-This does not cover reservations, checkouts, the audit log, or users — only the inventory data (items and kits).
+This does not cover reservations, checkouts, the audit log, or users — only inventory data.
+
+Separately, the underlying Firestore database has a **native daily backup schedule** (7-day retention) for disaster recovery — see `firebase firestore:backups:schedules:list`.
 
 ## Firestore Structure
 
 ```
-items/          — inventory items
-kits/           — named groups of items
-reservations/   — date-range bookings
-checkouts/      — active and historical checkouts with condition reports
-users/          — user profiles and roles
-flags/          — item condition flags
-auditLogs/      — action history
+organizations/  — one doc per customer organisation
+users/          — user profiles, roles, and orgId (created only via Cloud Functions)
+items/          — inventory items (orgId-scoped)
+categories/     — item categories (orgId-scoped)
+kits/           — named groups of items (orgId-scoped)
+reservations/   — date-range bookings (orgId-scoped)
+checkouts/      — active and historical checkouts with condition reports (orgId-scoped)
+auditLog/       — action history (orgId-scoped)
 ```
 
 ## Firestore Security Rules
 
-Rules are defined in `firestore.rules`. Storage rules are in `storage.rules`. Review and tighten these before going to production.
+Rules are defined in `firestore.rules` and are organisation-aware: every collection (other than `organizations` itself) checks that the requesting user's `orgId` custom claim matches the document's `orgId`, with an unconditional bypass for platform admins. Storage rules are in `storage.rules` but currently guard no live data (see Tech Stack note above).
+
+## Compliance & Operations
+
+The `legal/` folder contains drafts of:
+
+- [`PRIVACY_POLICY.md`](./legal/PRIVACY_POLICY.md) — end-user-facing privacy policy
+- [`DPA.md`](./legal/DPA.md) — Controller/Processor data processing agreement for customers
+- [`INCIDENT_RESPONSE_PLAN.md`](./legal/INCIDENT_RESPONSE_PLAN.md) — internal breach/incident playbook
+
+The privacy policy and DPA need a solicitor's review and the bracketed placeholders filled in before use with a paying customer.
 
 ## Licence
 

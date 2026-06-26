@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GearTrack — Getting Started</title>
+<style>
+  :root {
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --ink: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f3f4f6;
+    --green: #16a34a;
+    --red: #dc2626;
+    --amber: #d97706;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 22px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar .badge {
+    width: 28px; height: 28px;
+    background: var(--blue);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .topbar .title { font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap; }
+  .progress-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 4px;
+    transition: width .25s ease;
+    width: 0%;
+  }
+  .topbar .counter { font-size: 12px; color: var(--muted); white-space: nowrap; min-width: 70px; text-align: right; }
+
+  .slides-viewport {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .slide {
+    display: none;
+    width: 100%;
+    max-width: 1260px;
+    padding: 36px 28px 60px;
+    animation: fadeIn .25s ease;
+  }
+  .slide.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .slide h1 {
+    font-size: 24px;
+    margin: 0 0 6px 0;
+    color: var(--ink);
+  }
+  .slide .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .slide .lead {
+    font-size: 14.5px;
+    color: var(--muted);
+    margin: 0 0 22px 0;
+    max-width: 700px;
+  }
+  .slide p { line-height: 1.6; font-size: 14.5px; }
+  .slide ul { line-height: 1.6; font-size: 14.5px; padding-left: 22px; }
+  .slide strong { color: var(--ink); }
+
+  .shots {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin: 18px 0;
+  }
+  .shot {
+    flex: 1 1 420px;
+    max-width: 620px;
+  }
+  .shot img {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: block;
+    cursor: zoom-in;
+  }
+  .shot.narrow { max-width: 330px; flex: 0 1 330px; }
+  .shot figcaption {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 6px;
+  }
+  figure { margin: 0; }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 28px;
+    cursor: zoom-out;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img {
+    max-width: 96vw;
+    max-height: 92vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  .lightbox .close-hint {
+    position: absolute;
+    top: 18px; right: 24px;
+    color: #fff;
+    font-size: 13px;
+    opacity: .8;
+  }
+
+  .callout {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .callout.info { background: #eff6ff; border-left: 3px solid var(--blue); color: #1e3a8a; }
+  .callout.warn { background: #fff7ed; border-left: 3px solid var(--amber); color: #78350f; }
+
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+  th { background: #eff6ff; color: #1e3a8a; }
+  td.center, th.center { text-align: center; }
+  .check { color: var(--green); font-weight: 700; }
+
+  /* Quiz */
+  .quiz {
+    margin-top: 24px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    background: #fff;
+  }
+  .quiz .q-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+  .quiz .q-text { font-weight: 600; font-size: 14.5px; margin-bottom: 12px; }
+  .quiz .options { display: flex; flex-direction: column; gap: 8px; }
+  .quiz .option {
+    text-align: left;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: var(--ink);
+    transition: border-color .15s, background .15s;
+  }
+  .quiz .option:hover { border-color: var(--blue); background: #f8faff; }
+  .quiz .option.correct { border-color: var(--green); background: #f0fdf4; font-weight: 600; }
+  .quiz .option.incorrect { border-color: var(--red); background: #fef2f2; }
+  .quiz .option[disabled] { cursor: default; }
+  .quiz .feedback {
+    margin-top: 12px;
+    font-size: 13.5px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    display: none;
+  }
+  .quiz .feedback.show { display: block; }
+  .quiz .feedback.correct { background: #f0fdf4; color: #166534; }
+  .quiz .feedback.incorrect { background: #fef2f2; color: #991b1b; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 22px;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .controls .dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .dots button {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border);
+    cursor: pointer;
+    padding: 0;
+  }
+  .dots button.active { background: var(--blue); width: 20px; border-radius: 5px; }
+  .dots button.visited { background: #93c5fd; }
+
+  .nav-btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+  }
+  .nav-btn.primary {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .nav-btn.primary:hover { background: var(--blue-dark); }
+  .nav-btn:disabled { opacity: .4; cursor: default; }
+
+  .cover {
+    text-align: center;
+    padding-top: 40px;
+  }
+  .cover .big-badge {
+    width: 56px; height: 56px;
+    margin: 0 auto 16px;
+    background: var(--blue);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 26px;
+  }
+  .cover h1 { font-size: 28px; }
+  .cover .lead { margin: 0 auto 26px; }
+  .role-cards {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .role-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    width: 200px;
+    text-align: left;
+    background: #fff;
+  }
+  .role-card .name { font-weight: 700; margin-bottom: 4px; }
+  .role-card .desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+  .finish {
+    text-align: center;
+    padding-top: 50px;
+  }
+  .finish .big-badge { background: var(--green); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="badge">G</div>
+    <div class="title">GearTrack — Getting Started</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="counter" id="counter">Slide 1 of 11</div>
+  </div>
+
+  <div class="slides-viewport">
+    <div class="slides" id="slides">
+
+      <!-- 0: Welcome -->
+      <section class="slide active">
+        <div class="cover">
+          <div class="big-badge">G</div>
+          <h1>Welcome to GearTrack</h1>
+          <p class="lead">This is a quick, click-through tour of how the team checks gear in and out, makes reservations, and manages the inventory. About 10 minutes, 11 short stops, a few quick checks along the way.</p>
+          <div class="role-cards">
+            <div class="role-card">
+              <div class="name">User</div>
+              <div class="desc">Browse inventory, create reservations, manage their own checkouts and history.</div>
+            </div>
+            <div class="role-card">
+              <div class="name">Manager <span style="color:#9333ea">(Team Member)</span></div>
+              <div class="desc">All of the above, plus add/edit items, approve reservations, and create/manage checkouts.</div>
+            </div>
+            <div class="role-card">
+              <div class="name">Admin</div>
+              <div class="desc">All of the above, plus Reports, the Activity Log, and the Admin Panel (users, backup).</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1: Getting an account -->
+      <section class="slide">
+        <div class="kicker">Getting started</div>
+        <h1>Getting an Account &amp; Logging In</h1>
+        <p class="lead">GearTrack doesn't have open sign-up. Every account is created by your organisation's Admin.</p>
+        <ul>
+          <li>Ask your Admin to add you from the Admin Panel.</li>
+          <li>You'll get a one-time <strong>password-reset link</strong> — shared manually (email, Slack, whatever's easiest), not sent automatically.</li>
+          <li>Open the link, set your password, then sign in. You start as a <strong>User</strong>; an Admin can promote you later.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/01-login.png" alt="Login screen">
+            <figcaption>Sign in once your account exists</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/02-register-invite-only.png" alt="Invite-only notice">
+            <figcaption>The old sign-up page now just points you to your Admin</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 2: Dashboard -->
+      <section class="slide">
+        <div class="kicker">Home base</div>
+        <h1>The Dashboard</h1>
+        <p class="lead">First thing you see after logging in — a live snapshot of the inventory.</p>
+        <ul>
+          <li><strong>Summary cards</strong> — total, available, checked-out, and overdue items.</li>
+          <li>A banner up top if anything is <strong>flagged for inspection</strong>.</li>
+          <li><strong>7-day activity chart</strong>, <strong>upcoming reservations</strong>, and an <strong>active checkouts</strong> table.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot" style="max-width: 980px; flex-basis: 980px;">
+            <img src="screenshots/03-dashboard.png" alt="Dashboard">
+            <figcaption>The nav on the left changes depending on your role</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 3: Items & Kits -->
+      <section class="slide">
+        <div class="kicker">Inventory</div>
+        <h1>Items &amp; Kits</h1>
+        <p class="lead">Everything the team owns lives here, searchable and filterable.</p>
+        <ul>
+          <li><strong>Items</strong> — search by name, filter by category or condition. Click any item for its full detail page and audit trail.</li>
+          <li><strong>Kits</strong> — named bundles (e.g. "Documentary Run &amp; Gun Kit") that get reserved or checked out as one unit.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/04-items-list.png" alt="Items list">
+            <figcaption>Items — searchable, filterable, status at a glance</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/05-kits-list.png" alt="Kits list">
+            <figcaption>Kits — bundles of items reserved together</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 4: Reservations -->
+      <section class="slide">
+        <div class="kicker">Booking ahead</div>
+        <h1>Reservations</h1>
+        <p class="lead">Anyone can reserve items or kits for a future date range — but what happens next depends on your role.</p>
+        <ul>
+          <li>Go to <strong>Reservations → New Reservation</strong>, pick items or a kit, set a start/end date, submit.</li>
+          <li>If you're a <strong>User</strong>, it's created as <strong>Pending</strong> — a Manager or Admin has to approve it.</li>
+          <li>If you're a <strong>Manager</strong> or <strong>Admin</strong>, it's <strong>approved automatically</strong> — no extra step.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/06-reservation-new-form.png" alt="New reservation form">
+            <figcaption>Same form for everyone — the outcome differs by role</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/07-reservations-list.png" alt="Reservations list showing Pending and Approved">
+            <figcaption>Tom's (User) booking is Pending; Maya's (Manager) is Approved</figcaption>
+          </figure>
+        </div>
+
+        <div class="quiz" data-correct="1">
+          <div class="q-label">Quick check</div>
+          <div class="q-text">A Manager creates a new reservation. What status does it get?</div>
+          <div class="options">
+            <button class="option">Pending, same as everyone else</button>
+            <button class="option">Approved automatically</button>
+            <button class="option">Cancelled until an Admin reviews it</button>
+            <button class="option">Checked Out immediately</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+      </section>
+
+      <!-- 5: Checkouts -->
+      <section class="slide">
+        <div class="kicker">Handing out gear</div>
+        <h1>Checkouts</h1>
+        <p class="lead">Managers and Admins create checkouts from the Checkouts screen. There's an important quirk worth knowing here.</p>
+        <ul>
+          <li><strong>New Checkout</strong> — pick items and a due date, optionally add a condition report, confirm.</li>
+          <li><strong>Quick Grab</strong> — a one-click checkout due back end of today, for fast loans.</li>
+          <li><strong>The checkout always belongs to whoever creates it</strong> — there's no field to assign it to someone else. If gear is for a teammate, they should grab it themselves (in person, or via the mobile app).</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot narrow">
+            <img src="screenshots/08-new-checkout-modal.png" alt="New checkout modal">
+            <figcaption>Pick items, set a due date</figcaption>
+          </figure>
+          <figure class="shot narrow">
+            <img src="screenshots/09-checkout-condition-report.png" alt="Condition report on checkout">
+            <figcaption>Optional condition report at checkout</figcaption>
+          </figure>
+          <figure class="shot narrow">
+            <img src="screenshots/10-checkouts-list.png" alt="Checkouts list">
+            <figcaption>Active checkouts, all under their creator's name</figcaption>
+          </figure>
+        </div>
+
+        <div class="quiz" data-correct="1">
+          <div class="q-label">Quick check</div>
+          <div class="q-text">Who does a new checkout get attributed to?</div>
+          <div class="options">
+            <button class="option">Whoever you pick from a "recipient" dropdown</button>
+            <button class="option">Always whoever is logged in and creates it</button>
+            <button class="option">The person named on the linked reservation</button>
+            <button class="option">It stays unassigned until check-in</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+      </section>
+
+      <!-- 6: Returning gear -->
+      <section class="slide">
+        <div class="kicker">Coming back</div>
+        <h1>Returning Gear &amp; Condition Flags</h1>
+        <p class="lead">Checking gear back in always asks for a condition report — and a bad one has a real consequence.</p>
+        <ul>
+          <li>From <strong>Checkouts</strong>, click <strong>Check In</strong>, rate the condition (Excellent / Good / Fair / Poor / Damaged), add notes.</li>
+          <li>Return it <strong>Poor</strong> or <strong>Damaged</strong> and the item is <strong>automatically flagged</strong> — blocked from booking until someone clears it.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/11-checkin-condition-damaged.png" alt="Check-in condition report, Damaged selected">
+            <figcaption>Marking a return as Damaged, with notes</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/12-item-detail-damaged.png" alt="Item detail page showing Damaged flag">
+            <figcaption>The item is now blocked from booking, with the reason logged</figcaption>
+          </figure>
+        </div>
+
+        <div class="quiz" data-correct="2">
+          <div class="q-label">Quick check</div>
+          <div class="q-text">An item is checked in as Poor or Damaged. What happens?</div>
+          <div class="options">
+            <button class="option">Nothing — it just goes back to Available</button>
+            <button class="option">It's removed from the inventory entirely</button>
+            <button class="option">It's automatically flagged and blocked from booking until cleared</button>
+            <button class="option">The platform admin is emailed</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+      </section>
+
+      <!-- 7: My History & Mobile -->
+      <section class="slide">
+        <div class="kicker">On the go</div>
+        <h1>My History &amp; the Mobile App</h1>
+        <p class="lead">Your own record of what you've borrowed, plus a lightweight mobile experience at <code>/m</code>.</p>
+        <ul>
+          <li><strong>My History</strong> — your own checkouts and reservations, past and present.</li>
+          <li><strong>Mobile Browse</strong> — a list of currently available items. Tapping <strong>Quick Grab</strong> checks one out to yourself instantly, due end of today — there's no condition report or custom due date here, and no reservations either. For those, use the full site (it works fine on a phone browser too).</li>
+          <li><strong>Mobile My Gear</strong> — what you currently have out, with a one-tap <strong>Return</strong> and condition report.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/13-my-history.png" alt="My History screen">
+            <figcaption>My History — desktop view</figcaption>
+          </figure>
+          <figure class="shot narrow">
+            <img src="screenshots/14-mobile-browse-list.png" alt="Mobile browse list">
+            <figcaption>Mobile Browse</figcaption>
+          </figure>
+          <figure class="shot narrow">
+            <img src="screenshots/15-mobile-browse-quickgrab.png" alt="Mobile Quick Grab sheet">
+            <figcaption>Quick Grab confirm sheet</figcaption>
+          </figure>
+          <figure class="shot narrow">
+            <img src="screenshots/16-mobile-mygear.png" alt="Mobile My Gear">
+            <figcaption>My Gear — tap Return when done</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 8: Manager features -->
+      <section class="slide">
+        <div class="kicker">Manager+</div>
+        <h1>Manager Features</h1>
+        <p class="lead">Beyond what a User can do, Managers keep the catalogue and the record straight.</p>
+        <ul>
+          <li><strong>Managing items</strong> — add, edit, or delete items from the Items screen.</li>
+          <li><strong>Flagging</strong> — manually flag an item for inspection from its detail page, independent of a bad return.</li>
+          <li><strong>Activity Log</strong> — a full audit trail of checkouts, returns, reservation approvals, item changes, and more — who did what, when.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot" style="max-width: 980px; flex-basis: 980px;">
+            <img src="screenshots/17-activity-log.png" alt="Activity log">
+            <figcaption>Every action, attributed and timestamped</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 9: Admin features -->
+      <section class="slide">
+        <div class="kicker">Admin only</div>
+        <h1>Admin Features</h1>
+        <p class="lead">Full run of the organisation: people, data safety, and the numbers behind it all.</p>
+        <ul>
+          <li><strong>Add user</strong> — the only way new accounts get created. Generates a one-time password-reset link to share manually.</li>
+          <li><strong>Change role / Remove user</strong> — promote, demote, or remove teammates (you can't change your own role).</li>
+          <li><strong>Backup &amp; Restore</strong> — export items and kits to a JSON file; restore from it if needed. Doesn't cover checkouts, reservations, the log, or users.</li>
+          <li><strong>Reports</strong> — usage per item/user, late-return rate, unused items, approval rates.</li>
+        </ul>
+        <div class="shots">
+          <figure class="shot">
+            <img src="screenshots/18-admin-panel.png" alt="Admin panel">
+            <figcaption>Admin Panel — users, backup, and data maintenance</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="screenshots/19-reports.png" alt="Reports screen">
+            <figcaption>Reports — usage analytics across the inventory</figcaption>
+          </figure>
+        </div>
+
+        <div class="quiz" data-correct="1">
+          <div class="q-label">Quick check</div>
+          <div class="q-text">How does a new teammate get a GearTrack account?</div>
+          <div class="options">
+            <button class="option">They sign up themselves on the login screen</button>
+            <button class="option">An Admin adds them in the Admin Panel and shares a one-time password link</button>
+            <button class="option">They request access through the mobile app</button>
+            <button class="option">Accounts are created automatically the first time someone logs in</button>
+          </div>
+          <div class="feedback"></div>
+        </div>
+      </section>
+
+      <!-- 10: Wrap-up -->
+      <section class="slide">
+        <div class="finish">
+          <div class="big-badge">✓</div>
+          <h1>That's the tour</h1>
+          <p class="lead">One last reference — what each role can actually do.</p>
+        </div>
+        <table>
+          <tr><th>Feature</th><th class="center">User</th><th class="center">Manager</th><th class="center">Admin</th></tr>
+          <tr><td>Browse items &amp; kits</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>Create reservations</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>Reservations auto-approved</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>View own history / mobile app</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>Add / edit / delete items</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>Create / manage checkouts</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>Approve / cancel reservations</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>View Activity Log</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+          <tr><td>View Reports</td><td class="center"></td><td class="center"></td><td class="center check">✓</td></tr>
+          <tr><td>Add / remove users &amp; manage roles</td><td class="center"></td><td class="center"></td><td class="center check">✓</td></tr>
+        </table>
+        <div class="callout info">Questions about anything you saw here? Check the full <strong>GearTrack User Instructions</strong> doc, or ask your Admin.</div>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="nav-btn" id="prevBtn">← Back</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav-btn primary" id="nextBtn">Next →</button>
+  </div>
+
+</div>
+
+<div class="lightbox" id="lightbox">
+  <span class="close-hint">Click anywhere to close ✕</span>
+  <img id="lightboxImg" src="" alt="Enlarged screenshot">
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+  const visited = new Set([0]);
+
+  const dotsEl = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(dot);
+  });
+  const dots = Array.from(dotsEl.children);
+
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const counter = document.getElementById('counter');
+  const progressFill = document.getElementById('progressFill');
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    dots.forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+      d.classList.toggle('visited', visited.has(i) && i !== current);
+    });
+    counter.textContent = `Slide ${current + 1} of ${total}`;
+    progressFill.style.width = `${((current + 1) / total) * 100}%`;
+    prevBtn.disabled = current === 0;
+    nextBtn.textContent = current === total - 1 ? 'Done ✓' : 'Next →';
+    document.querySelector('.slides-viewport').scrollTop = 0;
+  }
+
+  function goTo(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    visited.add(current);
+    render();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => {
+    if (current === total - 1) { goTo(0); return; }
+    goTo(current + 1);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+  });
+
+  // Quiz logic
+  document.querySelectorAll('.quiz').forEach((quiz) => {
+    const correctIdx = Number(quiz.dataset.correct);
+    const options = Array.from(quiz.querySelectorAll('.option'));
+    const feedback = quiz.querySelector('.feedback');
+    options.forEach((opt, idx) => {
+      opt.addEventListener('click', () => {
+        if (quiz.dataset.answered) return;
+        quiz.dataset.answered = 'true';
+        options.forEach((o) => (o.disabled = true));
+        if (idx === correctIdx) {
+          opt.classList.add('correct');
+          feedback.textContent = 'Correct.';
+          feedback.classList.add('show', 'correct');
+        } else {
+          opt.classList.add('incorrect');
+          options[correctIdx].classList.add('correct');
+          feedback.textContent = 'Not quite — the correct answer is highlighted above.';
+          feedback.classList.add('show', 'incorrect');
+        }
+      });
+    });
+  });
+
+  // Lightbox
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  document.querySelectorAll('.shot img').forEach((img) => {
+    img.addEventListener('click', () => {
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      lightbox.classList.add('show');
+    });
+  });
+  lightbox.addEventListener('click', () => lightbox.classList.remove('show'));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') lightbox.classList.remove('show');
+  });
+
+  render();
+</script>
+</body>
+</html>

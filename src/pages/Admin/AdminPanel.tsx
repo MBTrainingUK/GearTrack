@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
@@ -43,6 +43,7 @@ export default function AdminPanel() {
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backfilling, setBackfilling] = useState(false);
+  const [fixingOrphans, setFixingOrphans] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
   const [newUserLink, setNewUserLink] = useState<string | null>(null);
@@ -72,14 +73,34 @@ export default function AdminPanel() {
     const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
     (async () => {
       try {
-        for (const { col, field } of [
-          { col: 'checkouts', field: 'checkedOutAt' },
-          { col: 'reservations', field: 'createdAt' },
-        ]) {
-          const snap = await getDocs(query(collection(db, col), where('orgId', '==', orgId), where(field, '<', cutoff)));
-          if (snap.empty) continue;
+        // Reset items belonging to old active checkouts before deleting them
+        const oldCheckouts = await getDocs(query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('checkedOutAt', '<', cutoff)));
+        if (!oldCheckouts.empty) {
+          const itemIds = new Set<string>();
+          oldCheckouts.docs.forEach((d) => {
+            const data = d.data();
+            if (data.status === 'active') (data.itemIds as string[]).forEach((id) => itemIds.add(id));
+          });
+          if (itemIds.size > 0) {
+            const itemBatches: ReturnType<typeof writeBatch>[] = [];
+            [...itemIds].forEach((id, i) => {
+              if (i % 500 === 0) itemBatches.push(writeBatch(db));
+              itemBatches[itemBatches.length - 1].update(doc(db, 'items', id), { status: 'available', updatedAt: serverTimestamp() });
+            });
+            await Promise.all(itemBatches.map((b) => b.commit()));
+          }
+          const delBatches: ReturnType<typeof writeBatch>[] = [];
+          oldCheckouts.docs.forEach((d, i) => {
+            if (i % 500 === 0) delBatches.push(writeBatch(db));
+            delBatches[delBatches.length - 1].delete(d.ref);
+          });
+          await Promise.all(delBatches.map((b) => b.commit()));
+        }
+        // Reservations have no item status side-effect — delete directly
+        const oldReservations = await getDocs(query(collection(db, 'reservations'), where('orgId', '==', orgId), where('createdAt', '<', cutoff)));
+        if (!oldReservations.empty) {
           const batches: ReturnType<typeof writeBatch>[] = [];
-          snap.docs.forEach((d, i) => {
+          oldReservations.docs.forEach((d, i) => {
             if (i % 500 === 0) batches.push(writeBatch(db));
             batches[batches.length - 1].delete(d.ref);
           });
@@ -129,9 +150,19 @@ export default function AdminPanel() {
     setClearingData(true);
     setConfirmClearData(false);
     try {
-      const collectionsToWipe = ['auditLog', 'checkouts', 'reservations'];
-      for (const name of collectionsToWipe) {
+      // Reset all checked-out items back to available before wiping checkouts
+      const checkedOutItems = await getDocs(query(collection(db, 'items'), where('orgId', '==', appUser.orgId), where('status', '==', 'checked_out')));
+      if (!checkedOutItems.empty) {
+        const itemBatches: ReturnType<typeof writeBatch>[] = [];
+        checkedOutItems.docs.forEach((d, i) => {
+          if (i % 500 === 0) itemBatches.push(writeBatch(db));
+          itemBatches[itemBatches.length - 1].update(d.ref, { status: 'available', updatedAt: serverTimestamp() });
+        });
+        await Promise.all(itemBatches.map((b) => b.commit()));
+      }
+      for (const name of ['auditLog', 'checkouts', 'reservations']) {
         const snap = await getDocs(query(collection(db, name), where('orgId', '==', appUser.orgId)));
+        if (snap.empty) continue;
         const batches: ReturnType<typeof writeBatch>[] = [];
         snap.docs.forEach((d, i) => {
           if (i % 500 === 0) batches.push(writeBatch(db));
@@ -154,19 +185,39 @@ export default function AdminPanel() {
     const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
     let total = 0;
     try {
-      for (const { col, field } of [
-        { col: 'checkouts', field: 'checkedOutAt' },
-        { col: 'reservations', field: 'createdAt' },
-      ]) {
-        const snap = await getDocs(query(collection(db, col), where('orgId', '==', appUser.orgId), where(field, '<', cutoff)));
-        if (snap.empty) continue;
+      // Reset items belonging to old active checkouts before deleting them
+      const oldCheckouts = await getDocs(query(collection(db, 'checkouts'), where('orgId', '==', appUser.orgId), where('checkedOutAt', '<', cutoff)));
+      if (!oldCheckouts.empty) {
+        const itemIds = new Set<string>();
+        oldCheckouts.docs.forEach((d) => {
+          const data = d.data();
+          if (data.status === 'active') (data.itemIds as string[]).forEach((id) => itemIds.add(id));
+        });
+        if (itemIds.size > 0) {
+          const itemBatches: ReturnType<typeof writeBatch>[] = [];
+          [...itemIds].forEach((id, i) => {
+            if (i % 500 === 0) itemBatches.push(writeBatch(db));
+            itemBatches[itemBatches.length - 1].update(doc(db, 'items', id), { status: 'available', updatedAt: serverTimestamp() });
+          });
+          await Promise.all(itemBatches.map((b) => b.commit()));
+        }
+        const delBatches: ReturnType<typeof writeBatch>[] = [];
+        oldCheckouts.docs.forEach((d, i) => {
+          if (i % 500 === 0) delBatches.push(writeBatch(db));
+          delBatches[delBatches.length - 1].delete(d.ref);
+        });
+        await Promise.all(delBatches.map((b) => b.commit()));
+        total += oldCheckouts.size;
+      }
+      const oldReservations = await getDocs(query(collection(db, 'reservations'), where('orgId', '==', appUser.orgId), where('createdAt', '<', cutoff)));
+      if (!oldReservations.empty) {
         const batches: ReturnType<typeof writeBatch>[] = [];
-        snap.docs.forEach((d, i) => {
+        oldReservations.docs.forEach((d, i) => {
           if (i % 500 === 0) batches.push(writeBatch(db));
           batches[batches.length - 1].delete(d.ref);
         });
         await Promise.all(batches.map((b) => b.commit()));
-        total += snap.size;
+        total += oldReservations.size;
       }
       if (total > 0) toast.success(`Purged ${total} record${total !== 1 ? 's' : ''} older than 180 days`);
       else toast.success('No records older than 180 days found');
@@ -174,6 +225,42 @@ export default function AdminPanel() {
       toast.error('Failed to purge old records');
     } finally {
       setPurgingOld(false);
+    }
+  }
+
+  async function fixOrphanedItems() {
+    if (!appUser?.orgId) return;
+    setFixingOrphans(true);
+    try {
+      const [checkedOutSnap, activeCheckoutsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'items'), where('orgId', '==', appUser.orgId), where('status', '==', 'checked_out'))),
+        getDocs(query(collection(db, 'checkouts'), where('orgId', '==', appUser.orgId), where('status', '==', 'active'))),
+      ]);
+      if (checkedOutSnap.empty) {
+        toast.success('No stuck items found');
+        return;
+      }
+      // Collect item IDs that have a real active checkout
+      const claimedIds = new Set<string>();
+      activeCheckoutsSnap.docs.forEach((d) => {
+        (d.data().itemIds as string[]).forEach((id) => claimedIds.add(id));
+      });
+      const orphans = checkedOutSnap.docs.filter((d) => !claimedIds.has(d.id));
+      if (orphans.length === 0) {
+        toast.success('No orphaned items found — all checked-out items have an active checkout');
+        return;
+      }
+      const batches: ReturnType<typeof writeBatch>[] = [];
+      orphans.forEach((d, i) => {
+        if (i % 500 === 0) batches.push(writeBatch(db));
+        batches[batches.length - 1].update(d.ref, { status: 'available', updatedAt: serverTimestamp() });
+      });
+      await Promise.all(batches.map((b) => b.commit()));
+      toast.success(`Reset ${orphans.length} orphaned item${orphans.length !== 1 ? 's' : ''} back to available`);
+    } catch {
+      toast.error('Failed to fix orphaned items');
+    } finally {
+      setFixingOrphans(false);
     }
   }
 
@@ -441,6 +528,20 @@ export default function AdminPanel() {
           <AlertTriangle size={16} className="text-red-600" />
           <h2 className="text-sm font-semibold text-red-700">Danger Zone</h2>
         </div>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-800">Fix stuck items</p>
+            <p className="text-xs text-gray-500 mt-0.5">Resets any items showing as "Checked Out" with no active checkout record — caused by clearing test data or manual edits in the database.</p>
+          </div>
+          <button
+            onClick={fixOrphanedItems}
+            disabled={fixingOrphans}
+            className="shrink-0 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {fixingOrphans ? 'Fixing…' : 'Fix stuck items'}
+          </button>
+        </div>
+        <div className="border-t border-red-200" />
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-gray-800">Purge old records</p>

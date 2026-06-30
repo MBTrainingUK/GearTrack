@@ -183,11 +183,15 @@ export default function ReservationForm() {
     );
   }
 
-  const filteredItems = items.filter(
-    (i) =>
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredItems = items.filter((i) => {
+    const q = search.toLowerCase();
+    return (
+      i.name.toLowerCase().includes(q) ||
+      i.category.toLowerCase().includes(q) ||
+      (i.assetNumber ?? '').toLowerCase().includes(q) ||
+      (i.serialNumber ?? '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -288,7 +292,11 @@ export default function ReservationForm() {
                 >
                   <div className="text-left">
                     <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">{item.category}</p>
+                    <p className="text-xs text-gray-500">
+                      {item.category}
+                      {item.assetNumber && <span className="ml-2">· Asset: {item.assetNumber}</span>}
+                      {!item.assetNumber && item.serialNumber && <span className="ml-2">· S/N: {item.serialNumber}</span>}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isConflict && <span className="text-xs text-red-600">Conflict</span>}

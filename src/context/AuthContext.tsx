@@ -45,8 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        const data = await ensureUserDoc(user);
-        setAppUser(data);
+        try {
+          const data = await ensureUserDoc(user);
+          setAppUser(data);
+        } catch (e) {
+          console.error('Failed to load user doc:', e);
+          setAppUser(null);
+        }
       } else {
         setAppUser(null);
       }

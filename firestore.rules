@@ -31,7 +31,7 @@ service cloud.firestore {
 
     // ── users ─────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
+      allow read: if isPlatformAdmin() || isOwner(userId) || sameOrg(resource.data.orgId);
       // All account creation happens server-side via Cloud Functions
       // (createOrganization / createOrgUser), which use the Admin SDK and
       // bypass these rules entirely. No client may create a user doc.

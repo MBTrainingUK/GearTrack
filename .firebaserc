@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "geartrack-d9e91"
+    "default": "geartrack-d9e91",
+    "production": "geartrack-d9e91",
+    "staging": "geartrack-staging"
   }
 }

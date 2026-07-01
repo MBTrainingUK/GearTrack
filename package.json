@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:staging": "vite build --mode staging && firebase deploy --project staging",
+    "deploy:prod": "vite build --mode production && firebase deploy --project production"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.20",

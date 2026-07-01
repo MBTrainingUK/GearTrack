@@ -4,13 +4,17 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const isGitHubPages = mode === 'production';
+  const base = isGitHubPages ? '/GearTrack/' : '/';
+
+  return {
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      base: '/GearTrack/',
+      base,
       manifest: {
         name: 'GearTrack',
         short_name: 'GearTrack',
@@ -18,17 +22,17 @@ export default defineConfig({
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
-        scope: '/GearTrack/',
-        start_url: '/GearTrack/#/m/gear',
+        scope: base,
+        start_url: `${base}#/m/gear`,
         icons: [
-          { src: '/GearTrack/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/GearTrack/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/GearTrack/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: `${base}icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${base}icons/icon-512.png`, sizes: '512x512', type: 'image/png' },
+          { src: `${base}icons/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
     }),
   ],
-  base: '/GearTrack/',
+  base,
   build: {
     rollupOptions: {
       output: {
@@ -40,4 +44,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

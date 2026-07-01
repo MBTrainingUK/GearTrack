@@ -31,5 +31,8 @@ jobs:
           VITE_STORAGE_ENABLED: 'false'
         run: npx vite build --mode staging
 
-      - name: Deploy to Firebase Hosting
-        run: npx firebase-tools deploy --only hosting --project staging --token "${{ secrets.FIREBASE_TOKEN }}"
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Deploy to Firebase
+        run: npx firebase-tools deploy --project staging --token "${{ secrets.FIREBASE_TOKEN }}"

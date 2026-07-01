@@ -26,6 +26,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
+import { fetchMondayFilmingDates, type MondayFilmingEvent } from '../../lib/monday';
 
 export default function ReservationsList() {
   const { appUser, currentUser } = useAuth();
@@ -36,6 +37,9 @@ export default function ReservationsList() {
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [dateRange, setDateRange] = useState<30 | 90>(30);
+  const [showMonday, setShowMonday] = useState(false);
+  const [mondayEvents, setMondayEvents] = useState<MondayFilmingEvent[]>([]);
+  const [mondayLoading, setMondayLoading] = useState(false);
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -100,6 +104,15 @@ export default function ReservationsList() {
     }
   }
 
+  useEffect(() => {
+    if (!showMonday || mondayEvents.length > 0) return;
+    setMondayLoading(true);
+    fetchMondayFilmingDates()
+      .then(setMondayEvents)
+      .catch(() => toast.error('Failed to load Monday.com bookings'))
+      .finally(() => setMondayLoading(false));
+  }, [showMonday]);
+
   const cutoff = subDays(new Date(), dateRange);
   const activeStatuses: Reservation['status'][] = ['pending', 'approved', 'checked_out'];
   const visibleReservations = reservations.filter((r) => {
@@ -109,17 +122,31 @@ export default function ReservationsList() {
   const filtered =
     filter === 'all' ? visibleReservations : visibleReservations.filter((r) => r.status === filter);
 
-  const calendarEvents = reservations
+  const geartrackEvents = reservations
     .filter((r) => r.status !== 'cancelled' && r.status !== 'completed')
     .map((r) => ({
-    id: r.id,
-    title: `${r.userName} — ${bookingLabel(r, items, kits)}`,
-    start: r.startDate.toDate(),
-    end: r.endDate.toDate(),
-    backgroundColor: statusColor(r.status),
-    borderColor: statusColor(r.status),
-    extendedProps: { status: r.status },
-  }));
+      id: r.id,
+      title: `${r.userName} — ${bookingLabel(r, items, kits)}`,
+      start: r.startDate.toDate(),
+      end: r.endDate.toDate(),
+      backgroundColor: statusColor(r.status),
+      borderColor: statusColor(r.status),
+      extendedProps: { source: 'geartrack', status: r.status },
+    }));
+
+  const mondayCalendarEvents = showMonday
+    ? mondayEvents.map((e) => ({
+        id: e.id,
+        title: `📽 ${e.title}`,
+        start: e.date,
+        allDay: true,
+        backgroundColor: '#7c3aed',
+        borderColor: '#6d28d9',
+        extendedProps: { source: 'monday' },
+      }))
+    : [];
+
+  const calendarEvents = [...geartrackEvents, ...mondayCalendarEvents];
 
   return (
     <div className="space-y-5">
@@ -160,6 +187,19 @@ export default function ReservationsList() {
 
       {view === 'calendar' ? (
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-3">
+            <button
+              onClick={() => setShowMonday((v) => !v)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                showMonday
+                  ? 'border-violet-400 bg-violet-50 text-violet-700'
+                  : 'border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'
+              }`}
+            >
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-500" />
+              {mondayLoading ? 'Loading…' : 'Monday.com filming dates'}
+            </button>
+          </div>
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
             initialView="dayGridMonth"

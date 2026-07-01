@@ -222,8 +222,9 @@ export default function CheckoutsList() {
           reservationId={conditionModal.reservationId}
           onClose={() => setConditionModal(null)}
           onConfirm={() => {
+            const mode = conditionModal.mode;
             setConditionModal(null);
-            toast.success('Items checked in successfully');
+            toast.success(mode === 'checkout' ? 'Items checked out successfully' : 'Items checked in successfully');
           }}
         />
       )}

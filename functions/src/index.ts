@@ -132,6 +132,41 @@ export const createOrgUser = onCall(async (request) => {
  * Self-disables once any organization exists. Callable by any
  * pre-migration admin, since there's no platform admin yet to gate this on.
  */
+/**
+ * Re-applies orgId/role custom claims from the user's Firestore doc.
+ * Useful when claims are missing or stale (e.g. on a new environment).
+ * Callable by any authenticated user for their own account only.
+ */
+export const syncClaims = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+
+  const db = getFirestore();
+  const auth = getAuth();
+
+  const userDoc = await db.collection('users').doc(request.auth.uid).get();
+  if (!userDoc.exists) {
+    throw new HttpsError('not-found', 'No user record found — contact your administrator.');
+  }
+
+  const data = userDoc.data()!;
+  const orgId = data.orgId as string | undefined;
+  const role = (data.role as Role | undefined) ?? 'user';
+  const isPlatformAdmin = data.isPlatformAdmin === true;
+
+  if (!orgId) {
+    throw new HttpsError('failed-precondition', 'No organisation assigned — contact your administrator.');
+  }
+
+  const claims: Record<string, unknown> = { orgId, role };
+  if (isPlatformAdmin) claims.platformAdmin = true;
+
+  await auth.setCustomUserClaims(request.auth.uid, claims);
+
+  return { orgId, role };
+});
+
 export const backfillDefaultOrg = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Must be signed in.');

@@ -43,6 +43,7 @@ export default function AdminPanel() {
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backfilling, setBackfilling] = useState(false);
+  const [syncingClaims, setSyncingClaims] = useState(false);
   const [fixingOrphans, setFixingOrphans] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
@@ -316,6 +317,20 @@ export default function AdminPanel() {
     setAddUserForm({ email: '', displayName: '', role: 'user' });
   }
 
+  async function handleSyncClaims() {
+    setSyncingClaims(true);
+    try {
+      await httpsCallable(functions, 'syncClaims')({});
+      await currentUser?.getIdToken(true);
+      toast.success('Permissions refreshed — reloading…');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to refresh permissions');
+    } finally {
+      setSyncingClaims(false);
+    }
+  }
+
   useEffect(() => {
     if (!appUser?.orgId) return;
     getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
@@ -334,7 +349,8 @@ export default function AdminPanel() {
         { merge: true }
       );
       toast.success(mondayKey.trim() ? 'Monday.com API key saved' : 'Monday.com API key removed');
-    } catch {
+    } catch (err) {
+      console.error('saveMondayKey failed:', err);
       toast.error('Failed to save API key');
     } finally {
       setSavingMondayKey(false);
@@ -406,6 +422,25 @@ export default function AdminPanel() {
           Add user
         </button>
       </div>
+
+      {users.length === 0 && appUser?.orgId && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-600" />
+            <h2 className="text-sm font-semibold text-amber-900">Permission error detected</h2>
+          </div>
+          <p className="text-xs text-amber-800">
+            Your session permissions appear to be out of sync. Click below to fix this — the page will reload automatically.
+          </p>
+          <button
+            onClick={handleSyncClaims}
+            disabled={syncingClaims}
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+          >
+            {syncingClaims ? 'Refreshing…' : 'Fix permissions'}
+          </button>
+        </div>
+      )}
 
       {!appUser?.orgId && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 space-y-3">

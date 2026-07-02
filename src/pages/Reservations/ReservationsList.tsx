@@ -8,6 +8,7 @@ import {
   updateDoc,
   doc,
   getDocs,
+  getDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -40,6 +41,7 @@ export default function ReservationsList() {
   const [showMonday, setShowMonday] = useState(false);
   const [mondayEvents, setMondayEvents] = useState<MondayFilmingEvent[]>([]);
   const [mondayLoading, setMondayLoading] = useState(false);
+  const [orgMondayKey, setOrgMondayKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -105,13 +107,20 @@ export default function ReservationsList() {
   }
 
   useEffect(() => {
+    if (!appUser?.orgId || appUser.role !== 'admin') return;
+    getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
+      if (snap.exists()) setOrgMondayKey(snap.data().mondayApiKey ?? null);
+    }).catch(() => {});
+  }, [appUser?.orgId, appUser?.role]);
+
+  useEffect(() => {
     if (!showMonday || mondayEvents.length > 0) return;
     setMondayLoading(true);
-    fetchMondayFilmingDates()
+    fetchMondayFilmingDates(orgMondayKey ?? undefined)
       .then(setMondayEvents)
       .catch(() => toast.error('Failed to load Monday.com bookings'))
       .finally(() => setMondayLoading(false));
-  }, [showMonday]);
+  }, [showMonday, orgMondayKey]);
 
   const cutoff = subDays(new Date(), dateRange);
   const activeStatuses: Reservation['status'][] = ['pending', 'approved', 'checked_out'];

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check, Plug } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
@@ -49,6 +49,10 @@ export default function AdminPanel() {
   const [newUserLink, setNewUserLink] = useState<string | null>(null);
   const [addUserForm, setAddUserForm] = useState({ email: '', displayName: '', role: 'user' as UserRole });
   const [linkCopied, setLinkCopied] = useState(false);
+  const [mondayKey, setMondayKey] = useState('');
+  const [mondayKeyLoaded, setMondayKeyLoaded] = useState(false);
+  const [savingMondayKey, setSavingMondayKey] = useState(false);
+  const [showMondayKey, setShowMondayKey] = useState(false);
 
   function copyLink(link: string) {
     navigator.clipboard.writeText(link).then(() => {
@@ -312,6 +316,31 @@ export default function AdminPanel() {
     setAddUserForm({ email: '', displayName: '', role: 'user' });
   }
 
+  useEffect(() => {
+    if (!appUser?.orgId) return;
+    getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
+      if (snap.exists()) setMondayKey(snap.data().mondayApiKey ?? '');
+      setMondayKeyLoaded(true);
+    }).catch(() => setMondayKeyLoaded(true));
+  }, [appUser?.orgId]);
+
+  async function saveMondayKey() {
+    if (!appUser?.orgId) return;
+    setSavingMondayKey(true);
+    try {
+      await setDoc(
+        doc(db, 'organizations', appUser.orgId, 'private', 'integrations'),
+        { mondayApiKey: mondayKey.trim() },
+        { merge: true }
+      );
+      toast.success(mondayKey.trim() ? 'Monday.com API key saved' : 'Monday.com API key removed');
+    } catch {
+      toast.error('Failed to save API key');
+    } finally {
+      setSavingMondayKey(false);
+    }
+  }
+
   async function handleExport() {
     if (!appUser?.orgId) return;
     setExporting(true);
@@ -486,6 +515,51 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {/* Integrations */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Plug size={16} className="text-gray-600" />
+          <h2 className="text-sm font-semibold text-gray-800">Integrations</h2>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Monday.com API key</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Enables filming dates from your Monday.com board to appear on the reservations calendar.
+              </p>
+            </div>
+          </div>
+          {mondayKeyLoaded && (
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <input
+                  type={showMondayKey ? 'text' : 'password'}
+                  value={mondayKey}
+                  onChange={(e) => setMondayKey(e.target.value)}
+                  placeholder="Paste your Monday.com API key"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-20 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMondayKey((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  {showMondayKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <button
+                onClick={saveMondayKey}
+                disabled={savingMondayKey}
+                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {savingMondayKey ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Backup & restore */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
         <div className="flex items-center gap-2">

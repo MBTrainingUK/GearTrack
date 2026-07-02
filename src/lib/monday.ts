@@ -8,8 +8,9 @@ export interface MondayFilmingEvent {
   date: Date;
 }
 
-export async function fetchMondayFilmingDates(): Promise<MondayFilmingEvent[]> {
-  if (!MONDAY_API_KEY) return [];
+export async function fetchMondayFilmingDates(apiKey?: string): Promise<MondayFilmingEvent[]> {
+  const key = apiKey || MONDAY_API_KEY;
+  if (!key) return [];
 
   const query = `{
     boards(ids: [${BOARD_ID}]) {
@@ -30,7 +31,7 @@ export async function fetchMondayFilmingDates(): Promise<MondayFilmingEvent[]> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: MONDAY_API_KEY,
+      Authorization: key,
     },
     body: JSON.stringify({ query }),
   });

@@ -27,6 +27,11 @@ service cloud.firestore {
       allow read: if isPlatformAdmin() || sameOrg(orgId);
       // Created/managed only via Cloud Functions (Admin SDK), never directly.
       allow create, update, delete: if isPlatformAdmin();
+
+      // Private subcollection — org admins only, never exposed to regular users.
+      match /private/{docId} {
+        allow read, write: if isPlatformAdmin() || (isAdmin() && sameOrg(orgId));
+      }
     }
 
     // ── users ─────────────────────────────────────────────

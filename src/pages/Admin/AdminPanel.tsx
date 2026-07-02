@@ -52,6 +52,7 @@ export default function AdminPanel() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [mondayKey, setMondayKey] = useState('');
   const [mondayKeyLoaded, setMondayKeyLoaded] = useState(false);
+  const [mondayKeyExists, setMondayKeyExists] = useState(false);
   const [savingMondayKey, setSavingMondayKey] = useState(false);
   const [showMondayKey, setShowMondayKey] = useState(false);
 
@@ -334,7 +335,11 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!appUser?.orgId) return;
     getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
-      if (snap.exists()) setMondayKey(snap.data().mondayApiKey ?? '');
+      if (snap.exists()) {
+        const key = snap.data().mondayApiKey ?? '';
+        setMondayKey(key);
+        setMondayKeyExists(!!key);
+      }
       setMondayKeyLoaded(true);
     }).catch(() => setMondayKeyLoaded(true));
   }, [appUser?.orgId]);
@@ -343,12 +348,31 @@ export default function AdminPanel() {
     if (!appUser?.orgId) return;
     setSavingMondayKey(true);
     try {
+      const trimmed = mondayKey.trim();
       await setDoc(
         doc(db, 'organizations', appUser.orgId, 'private', 'integrations'),
-        { mondayApiKey: mondayKey.trim() },
+        { mondayApiKey: trimmed },
         { merge: true }
       );
-      toast.success(mondayKey.trim() ? 'Monday.com API key saved' : 'Monday.com API key removed');
+      setMondayKeyExists(!!trimmed);
+      if (!trimmed) {
+        toast.success('Monday.com API key removed');
+        return;
+      }
+      // Test the key with a lightweight API call
+      const testRes = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: trimmed },
+        body: JSON.stringify({ query: '{ me { name } }' }),
+      });
+      const testJson = await testRes.json();
+      if (testJson?.data?.me?.name) {
+        toast.success(`Connected — logged in as ${testJson.data.me.name}`);
+      } else if (testJson?.errors) {
+        toast.error('Key saved but Monday.com rejected it — check it is correct');
+      } else {
+        toast.success('API key saved');
+      }
     } catch (err) {
       console.error('saveMondayKey failed:', err);
       toast.error('Failed to save API key');
@@ -557,13 +581,19 @@ export default function AdminPanel() {
           <h2 className="text-sm font-semibold text-gray-800">Integrations</h2>
         </div>
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
               <p className="text-sm font-medium text-gray-800">Monday.com API key</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 Enables filming dates from your Monday.com board to appear on the reservations calendar.
               </p>
             </div>
+            {mondayKeyLoaded && mondayKeyExists && (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Key configured
+              </span>
+            )}
           </div>
           {mondayKeyLoaded && (
             <div className="flex gap-2 items-center">
@@ -572,7 +602,7 @@ export default function AdminPanel() {
                   type={showMondayKey ? 'text' : 'password'}
                   value={mondayKey}
                   onChange={(e) => setMondayKey(e.target.value)}
-                  placeholder="Paste your Monday.com API key"
+                  placeholder={mondayKeyExists ? 'Enter a new key to replace the existing one' : 'Paste your Monday.com API key'}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-20 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
@@ -588,7 +618,7 @@ export default function AdminPanel() {
                 disabled={savingMondayKey}
                 className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
               >
-                {savingMondayKey ? 'Saving…' : 'Save'}
+                {savingMondayKey ? 'Testing…' : 'Save & test'}
               </button>
             </div>
           )}

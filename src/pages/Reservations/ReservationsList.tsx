@@ -114,7 +114,7 @@ export default function ReservationsList() {
   }, [appUser?.orgId, appUser?.role]);
 
   useEffect(() => {
-    if (!showMonday || mondayEvents.length > 0) return;
+    if (!showMonday) return;
     setMondayLoading(true);
     fetchMondayFilmingDates(orgMondayKey ?? undefined)
       .then(setMondayEvents)

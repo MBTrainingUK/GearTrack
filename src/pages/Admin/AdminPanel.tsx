@@ -9,6 +9,7 @@ import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Downloa
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
+import { fetchMondayFilmingDates } from '../../lib/monday';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
@@ -368,23 +369,16 @@ export default function AdminPanel() {
       return;
     }
 
-    // Test the key separately — a test failure doesn't undo the save
+    // Test the key by fetching real data — same call the calendar uses
     try {
-      const testRes = await fetch('https://api.monday.com/v2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: trimmed },
-        body: JSON.stringify({ query: '{ me { name } }' }),
-      });
-      const testJson = await testRes.json();
-      if (testJson?.data?.me?.name) {
-        toast.success(`Key saved — connected as ${testJson.data.me.name}`);
-      } else if (testJson?.errors) {
-        toast('Key saved, but Monday.com rejected it — double-check the key is correct', { icon: '⚠️' });
+      const events = await fetchMondayFilmingDates(trimmed);
+      if (events.length > 0) {
+        toast.success(`Key saved — found ${events.length} filming date${events.length !== 1 ? 's' : ''}`);
       } else {
-        toast.success('API key saved');
+        toast.success('Key saved — connected, but no filming dates found on the board');
       }
     } catch {
-      toast.success('API key saved (connection test unavailable)');
+      toast('Key saved, but the connection test failed — double-check the key is correct', { icon: '⚠️' });
     } finally {
       setSavingMondayKey(false);
     }

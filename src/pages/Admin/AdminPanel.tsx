@@ -347,19 +347,29 @@ export default function AdminPanel() {
   async function saveMondayKey() {
     if (!appUser?.orgId) return;
     setSavingMondayKey(true);
+    const trimmed = mondayKey.trim();
     try {
-      const trimmed = mondayKey.trim();
       await setDoc(
         doc(db, 'organizations', appUser.orgId, 'private', 'integrations'),
         { mondayApiKey: trimmed },
         { merge: true }
       );
       setMondayKeyExists(!!trimmed);
-      if (!trimmed) {
-        toast.success('Monday.com API key removed');
-        return;
-      }
-      // Test the key with a lightweight API call
+    } catch (err) {
+      console.error('saveMondayKey failed:', err);
+      toast.error('Failed to save API key');
+      setSavingMondayKey(false);
+      return;
+    }
+
+    if (!trimmed) {
+      toast.success('Monday.com API key removed');
+      setSavingMondayKey(false);
+      return;
+    }
+
+    // Test the key separately — a test failure doesn't undo the save
+    try {
       const testRes = await fetch('https://api.monday.com/v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: trimmed },
@@ -367,15 +377,14 @@ export default function AdminPanel() {
       });
       const testJson = await testRes.json();
       if (testJson?.data?.me?.name) {
-        toast.success(`Connected — logged in as ${testJson.data.me.name}`);
+        toast.success(`Key saved — connected as ${testJson.data.me.name}`);
       } else if (testJson?.errors) {
-        toast.error('Key saved but Monday.com rejected it — check it is correct');
+        toast('Key saved, but Monday.com rejected it — double-check the key is correct', { icon: '⚠️' });
       } else {
         toast.success('API key saved');
       }
-    } catch (err) {
-      console.error('saveMondayKey failed:', err);
-      toast.error('Failed to save API key');
+    } catch {
+      toast.success('API key saved (connection test unavailable)');
     } finally {
       setSavingMondayKey(false);
     }

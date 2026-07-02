@@ -6,7 +6,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, functions } from '../lib/firebase';
 import type { AppUser } from '../types';
 import { AuthContext } from './useAuth';
 
@@ -47,6 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         try {
           const data = await ensureUserDoc(user);
+          // If the token is missing orgId/role claims, sync them from the
+          // Firestore doc now so all rules work without requiring a manual fix.
+          const token = await user.getIdTokenResult();
+          if (data.orgId && (!token.claims.orgId || !token.claims.role)) {
+            try {
+              await httpsCallable(functions, 'syncClaims')({});
+              await user.getIdToken(true);
+            } catch {
+              // Non-fatal — the app will still load, some queries may fail
+            }
+          }
           setAppUser(data);
         } catch (e) {
           console.error('Failed to load user doc:', e);

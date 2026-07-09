@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 initializeApp();
 
@@ -235,4 +236,81 @@ export const backfillDefaultOrg = onCall(async (request) => {
   }
 
   return { orgId: orgRef.id };
+});
+
+/**
+ * Runs every 5 minutes. Finds approved reservations with autoCheckout=true
+ * whose startDate has passed, then creates a checkout and flips item statuses
+ * in a single transaction — matching the atomicity guarantee of createCheckout.
+ */
+export const autoCheckoutReservations = onSchedule('every 5 minutes', async () => {
+  const db = getFirestore();
+  const now = new Date();
+
+  const snap = await db
+    .collection('reservations')
+    .where('status', '==', 'approved')
+    .where('autoCheckout', '==', true)
+    .where('startDate', '<=', now)
+    .get();
+
+  if (snap.empty) return;
+
+  await Promise.all(
+    snap.docs.map(async (resDoc) => {
+      const res = resDoc.data();
+      const itemIds: string[] = res.itemIds ?? [];
+      if (itemIds.length === 0) return;
+
+      try {
+        const checkoutRef = db.collection('checkouts').doc();
+        await db.runTransaction(async (tx) => {
+          for (const itemId of itemIds) {
+            const itemSnap = await tx.get(db.collection('items').doc(itemId));
+            if (!itemSnap.exists || itemSnap.data()?.status !== 'available') {
+              throw new Error(`Item ${itemId} is no longer available`);
+            }
+          }
+          tx.set(checkoutRef, {
+            orgId: res.orgId,
+            reservationId: resDoc.id,
+            kitId: res.kitId ?? null,
+            userId: res.userId,
+            userName: res.userName,
+            userEmail: res.userEmail,
+            itemIds,
+            checkedOutAt: FieldValue.serverTimestamp(),
+            dueDate: res.endDate,
+            status: 'active',
+            notes: res.notes ?? '',
+            autoCheckedOut: true,
+          });
+          for (const itemId of itemIds) {
+            tx.update(db.collection('items').doc(itemId), {
+              status: 'checked_out',
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          }
+          tx.update(resDoc.ref, {
+            status: 'checked_out',
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+
+        await db.collection('auditLog').add({
+          orgId: res.orgId,
+          action: 'checkout',
+          performedBy: 'system',
+          performedByName: 'Auto-checkout',
+          targetType: 'checkout',
+          targetId: checkoutRef.id,
+          targetName: res.userName,
+          timestamp: FieldValue.serverTimestamp(),
+          details: { reservationId: resDoc.id, trigger: 'autoCheckout' },
+        });
+      } catch (err) {
+        console.error(`autoCheckout failed for reservation ${resDoc.id}:`, err);
+      }
+    })
+  );
 });

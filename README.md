@@ -18,6 +18,7 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 - **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, and cost-per-checkout financials
 - **Activity log** — full audit trail of who did what, when
 - **Admin panel** — manage user roles, add new teammates, and run data maintenance
+- **Email notifications** — managers are emailed when a reservation needs approval, requesters when it's approved, and borrowers get due-tomorrow reminders and overdue alerts (overdue alerts CC the org's admins)
 - **Backup & restore** — export an organisation's items and kits to a JSON file, and re-import to restore
 - **Date-range filtering & retention** — 30/90-day filters on reservations, checkouts, and history; records older than 180 days are automatically purged
 
@@ -103,6 +104,21 @@ firebase deploy --only firestore:rules,firestore:indexes,functions
 ```bash
 npm run dev
 ```
+
+### Email notifications
+
+Notification emails are sent by Cloud Functions via [Resend](https://resend.com):
+
+1. Create a Resend account, verify the sending domain, and generate an API key per Firebase project.
+2. Store each key as a Firebase secret: `firebase functions:secrets:set RESEND_API_KEY --project <project>`
+3. Per-environment settings live in `functions/.env.<projectId>`:
+   - `MAIL_FROM` — sender address (must be on a Resend-verified domain in production)
+   - `APP_URL` — base URL used for links in emails
+   - `MAIL_REDIRECT` — staging only: redirects every email to this address so real users are never emailed from staging
+
+Three functions do the sending: `onReservationCreated` (pending reservation → org admins/managers), `onReservationUpdated` (approved → requester), and `sendDueDateEmails` (daily at 08:00 UK time: due-tomorrow reminders, plus overdue alerts CC'd to org admins, with the borrower's name in the subject line for shared inboxes). Reminder emails are stamped on the checkout doc (`dueSoonEmailAt`/`overdueEmailAt`) so each is sent at most once. Overdue is derived at calendar-day level, matching `src/lib/checkout.ts`.
+
+> Until a sending domain is verified in Resend, the `onboarding@resend.dev` test sender can only deliver to the Resend account owner's own address — verify a domain before going to production.
 
 ### Deploy
 

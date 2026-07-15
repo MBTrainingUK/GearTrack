@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GearTrack — User Instructions</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1f2330;
+    line-height: 1.5;
+    font-size: 10.5pt;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 8px;
+  }
+
+  /* ---- Cover ---- */
+  .cover {
+    padding-top: 18px;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+  }
+  .cover .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #2563eb;
+    color: #fff;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16pt;
+    margin-bottom: 10px;
+  }
+  .cover h1 {
+    font-size: 22pt;
+    margin: 0 0 4px 0;
+    color: #111827;
+  }
+  .cover p.subtitle {
+    margin: 0;
+    color: #4b5563;
+    font-size: 11pt;
+  }
+  .cover .roles {
+    margin-top: 14px;
+    font-size: 9.5pt;
+    color: #374151;
+  }
+  .cover .roles strong { color: #111827; }
+
+  /* ---- Headings ---- */
+  h2 {
+    font-size: 14pt;
+    color: #1d4ed8;
+    border-bottom: 1.5px solid #dbeafe;
+    padding-bottom: 4px;
+    margin-top: 26px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11.5pt;
+    color: #111827;
+    margin-top: 16px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  section { page-break-inside: avoid; }
+  .keep-together { page-break-inside: avoid; }
+
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+
+  strong { color: #111827; }
+
+  blockquote {
+    margin: 8px 0;
+    padding: 6px 12px;
+    background: #f3f4f6;
+    border-left: 3px solid #9ca3af;
+    font-size: 9.8pt;
+    color: #374151;
+  }
+
+  .callout {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #fff7ed;
+    border-left: 3px solid #f59e0b;
+    font-size: 9.8pt;
+    color: #78350f;
+    border-radius: 0 4px 4px 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 5px 8px;
+    text-align: left;
+  }
+  th {
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-weight: 600;
+  }
+  td.center, th.center { text-align: center; }
+
+  .check { color: #16a34a; font-weight: 700; }
+
+  .faq dt {
+    font-weight: 600;
+    color: #111827;
+    margin-top: 10px;
+  }
+  .faq dd {
+    margin: 2px 0 0 0;
+    color: #374151;
+  }
+
+  footer {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 8.5pt;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  @media print {
+    body { padding: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="badge">G</div>
+  <h1>GearTrack — User Instructions</h1>
+  <p class="subtitle">Equipment management: checkouts, reservations, and condition reporting.</p>
+  <p class="roles">Three roles: <strong>User</strong> · <strong>Manager</strong> (shown as <strong>Team Member</strong> in the Admin Panel) · <strong>Admin</strong></p>
+</div>
+
+<section class="keep-together">
+<h2>Getting Started</h2>
+
+<h3>Creating an Account</h3>
+<p>GearTrack doesn't have open sign-up — accounts are created by your organisation's Admin.</p>
+<ol>
+  <li>Ask your Admin to add you via the Admin Panel.</li>
+  <li>The Admin will send you a one-time <strong>password-reset link</strong> (by email, Slack, or however your team shares things — it isn't sent automatically).</li>
+  <li>Open the link, set your password, then sign in.</li>
+  <li>Your account starts with the <strong>User</strong> role by default. An Admin can upgrade your role if needed.</li>
+</ol>
+
+<h3>Logging In</h3>
+<ol>
+  <li>Enter your email and password on the <strong>Login</strong> screen.</li>
+  <li>You are taken to the Dashboard on successful login.</li>
+</ol>
+</section>
+
+<section class="keep-together">
+<h2>The Dashboard</h2>
+<p>The Dashboard gives a live overview of the inventory:</p>
+<ul>
+  <li><strong>Summary cards</strong> — total items, available items, checked-out items, and overdue items.</li>
+  <li><strong>7-day activity chart</strong> — a bar chart of recent checkout and return activity.</li>
+  <li><strong>Upcoming reservations</strong> — a calendar view of approved reservations due in the coming days.</li>
+</ul>
+</section>
+
+<section class="keep-together">
+<h2>Browsing Inventory</h2>
+
+<h3>Items</h3>
+<p>The <strong>Items</strong> screen lists all equipment in the system.</p>
+<ul>
+  <li>Use the <strong>search bar</strong> to find items by name.</li>
+  <li>Filter by <strong>category</strong> or <strong>condition</strong> using the dropdowns.</li>
+  <li>Click any item to open its <strong>detail page</strong>, which shows its current status, condition history, and full audit trail.</li>
+</ul>
+
+<h3>Kits</h3>
+<p>The <strong>Kits</strong> screen lists named bundles of related equipment (e.g. "Camera Kit A"). Kits can be reserved or checked out as a group.</p>
+</section>
+
+<section>
+<h2>Reservations</h2>
+
+<h3>Creating a Reservation (all roles)</h3>
+<ol>
+  <li>Go to <strong>Reservations</strong> and click <strong>New Reservation</strong>.</li>
+  <li>Select the items or kits you need.</li>
+  <li>Choose a <strong>start date</strong> and <strong>end date</strong>.</li>
+  <li>Submit. If you're a <strong>User</strong>, the reservation is created with a <strong>Pending</strong> status and needs a manager's approval. If you're a <strong>Manager</strong> or <strong>Admin</strong>, it's <strong>approved automatically</strong>.</li>
+</ol>
+<p>The system will warn you if:</p>
+<ul>
+  <li>Your chosen dates conflict with an existing approved reservation.</li>
+  <li>Any selected item is currently flagged for inspection.</li>
+</ul>
+
+<h3>Reservation Statuses</h3>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td>Pending</td><td>Awaiting manager approval (only for reservations made by a User)</td></tr>
+  <tr><td>Approved</td><td>Approved and ready for checkout</td></tr>
+  <tr><td>Checked Out</td><td>Gear has been taken out against this reservation</td></tr>
+  <tr><td>Completed</td><td>Gear has been returned</td></tr>
+  <tr><td>Cancelled</td><td>Reservation was cancelled by a manager</td></tr>
+</table>
+
+<h3>Approving / Cancelling Reservations (Manager+)</h3>
+<p>Managers see all pending reservations on the <strong>Reservations</strong> screen and can <strong>Approve</strong> or <strong>Cancel</strong> them from there.</p>
+</section>
+
+<section>
+<h2>Checkouts</h2>
+
+<h3>Checking Out Gear (Manager+)</h3>
+<ol>
+  <li>Go to <strong>Checkouts</strong> and click <strong>New Checkout</strong>.</li>
+  <li>Select the items and the <strong>due date</strong>. The checkout is recorded under your own account — there's currently no way to check gear out on someone else's behalf. If it's for a teammate, they should grab it themselves (Quick Grab or the mobile app).</li>
+  <li>Optionally add a <strong>condition report</strong> (rating and notes) at checkout time.</li>
+  <li>Confirm — the items are marked as <strong>Checked Out</strong> and are no longer available for others to book.</li>
+</ol>
+<blockquote>Managers can also create a checkout directly from an approved reservation.</blockquote>
+
+<h3>Quick Grab</h3>
+<p><strong>Quick Grab</strong> is a fast checkout for end-of-day loans where gear is expected back the same day. It skips the full checkout form.</p>
+
+<h3>Returning Gear (Check-In)</h3>
+<ol>
+  <li>Open the active checkout from the <strong>Checkouts</strong> screen.</li>
+  <li>Click <strong>Return</strong> (or <strong>Check In</strong>).</li>
+  <li>Log the return condition — rate the condition (Excellent / Good / Fair / Poor / Damaged) and add any notes.</li>
+  <li>Confirm — the items return to <strong>Available</strong> status.</li>
+</ol>
+<div class="callout">If an item is returned in <strong>Poor</strong> or <strong>Damaged</strong> condition, it is automatically <strong>flagged</strong> for inspection and cannot be reserved again until the flag is cleared.</div>
+
+<h3>Overdue Items</h3>
+<p>An item is considered overdue when its checkout due date has passed and it has not yet been returned. Overdue checkouts are highlighted on the Checkouts screen.</p>
+</section>
+
+<section class="keep-together">
+<h2>Email Notifications</h2>
+<p>GearTrack sends automatic emails so nothing slips through the cracks:</p>
+<ul>
+  <li><strong>Reservation requested</strong> — admins and managers receive an email when a reservation is waiting for approval.</li>
+  <li><strong>Reservation approved</strong> — the requester receives an email when their reservation is approved.</li>
+  <li><strong>Due tomorrow</strong> — borrowers receive a reminder the day before their gear is due back.</li>
+  <li><strong>Overdue</strong> — borrowers receive an alert once their gear becomes overdue, with the organisation's admins copied in. The subject line includes the borrower's name (e.g. <em>"Overdue: Sam Taylor — gear was due back Tue 14 Jul 2026"</em>), so a shared inbox shows at a glance who needs to return gear.</li>
+</ul>
+<div class="callout">Reminders are sent once per checkout, each morning at <strong>8am UK time</strong>. Overdue is counted by calendar day — an item due back today is not overdue until tomorrow morning, so same-day returns are never chased.</div>
+</section>
+
+<section class="keep-together">
+<h2>My History</h2>
+<p>The <strong>My History</strong> screen shows your personal record of past and current checkouts and reservations. Use this to track what you currently have out and review your previous borrowing history.</p>
+</section>
+
+<section class="keep-together">
+<h2>Mobile App</h2>
+<p>GearTrack includes a <strong>mobile-optimised PWA</strong> accessible at the <code>/m/</code> path (or via a mobile shortcut).</p>
+
+<h3>My Gear (mobile)</h3>
+<p>Shows all items you currently have checked out, with their due dates and return status. Tapping <strong>Return</strong> opens a condition report — select the condition (Excellent / Good / Fair / Poor / Damaged) and add any notes before confirming. Items returned in Poor or Damaged condition are automatically flagged for inspection.</p>
+
+<h3>Browse (mobile)</h3>
+<p>A searchable list of currently available items. Tap <strong>Quick Grab</strong> to check one out to yourself instantly, due back by end of today — there's no condition report or custom due date on this quick mobile flow. For reservations, or a full checkout with a custom due date and condition report, use the full site (it works fine in a mobile browser too, just outside this dedicated app view).</p>
+</section>
+
+<section>
+<h2>Manager Features</h2>
+
+<h3>Managing Items</h3>
+<p>Managers can <strong>add</strong>, <strong>edit</strong>, and <strong>delete</strong> inventory items from the <strong>Items</strong> screen.</p>
+<p><strong>When adding an item:</strong></p>
+<ul>
+  <li>Enter the name, category, serial number, and asset number.</li>
+  <li>Set the current condition and optionally log a purchase date, price, and expected lifespan.</li>
+</ul>
+<p><strong>Flagging an item:</strong></p>
+<ul>
+  <li>Open the item detail page and use the <strong>Flag for Inspection</strong> action.</li>
+  <li>Flagged items cannot be reserved until the flag is cleared.</li>
+</ul>
+
+<h3>Activity Log</h3>
+<p>The <strong>Activity Log</strong> shows a full audit trail of every significant action in the system — checkouts, returns, reservation approvals, item changes, and user actions. Each entry records who performed the action and when.</p>
+</section>
+
+<section>
+<h2>Admin Features</h2>
+
+<h3>User Management</h3>
+<p>Admins access the <strong>Admin Panel</strong> to manage user accounts.</p>
+<ul>
+  <li><strong>Add user</strong> — Create a new teammate's account. GearTrack generates a one-time password-reset link for you to share with them manually (there's no automated email).</li>
+  <li><strong>Change role</strong> — Promote or demote a user between User, Manager, and Admin (shown as "Team Member" in the picker). Note: Admins cannot change their own role.</li>
+  <li><strong>Remove user</strong> — Remove a user from the system.</li>
+</ul>
+
+<h3>Backup &amp; Restore</h3>
+<p>The Admin Panel has an <strong>Export/Import</strong> section for the inventory catalogue:</p>
+<ul>
+  <li><strong>Export</strong> downloads a JSON file of every item and kit in your organisation.</li>
+  <li><strong>Import</strong> reads that file back in and restores items/kits, overwriting any that already exist.</li>
+</ul>
+<p>This covers items and kits only — it doesn't include reservations, checkouts, the Activity Log, or user accounts.</p>
+
+<h3>Reports</h3>
+<p>The <strong>Reports</strong> screen provides analytics across the inventory:</p>
+<ul>
+  <li>Usage per item and per user</li>
+  <li>Average checkout duration</li>
+  <li>Late return rates</li>
+  <li>Items that have never been checked out</li>
+  <li>Reservation approval rates</li>
+</ul>
+</section>
+
+<section class="keep-together">
+<h2>Role Summary</h2>
+<table>
+  <tr><th>Feature</th><th class="center">User</th><th class="center">Manager</th><th class="center">Admin</th></tr>
+  <tr><td>Browse items &amp; kits</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>Create reservations</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>View own history</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>Mobile app</td><td class="center check">✓</td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>Add / edit / delete items</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>Approve / cancel reservations</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>Create / manage checkouts</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>View Activity Log</td><td class="center"></td><td class="center check">✓</td><td class="center check">✓</td></tr>
+  <tr><td>View Reports</td><td class="center"></td><td class="center"></td><td class="center check">✓</td></tr>
+  <tr><td>Add / remove users &amp; manage roles</td><td class="center"></td><td class="center"></td><td class="center check">✓</td></tr>
+</table>
+</section>
+
+<section class="keep-together">
+<h2>Common Questions</h2>
+<dl class="faq">
+  <dt>Why can't I reserve an item?</dt>
+  <dd>The item may be flagged for inspection, already reserved for those dates, or currently checked out past its due date.</dd>
+
+  <dt>Why is my reservation still Pending?</dt>
+  <dd>Reservations require manager approval before they are confirmed. Contact your manager to review it.</dd>
+
+  <dt>What happens if I return gear in poor condition?</dt>
+  <dd>The item is automatically flagged for inspection. A manager must clear the flag before the item can be reserved again.</dd>
+
+  <dt>Can I use GearTrack on my phone?</dt>
+  <dd>Yes — open the app on a mobile browser and navigate to the Browse or My Gear section. You can add it to your home screen as a PWA for faster access.</dd>
+
+  <dt>Why did an old checkout or reservation disappear?</dt>
+  <dd>GearTrack clears out checkout and reservation records older than 180 days to keep things tidy. Your current and recent history isn't affected — only old, completed records are removed.</dd>
+
+  <dt>How do I get an account?</dt>
+  <dd>There's no sign-up form — ask your organisation's Admin to add you from the Admin Panel. You'll get a one-time link to set your password.</dd>
+</dl>
+</section>
+
+<footer>GearTrack User Instructions</footer>
+
+</body>
+</html>

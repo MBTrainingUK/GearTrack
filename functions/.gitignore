@@ -3,3 +3,7 @@ lib/
 *.log
 .env
 .env.*
+
+# Per-project params (non-secret: sender, app URL, staging redirect) — committed deliberately
+!.env.geartrack-staging
+!.env.geartrack-d9e91

@@ -3,6 +3,18 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
+import {
+  RESEND_API_KEY,
+  sendEmail,
+  getOrgStaffEmails,
+  getItemNames,
+  reservationPendingEmail,
+  reservationApprovedEmail,
+  dueTomorrowEmail,
+  overdueEmail,
+} from './email';
 
 initializeApp();
 
@@ -314,3 +326,121 @@ export const autoCheckoutReservations = onSchedule('every 5 minutes', async () =
     })
   );
 });
+
+// ── Email notifications ──────────────────────────────────────────────
+
+/**
+ * New pending reservation → notify the org's admins and managers so
+ * someone approves it. Reservations created directly as 'approved'
+ * (e.g. by a manager) send nothing.
+ */
+export const onReservationCreated = onDocumentCreated(
+  { document: 'reservations/{reservationId}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const res = event.data?.data();
+    if (!res || res.status !== 'pending') return;
+
+    const staffEmails = (await getOrgStaffEmails(res.orgId, ['admin', 'manager'])).filter(
+      // Don't notify the requester about their own reservation.
+      (e) => e !== res.userEmail
+    );
+    if (staffEmails.length === 0) return;
+
+    const itemNames = await getItemNames(res.itemIds ?? []);
+    await sendEmail({
+      to: staffEmails,
+      ...reservationPendingEmail({
+        userName: res.userName,
+        itemNames,
+        startDate: (res.startDate as Timestamp).toDate(),
+        endDate: (res.endDate as Timestamp).toDate(),
+      }),
+    });
+  }
+);
+
+/** Reservation approved (pending → approved) → notify the requester. */
+export const onReservationUpdated = onDocumentUpdated(
+  { document: 'reservations/{reservationId}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.status !== 'pending' || after.status !== 'approved') return;
+    if (!after.userEmail) return;
+
+    const itemNames = await getItemNames(after.itemIds ?? []);
+    await sendEmail({
+      to: [after.userEmail],
+      ...reservationApprovedEmail({
+        itemNames,
+        startDate: (after.startDate as Timestamp).toDate(),
+        endDate: (after.endDate as Timestamp).toDate(),
+      }),
+    });
+  }
+);
+
+/** Calendar day (yyyy-mm-dd) in the UK timezone, for day-level due-date maths. */
+function ukDayKey(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+}
+
+/**
+ * Daily at 08:00 UK time. Sends "due tomorrow" reminders to borrowers and
+ * first-overdue alerts to borrowers (CC org admins). Each email is stamped
+ * on the checkout doc (dueSoonEmailAt / overdueEmailAt) so it's sent at
+ * most once per checkout. Overdue is derived from the due date at
+ * day-level, matching src/lib/checkout.ts — it is never stored as a status.
+ */
+export const sendDueDateEmails = onSchedule(
+  { schedule: 'every day 08:00', timeZone: 'Europe/London', secrets: [RESEND_API_KEY] },
+  async () => {
+    const db = getFirestore();
+    const now = new Date();
+    const today = ukDayKey(now);
+    const tomorrow = ukDayKey(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+
+    const snap = await db.collection('checkouts').where('status', '==', 'active').get();
+    if (snap.empty) return;
+
+    // Org admin lists are reused across checkouts within this run.
+    const adminEmailsByOrg = new Map<string, string[]>();
+    async function orgAdmins(orgId: string): Promise<string[]> {
+      let emails = adminEmailsByOrg.get(orgId);
+      if (!emails) {
+        emails = await getOrgStaffEmails(orgId, ['admin']);
+        adminEmailsByOrg.set(orgId, emails);
+      }
+      return emails;
+    }
+
+    for (const doc of snap.docs) {
+      const c = doc.data();
+      if (!c.userEmail || !c.dueDate) continue;
+      const dueDate = (c.dueDate as Timestamp).toDate();
+      const dueKey = ukDayKey(dueDate);
+
+      try {
+        if (dueKey === tomorrow && !c.dueSoonEmailAt) {
+          const itemNames = await getItemNames(c.itemIds ?? []);
+          await sendEmail({
+            to: [c.userEmail],
+            ...dueTomorrowEmail({ itemNames, dueDate }),
+          });
+          await doc.ref.update({ dueSoonEmailAt: FieldValue.serverTimestamp() });
+        } else if (dueKey < today && !c.overdueEmailAt) {
+          const itemNames = await getItemNames(c.itemIds ?? []);
+          await sendEmail({
+            to: [c.userEmail],
+            cc: (await orgAdmins(c.orgId)).filter((e) => e !== c.userEmail),
+            ...overdueEmail({ userName: c.userName, itemNames, dueDate }),
+          });
+          await doc.ref.update({ overdueEmailAt: FieldValue.serverTimestamp() });
+        }
+      } catch (err) {
+        console.error(`sendDueDateEmails failed for checkout ${doc.id}:`, err);
+      }
+    }
+  }
+);

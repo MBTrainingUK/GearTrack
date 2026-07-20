@@ -114,6 +114,10 @@ export interface Checkout {
   checkoutCondition?: ConditionReport;
   returnCondition?: ConditionReport;
   notes?: string;
+  // Stamped by the sendDueDateEmails Cloud Function so each reminder is
+  // sent at most once per checkout.
+  dueSoonEmailAt?: Timestamp;
+  overdueEmailAt?: Timestamp;
 }
 
 // ── Audit Log ────────────────────────────────────────────────────────
@@ -130,7 +134,8 @@ export type AuditAction =
   | 'create_kit'
   | 'update_kit'
   | 'delete_kit'
-  | 'approve_reservation';
+  | 'approve_reservation'
+  | 'edit_reservation';
 
 export interface AuditLog {
   id: string;

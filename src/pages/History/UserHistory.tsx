@@ -12,10 +12,12 @@ import { useItems } from '../../store/items';
 import StatusBadge from '../../components/StatusBadge';
 import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { History } from 'lucide-react';
+import { History, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function UserHistory() {
   const { currentUser, appUser } = useAuth();
+  const navigate = useNavigate();
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const { byId: items } = useItems();
@@ -128,6 +130,7 @@ export default function UserHistory() {
                   <th className="px-5 py-3 text-left font-medium">Returned</th>
                   <th className="px-5 py-3 text-left font-medium">Status</th>
                   <th className="px-5 py-3 text-left font-medium">Condition</th>
+                  <th className="px-5 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -153,6 +156,16 @@ export default function UserHistory() {
                     </td>
                     <td className="px-5 py-3 text-xs capitalize text-gray-600">
                       {c.returnCondition?.condition ?? '—'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => navigate(`/reservations/new?itemIds=${c.itemIds.join(',')}`)}
+                        title="Reserve the same items again"
+                        className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                      >
+                        <RotateCcw size={11} />
+                        Repeat
+                      </button>
                     </td>
                   </tr>
                 ))}

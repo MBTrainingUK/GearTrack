@@ -236,9 +236,9 @@ export default function CheckoutsList() {
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
           onClose={() => setShowNewModal(false)}
-          onCreated={(id, itemIds, targetName) => {
+          onCreated={() => {
             setShowNewModal(false);
-            setConditionModal({ checkoutId: id, itemIds, targetName, mode: 'checkout' });
+            toast.success('Items checked out successfully');
           }}
         />
       )}
@@ -257,7 +257,7 @@ function NewCheckoutModal({
   kits: Kit[];
   reservationId?: string;
   onClose: () => void;
-  onCreated: (id: string, itemIds: string[], targetName: string) => void;
+  onCreated: () => void;
 }) {
   const { currentUser, appUser } = useAuth();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -329,7 +329,7 @@ function NewCheckoutModal({
         targetId: id,
         targetName: name,
       });
-      onCreated(id, itemIds, name);
+      onCreated();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create checkout');
     } finally {
@@ -514,7 +514,7 @@ function NewCheckoutModal({
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
-            {saving ? 'Creating…' : 'Check Out & Add Condition Report'}
+            {saving ? 'Creating…' : 'Check Out'}
           </button>
         </div>
       </div>

@@ -10,7 +10,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Item, Kit, Reservation } from '../../types';
+import type { AppUser, Item, Kit, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
 import { ArrowLeft, Check, AlertTriangle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -25,10 +25,15 @@ export default function ReservationForm() {
   const [searchParams] = useSearchParams();
   const preselectedItemId = searchParams.get('itemId');
   const preselectedKitId = searchParams.get('kitId');
+  const preselectedItemIds = searchParams.get('itemIds')?.split(',').filter(Boolean) ?? [];
 
   const [items, setItems] = useState<Item[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
-  const [selectedItems, setSelectedItems] = useState<string[]>(preselectedItemId ? [preselectedItemId] : []);
+  const [orgUsers, setOrgUsers] = useState<AppUser[]>([]);
+  const [assignedUserId, setAssignedUserId] = useState<string>('');
+  const [selectedItems, setSelectedItems] = useState<string[]>(
+    preselectedItemIds.length > 0 ? preselectedItemIds : preselectedItemId ? [preselectedItemId] : []
+  );
   const [selectedKitId, setSelectedKitId] = useState<string | null>(preselectedKitId);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -44,11 +49,14 @@ export default function ReservationForm() {
     Promise.all([
       getDocs(query(collection(db, 'items'), where('orgId', '==', orgId))),
       getDocs(query(collection(db, 'kits'), where('orgId', '==', orgId))),
-    ]).then(([itemsSnap, kitsSnap]) => {
+      getDocs(query(collection(db, 'users'), where('orgId', '==', orgId))),
+    ]).then(([itemsSnap, kitsSnap, usersSnap]) => {
       const loadedItems = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item));
       setItems(loadedItems);
       const loadedKits = kitsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Kit));
       setKits(loadedKits);
+      const loadedUsers = usersSnap.docs.map((d) => ({ ...d.data() } as AppUser));
+      setOrgUsers(loadedUsers);
       // Pre-select items for a kit passed in via ?kitId=
       if (preselectedKitId) {
         const kit = loadedKits.find((k) => k.id === preselectedKitId);
@@ -126,6 +134,14 @@ export default function ReservationForm() {
     }
 
     setSaving(true);
+    const canAssign = appUser.role === 'admin' || appUser.role === 'manager';
+    const assignedUser = canAssign && assignedUserId
+      ? orgUsers.find((u) => u.uid === assignedUserId)
+      : null;
+    const reservationUserId = assignedUser ? assignedUser.uid : currentUser.uid;
+    const reservationUserName = assignedUser ? assignedUser.displayName : appUser.displayName;
+    const reservationUserEmail = assignedUser ? assignedUser.email : appUser.email;
+
     try {
       const cfls = await checkConflicts(selectedItems, start, end);
       if (cfls.length > 0) {
@@ -137,14 +153,15 @@ export default function ReservationForm() {
 
       const resRef = await addDoc(collection(db, 'reservations'), {
         orgId: appUser.orgId,
-        userId: currentUser.uid,
-        userName: appUser.displayName,
-        userEmail: appUser.email,
+        userId: reservationUserId,
+        userName: reservationUserName,
+        userEmail: reservationUserEmail,
         itemIds: selectedItems,
         kitId: selectedKitId ?? null,
         startDate: Timestamp.fromDate(start),
         endDate: Timestamp.fromDate(end),
-        status: appUser.role === 'user' ? 'pending' : 'approved',
+        status: 'approved',
+        autoCheckout: true,
         notes,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -230,6 +247,31 @@ export default function ReservationForm() {
             </div>
           </div>
         </div>
+
+        {/* Assign to (admin/manager only) */}
+        {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-gray-900">Assign To</h2>
+            <select
+              value={assignedUserId}
+              onChange={(e) => setAssignedUserId(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Myself ({appUser.displayName})</option>
+              {orgUsers
+                .filter((u) => u.uid !== currentUser?.uid)
+                .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                .map((u) => (
+                  <option key={u.uid} value={u.uid}>
+                    {u.displayName} ({u.email})
+                  </option>
+                ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-400">
+              The reservation will be created in this person's name and auto-checked out at the start time.
+            </p>
+          </div>
+        )}
 
         {/* Kit picker */}
         {kits.length > 0 && (

@@ -50,6 +50,15 @@
       ]
     },
     {
+      "collectionGroup": "reservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "autoCheckout", "order": "ASCENDING" },
+        { "fieldPath": "startDate", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "auditLog",
       "queryScope": "COLLECTION",
       "fields": [

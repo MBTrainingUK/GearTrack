@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check, Plug } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
+import { fetchMondayFilmingDates } from '../../lib/monday';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
@@ -43,12 +44,18 @@ export default function AdminPanel() {
   const [pendingImport, setPendingImport] = useState<{ items: number; kits: number; backup: Parameters<typeof importBackup>[0] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [backfilling, setBackfilling] = useState(false);
+  const [syncingClaims, setSyncingClaims] = useState(false);
   const [fixingOrphans, setFixingOrphans] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
   const [newUserLink, setNewUserLink] = useState<string | null>(null);
   const [addUserForm, setAddUserForm] = useState({ email: '', displayName: '', role: 'user' as UserRole });
   const [linkCopied, setLinkCopied] = useState(false);
+  const [mondayKey, setMondayKey] = useState('');
+  const [mondayKeyLoaded, setMondayKeyLoaded] = useState(false);
+  const [mondayKeyExists, setMondayKeyExists] = useState(false);
+  const [savingMondayKey, setSavingMondayKey] = useState(false);
+  const [showMondayKey, setShowMondayKey] = useState(false);
 
   function copyLink(link: string) {
     navigator.clipboard.writeText(link).then(() => {
@@ -312,6 +319,71 @@ export default function AdminPanel() {
     setAddUserForm({ email: '', displayName: '', role: 'user' });
   }
 
+  async function handleSyncClaims() {
+    setSyncingClaims(true);
+    try {
+      await httpsCallable(functions, 'syncClaims')({});
+      await currentUser?.getIdToken(true);
+      toast.success('Permissions refreshed — reloading…');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to refresh permissions');
+    } finally {
+      setSyncingClaims(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!appUser?.orgId) return;
+    getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
+      if (snap.exists()) {
+        const key = snap.data().mondayApiKey ?? '';
+        setMondayKey(key);
+        setMondayKeyExists(!!key);
+      }
+      setMondayKeyLoaded(true);
+    }).catch(() => setMondayKeyLoaded(true));
+  }, [appUser?.orgId]);
+
+  async function saveMondayKey() {
+    if (!appUser?.orgId) return;
+    setSavingMondayKey(true);
+    const trimmed = mondayKey.trim();
+    try {
+      await setDoc(
+        doc(db, 'organizations', appUser.orgId, 'private', 'integrations'),
+        { mondayApiKey: trimmed },
+        { merge: true }
+      );
+      setMondayKeyExists(!!trimmed);
+    } catch (err) {
+      console.error('saveMondayKey failed:', err);
+      toast.error('Failed to save API key');
+      setSavingMondayKey(false);
+      return;
+    }
+
+    if (!trimmed) {
+      toast.success('Monday.com API key removed');
+      setSavingMondayKey(false);
+      return;
+    }
+
+    // Test the key by fetching real data — same call the calendar uses
+    try {
+      const events = await fetchMondayFilmingDates(trimmed);
+      if (events.length > 0) {
+        toast.success(`Key saved — found ${events.length} filming date${events.length !== 1 ? 's' : ''}`);
+      } else {
+        toast.success('Key saved — connected, but no filming dates found on the board');
+      }
+    } catch {
+      toast('Key saved, but the connection test failed — double-check the key is correct', { icon: '⚠️' });
+    } finally {
+      setSavingMondayKey(false);
+    }
+  }
+
   async function handleExport() {
     if (!appUser?.orgId) return;
     setExporting(true);
@@ -377,6 +449,25 @@ export default function AdminPanel() {
           Add user
         </button>
       </div>
+
+      {users.length === 0 && appUser?.orgId && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-600" />
+            <h2 className="text-sm font-semibold text-amber-900">Permission error detected</h2>
+          </div>
+          <p className="text-xs text-amber-800">
+            Your session permissions appear to be out of sync. Click below to fix this — the page will reload automatically.
+          </p>
+          <button
+            onClick={handleSyncClaims}
+            disabled={syncingClaims}
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+          >
+            {syncingClaims ? 'Refreshing…' : 'Fix permissions'}
+          </button>
+        </div>
+      )}
 
       {!appUser?.orgId && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 space-y-3">
@@ -486,6 +577,57 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {/* Integrations */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Plug size={16} className="text-gray-600" />
+          <h2 className="text-sm font-semibold text-gray-800">Integrations</h2>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Monday.com API key</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Enables filming dates from your Monday.com board to appear on the reservations calendar.
+              </p>
+            </div>
+            {mondayKeyLoaded && mondayKeyExists && (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Key configured
+              </span>
+            )}
+          </div>
+          {mondayKeyLoaded && (
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <input
+                  type={showMondayKey ? 'text' : 'password'}
+                  value={mondayKey}
+                  onChange={(e) => setMondayKey(e.target.value)}
+                  placeholder={mondayKeyExists ? 'Enter a new key to replace the existing one' : 'Paste your Monday.com API key'}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 pr-20 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMondayKey((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  {showMondayKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <button
+                onClick={saveMondayKey}
+                disabled={savingMondayKey}
+                className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {savingMondayKey ? 'Testing…' : 'Save & test'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Backup & restore */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
         <div className="flex items-center gap-2">

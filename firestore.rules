@@ -32,7 +32,7 @@ service cloud.firestore {
       // Uses token claims directly to avoid a nested get() inside a subcollection rule.
       match /private/{docId} {
         allow read, write: if isPlatformAdmin()
-          || (isSignedIn() && request.auth.token.role == 'admin' && sameOrg(orgId));
+          || (isSignedIn() && request.auth.token.role in ['admin', 'manager'] && sameOrg(orgId));
       }
     }
 

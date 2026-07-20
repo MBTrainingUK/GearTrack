@@ -25,12 +25,15 @@ export default function ReservationForm() {
   const [searchParams] = useSearchParams();
   const preselectedItemId = searchParams.get('itemId');
   const preselectedKitId = searchParams.get('kitId');
+  const preselectedItemIds = searchParams.get('itemIds')?.split(',').filter(Boolean) ?? [];
 
   const [items, setItems] = useState<Item[]>([]);
   const [kits, setKits] = useState<Kit[]>([]);
   const [orgUsers, setOrgUsers] = useState<AppUser[]>([]);
   const [assignedUserId, setAssignedUserId] = useState<string>('');
-  const [selectedItems, setSelectedItems] = useState<string[]>(preselectedItemId ? [preselectedItemId] : []);
+  const [selectedItems, setSelectedItems] = useState<string[]>(
+    preselectedItemIds.length > 0 ? preselectedItemIds : preselectedItemId ? [preselectedItemId] : []
+  );
   const [selectedKitId, setSelectedKitId] = useState<string | null>(preselectedKitId);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');

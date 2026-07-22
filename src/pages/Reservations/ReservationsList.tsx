@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Reservation, Item, Kit } from '../../types';
+import type { AppUser, Checkout, Reservation, Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
 import { Plus, Calendar, List, X, Pencil, Check, Minus } from 'lucide-react';
 import { isFlagged } from '../../lib/items';
@@ -51,6 +51,8 @@ export default function ReservationsList() {
   const [editSearch, setEditSearch] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [allOrgItems, setAllOrgItems] = useState<Item[]>([]);
+  const [orgUsers, setOrgUsers] = useState<AppUser[]>([]);
+  const [editAssignedUserId, setEditAssignedUserId] = useState<string>('');
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -124,13 +126,18 @@ export default function ReservationsList() {
 
   useEffect(() => {
     if (!appUser?.orgId) return;
-    getDocs(query(collection(db, 'items'), where('orgId', '==', appUser.orgId))).then((snap) => {
-      setAllOrgItems(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
+    Promise.all([
+      getDocs(query(collection(db, 'items'), where('orgId', '==', appUser.orgId))),
+      getDocs(query(collection(db, 'users'), where('orgId', '==', appUser.orgId))),
+    ]).then(([itemSnap, userSnap]) => {
+      setAllOrgItems(itemSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Item)));
+      setOrgUsers(userSnap.docs.map((d) => ({ ...d.data() } as AppUser)));
     }).catch(() => {});
   }, [appUser?.orgId]);
 
   function openEdit(r: Reservation) {
     setEditItemIds([...r.itemIds]);
+    setEditAssignedUserId(r.userId ?? '');
     setEditSearch('');
     setEditing(true);
   }
@@ -138,6 +145,7 @@ export default function ReservationsList() {
   function closeEdit() {
     setEditing(false);
     setEditItemIds([]);
+    setEditAssignedUserId('');
     setEditSearch('');
   }
 
@@ -159,19 +167,37 @@ export default function ReservationsList() {
         const end = r.endDate.toDate();
         const conflictResults = await Promise.all(
           newlyAdded.map(async (itemId) => {
-            const q = query(
+            // Check reservation conflicts
+            const resQ = query(
               collection(db, 'reservations'),
               where('orgId', '==', appUser.orgId),
               where('itemIds', 'array-contains', itemId),
               where('status', 'in', ['pending', 'approved', 'checked_out'])
             );
-            const snap = await getDocs(q);
-            const clash = snap.docs.some((d) => {
+            const resSnap = await getDocs(resQ);
+            const reservationClash = resSnap.docs.some((d) => {
               if (d.id === r.id) return false;
               const res = d.data() as Reservation;
               return start < res.endDate.toDate() && end > res.startDate.toDate();
             });
-            return clash ? itemId : null;
+            if (reservationClash) return itemId;
+
+            // Check active checkouts not linked to a reservation
+            const coQ = query(
+              collection(db, 'checkouts'),
+              where('orgId', '==', appUser.orgId),
+              where('itemIds', 'array-contains', itemId),
+              where('status', 'in', ['active', 'overdue'])
+            );
+            const coSnap = await getDocs(coQ);
+            const checkoutClash = coSnap.docs.some((d) => {
+              const c = d.data() as Checkout;
+              if (c.reservationId) return false;
+              const dueDate = c.dueDate?.toDate();
+              if (!dueDate) return true;
+              return start < dueDate && end > c.checkedOutAt.toDate();
+            });
+            return checkoutClash ? itemId : null;
           })
         );
         const conflicts = conflictResults.filter((id): id is string => id !== null);
@@ -183,8 +209,18 @@ export default function ReservationsList() {
         }
       }
 
+      const canAssign = appUser.role === 'admin' || appUser.role === 'manager';
+      const assignedUser = canAssign && editAssignedUserId
+        ? orgUsers.find((u) => u.uid === editAssignedUserId)
+        : null;
+
       await updateDoc(doc(db, 'reservations', r.id), {
         itemIds: editItemIds,
+        ...(canAssign && {
+          userId: assignedUser ? assignedUser.uid : r.userId,
+          userName: assignedUser ? assignedUser.displayName : r.userName,
+          userEmail: assignedUser ? assignedUser.email : r.userEmail,
+        }),
         updatedAt: serverTimestamp(),
       });
 
@@ -490,6 +526,25 @@ export default function ReservationsList() {
               {/* Items — edit view */}
               {editing && (
                 <div className="space-y-3">
+                  {/* Assignee picker — admin/manager only */}
+                  {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1.5">Assigned To</p>
+                      <select
+                        value={editAssignedUserId}
+                        onChange={(e) => setEditAssignedUserId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {orgUsers
+                          .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                          .map((u) => (
+                            <option key={u.uid} value={u.uid}>
+                              {u.displayName} ({u.email})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
                   <p className="text-xs font-medium text-gray-500">Items ({editItemIds.length})</p>
                   {/* Current items with remove option */}
                   <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">

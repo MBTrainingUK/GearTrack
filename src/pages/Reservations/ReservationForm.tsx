@@ -10,7 +10,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { AppUser, Item, Kit, Reservation } from '../../types';
+import type { AppUser, Checkout, Item, Kit, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
 import { ArrowLeft, Check, AlertTriangle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -73,7 +73,10 @@ export default function ReservationForm() {
     const warned: string[] = [];
     kit.itemIds.forEach((id) => {
       const item = itemList.find((i) => i.id === id);
-      if (!item || isFlagged(item) || item.status !== 'available') {
+      // Only block flagged items (damaged/needs_investigating) — checked-out
+      // items that are due back before the reservation starts are still bookable;
+      // the conflict check at submit time will catch any real overlap.
+      if (!item || isFlagged(item)) {
         warned.push(item?.name ?? id);
       } else {
         available.push(id);
@@ -98,18 +101,39 @@ export default function ReservationForm() {
   async function checkConflicts(itemIds: string[], start: Date, end: Date): Promise<string[]> {
     const results = await Promise.all(
       itemIds.map(async (itemId) => {
-        const q = query(
+        // Check for overlapping reservations
+        const resQ = query(
           collection(db, 'reservations'),
           where('orgId', '==', appUser!.orgId),
           where('itemIds', 'array-contains', itemId),
           where('status', 'in', ['pending', 'approved', 'checked_out'])
         );
-        const snap = await getDocs(q);
-        const clash = snap.docs.some((d) => {
+        const resSnap = await getDocs(resQ);
+        const reservationClash = resSnap.docs.some((d) => {
           const r = d.data() as Reservation;
           return start < r.endDate.toDate() && end > r.startDate.toDate();
         });
-        return clash ? itemId : null;
+        if (reservationClash) return itemId;
+
+        // Check for active checkouts not linked to a reservation that overlap
+        const coQ = query(
+          collection(db, 'checkouts'),
+          where('orgId', '==', appUser!.orgId),
+          where('itemIds', 'array-contains', itemId),
+          where('status', 'in', ['active', 'overdue'])
+        );
+        const coSnap = await getDocs(coQ);
+        const checkoutClash = coSnap.docs.some((d) => {
+          const c = d.data() as Checkout;
+          // Only block if this checkout is not already linked to a reservation
+          // (reservation-linked checkouts are already captured above)
+          if (c.reservationId) return false;
+          const dueDate = c.dueDate?.toDate();
+          // No due date means indefinitely out — treat as a conflict
+          if (!dueDate) return true;
+          return start < dueDate && end > c.checkedOutAt.toDate();
+        });
+        return checkoutClash ? itemId : null;
       })
     );
     return results.filter((id): id is string => id !== null);

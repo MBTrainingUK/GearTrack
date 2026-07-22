@@ -107,9 +107,10 @@ export default function ReportsPanel() {
         c.itemIds.forEach((itemId) => {
           if (!iMap[itemId]) return;
           iMap[itemId].checkoutCount++;
-          // Duration
-          if (c.checkedOutAt && c.returnedAt) {
-            const days = (c.returnedAt.toMillis() - c.checkedOutAt.toMillis()) / (1000 * 60 * 60 * 24);
+          // Duration — use returnedAt for completed checkouts, now for still-active ones
+          if (c.checkedOutAt) {
+            const endMs = c.returnedAt ? c.returnedAt.toMillis() : Date.now();
+            const days = (endMs - c.checkedOutAt.toMillis()) / (1000 * 60 * 60 * 24);
             iMap[itemId].totalDaysOut += days;
           }
           // Return condition

@@ -58,7 +58,7 @@ export default function ReportsPanel() {
   const [itemsMissingPriceCount, setItemsMissingPriceCount] = useState(0);
   const [valueByCat, setValueByCat] = useState<{ name: string; value: number }[]>([]);
 
-  type FinSort = 'name' | 'category' | 'price' | 'age' | 'checkouts' | 'costPerCheckout' | 'utilisation';
+  type FinSort = 'name' | 'category' | 'price' | 'age' | 'checkouts' | 'daysOut' | 'costPerCheckout' | 'utilisation';
   const [finSort, setFinSort] = useState<FinSort>('costPerCheckout');
   const [finAsc, setFinAsc] = useState(true);
 
@@ -579,6 +579,7 @@ export default function ReportsPanel() {
                         ['price', 'Purchase Price'],
                         ['age', 'Age'],
                         ['checkouts', 'Checkouts'],
+                        ['daysOut', 'Days Out'],
                         ['costPerCheckout', 'Cost / Checkout'],
                         ['utilisation', 'Utilisation'],
                       ] as [FinSort, string][]
@@ -614,6 +615,7 @@ export default function ReportsPanel() {
                       if (finSort === 'price') { av = a.purchasePrice ?? 0; bv = b.purchasePrice ?? 0; }
                       else if (finSort === 'age') { av = a.ageMonths ?? 0; bv = b.ageMonths ?? 0; }
                       else if (finSort === 'checkouts') { av = a.checkoutCount; bv = b.checkoutCount; }
+                      else if (finSort === 'daysOut') { av = a.totalDaysOut; bv = b.totalDaysOut; }
                       else if (finSort === 'utilisation') { av = a.utilisationPct; bv = b.utilisationPct; }
                       else { av = a.costPerCheckout ?? Infinity; bv = b.costPerCheckout ?? Infinity; }
                       return finAsc ? av - bv : bv - av;
@@ -627,6 +629,9 @@ export default function ReportsPanel() {
                           {i.ageMonths != null ? `${Math.round(i.ageMonths)} mo` : '—'}
                         </td>
                         <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
+                        <td className="px-5 py-3 tabular-nums text-gray-900">
+                          {i.totalDaysOut > 0 ? `${i.totalDaysOut.toFixed(1)} d` : '—'}
+                        </td>
                         <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
                           {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
                         </td>

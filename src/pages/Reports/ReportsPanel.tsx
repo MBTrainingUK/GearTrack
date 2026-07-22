@@ -602,7 +602,7 @@ export default function ReportsPanel() {
                     .map((i) => {
                       const trackingStart = new Date('2026-07-01').getTime();
                       const ageDays = i.purchaseDate ? (Date.now() - Math.max(i.purchaseDate.toMillis(), trackingStart)) / 86400000 : null;
-                      const ageMonths = ageDays ? ageDays / 30.44 : null;
+                      const ageMonths = i.purchaseDate ? (Date.now() - i.purchaseDate.toMillis()) / (30.44 * 86400000) : null;
                       const costPerCheckout = i.purchasePrice && i.checkoutCount > 0 ? i.purchasePrice / i.checkoutCount : null;
                       const utilisationPct = ageDays && i.totalDaysOut > 0 ? Math.min(100, (i.totalDaysOut / ageDays) * 100) : 0;
                       return { ...i, ageMonths, costPerCheckout, utilisationPct };

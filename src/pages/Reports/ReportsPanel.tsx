@@ -630,7 +630,7 @@ export default function ReportsPanel() {
                         </td>
                         <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
                         <td className="px-5 py-3 tabular-nums text-gray-900">
-                          {i.totalDaysOut > 0 ? `${i.totalDaysOut.toFixed(1)} d` : '—'}
+                          {i.totalDaysOut > 0 ? `${Math.round(i.totalDaysOut)} d` : '—'}
                         </td>
                         <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
                           {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}

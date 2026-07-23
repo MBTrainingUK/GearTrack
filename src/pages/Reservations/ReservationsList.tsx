@@ -118,11 +118,11 @@ export default function ReservationsList() {
   }
 
   useEffect(() => {
-    if (!appUser?.orgId || appUser.role !== 'admin') return;
+    if (!appUser?.orgId) return;
     getDoc(doc(db, 'organizations', appUser.orgId, 'private', 'integrations')).then((snap) => {
       if (snap.exists()) setOrgMondayKey(snap.data().mondayApiKey ?? null);
     }).catch(() => {});
-  }, [appUser?.orgId, appUser?.role]);
+  }, [appUser?.orgId]);
 
   useEffect(() => {
     if (!appUser?.orgId) return;

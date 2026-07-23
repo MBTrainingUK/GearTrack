@@ -31,7 +31,8 @@ service cloud.firestore {
       // Private subcollection — org admins only, never exposed to regular users.
       // Uses token claims directly to avoid a nested get() inside a subcollection rule.
       match /private/{docId} {
-        allow read, write: if isPlatformAdmin()
+        allow read: if isPlatformAdmin() || sameOrg(orgId);
+        allow write: if isPlatformAdmin()
           || (isSignedIn() && request.auth.token.role in ['admin', 'manager'] && sameOrg(orgId));
       }
     }

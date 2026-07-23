@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(qlmanage -t -s 256 public/favicon.svg -o public)"
+      "Bash(qlmanage -t -s 256 public/favicon.svg -o public)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(gcloud secrets *)",
+      "Bash(npx firebase-tools *)"
     ]
   }
 }

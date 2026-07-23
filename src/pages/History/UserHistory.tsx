@@ -12,7 +12,7 @@ import { useItems } from '../../store/items';
 import StatusBadge from '../../components/StatusBadge';
 import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { History, RotateCcw } from 'lucide-react';
+import { History, RotateCcw, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function UserHistory() {
@@ -188,6 +188,7 @@ export default function UserHistory() {
                   <th className="px-5 py-3 text-left font-medium">End</th>
                   <th className="px-5 py-3 text-left font-medium">Status</th>
                   <th className="px-5 py-3 text-left font-medium">Notes</th>
+                  <th className="px-5 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -203,6 +204,18 @@ export default function UserHistory() {
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-500 max-w-[200px] truncate">
                       {r.notes ?? '—'}
+                    </td>
+                    <td className="px-5 py-3">
+                      {r.status === 'approved' && (
+                        <button
+                          onClick={() => navigate(`/checkouts?reservationId=${r.id}`)}
+                          title="Check out this reservation"
+                          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                        >
+                          <LogOut size={11} />
+                          Check Out
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

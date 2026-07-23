@@ -15,7 +15,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, AlertTriangle, X, Check, Zap, AlertCircle } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
-import { format, subDays } from 'date-fns';
+import { format, subDays, endOfDay } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
@@ -275,8 +275,10 @@ function NewCheckoutModal({
       if (snap.exists()) {
         const r = snap.data() as Reservation;
         setSelectedItems(r.itemIds);
-        // datetime-local expects local time, not the UTC that toISOString gives
-        setDueDate(format(r.endDate.toDate(), "yyyy-MM-dd'T'HH:mm"));
+        // If the reservation's end date has passed, default to end of today
+        const end = r.endDate.toDate();
+        const due = end < new Date() ? endOfDay(new Date()) : end;
+        setDueDate(format(due, "yyyy-MM-dd'T'HH:mm"));
       }
     });
   }, [reservationId]);

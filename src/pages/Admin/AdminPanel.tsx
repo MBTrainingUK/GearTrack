@@ -5,11 +5,12 @@ import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
 import type { AppUser, UserRole } from '../../types';
 import { exportBackup, importBackup, parseBackupFile } from '../../lib/backup';
-import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check, Plug } from 'lucide-react';
+import { Shield, UserCheck, User, ChevronDown, Trash2, X, AlertTriangle, Download, Upload, UserPlus, Copy, Check, Plug, Tag } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 import { fetchMondayFilmingDates } from '../../lib/monday';
+import { useCategories, setExcludedCategories } from '../../store/categories';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
@@ -56,6 +57,8 @@ export default function AdminPanel() {
   const [mondayKeyExists, setMondayKeyExists] = useState(false);
   const [savingMondayKey, setSavingMondayKey] = useState(false);
   const [showMondayKey, setShowMondayKey] = useState(false);
+  const [togglingCategory, setTogglingCategory] = useState<string | null>(null);
+  const { categories, excludedCategories } = useCategories();
 
   function copyLink(link: string) {
     navigator.clipboard.writeText(link).then(() => {
@@ -424,6 +427,21 @@ export default function AdminPanel() {
     }
   }
 
+  async function toggleCategoryExclusion(name: string) {
+    if (!appUser?.orgId) return;
+    setTogglingCategory(name);
+    const next = excludedCategories.includes(name)
+      ? excludedCategories.filter((c) => c !== name)
+      : [...excludedCategories, name];
+    try {
+      await setExcludedCategories(appUser.orgId, next);
+    } catch {
+      toast.error('Failed to update category');
+    } finally {
+      setTogglingCategory(null);
+    }
+  }
+
   function formatDate(ts: Timestamp | undefined) {
     if (!ts) return '—';
     try { return format(ts.toDate(), 'MMM d, yyyy'); } catch { return '—'; }
@@ -625,6 +643,50 @@ export default function AdminPanel() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Tag size={16} className="text-gray-600" />
+          <h2 className="text-sm font-semibold text-gray-800">Categories</h2>
+        </div>
+        <p className="text-xs text-gray-500">
+          Excluded categories are hidden from reservations and check-outs. Items in those categories remain visible in the inventory and kits but cannot be booked.
+        </p>
+        <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden">
+          {categories.map((cat) => {
+            const isExcluded = excludedCategories.includes(cat);
+            const isToggling = togglingCategory === cat;
+            return (
+              <div key={cat} className="flex items-center justify-between px-4 py-3 bg-white">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm text-gray-800">{cat}</span>
+                  {isExcluded && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      Unbookable
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleCategoryExclusion(cat)}
+                  disabled={isToggling}
+                  aria-label={isExcluded ? `Allow ${cat}` : `Exclude ${cat}`}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                    isExcluded ? 'bg-amber-500' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                      isExcluded ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -18,11 +18,14 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
+import { useCategories } from '../../store/categories';
+import { isCategoryExcluded } from '../../lib/items';
 
 export default function KitsList() {
   const { appUser, currentUser } = useAuth();
   const [kits, setKits] = useState<Kit[]>([]);
   const { items } = useItems();
+  const { excludedCategories } = useCategories();
   const [showForm, setShowForm] = useState(false);
   const [editingKit, setEditingKit] = useState<Kit | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
@@ -119,17 +122,22 @@ export default function KitsList() {
                   <p className="mt-3 text-sm text-gray-600 line-clamp-2">{kit.description}</p>
                 )}
                 <ul className="mt-3 space-y-1">
-                  {visibleItems.map((i) => (
-                    <li key={i.id} className="flex items-center justify-between text-xs">
+                  {visibleItems.map((i) => {
+                    const excluded = isCategoryExcluded(i, excludedCategories);
+                    return (
+                    <li key={i.id} className={`flex items-center justify-between rounded px-1.5 py-0.5 text-xs ${excluded ? 'border border-amber-400 bg-amber-50' : ''}`}>
                       <span className="text-gray-700">{i.name}</span>
                       <div className="flex items-center gap-2">
                         {(i.assetNumber || i.serialNumber) && (
                           <span className="text-gray-400">#{i.assetNumber || i.serialNumber}</span>
                         )}
-                        <StatusBadge status={i.status} type="item" />
+                        {excluded
+                          ? <span className="text-amber-600">Not bookable</span>
+                          : <StatusBadge status={i.status} type="item" />}
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                   {kitItems.length > 4 && (
                     <li>
                       <button

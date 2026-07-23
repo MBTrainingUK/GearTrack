@@ -4,20 +4,22 @@ import { useAuth } from '../../context/useAuth';
 import type { Item } from '../../types';
 import { writeAuditLog } from '../../lib/auditLog';
 import { createCheckout } from '../../lib/checkout';
-import { isFlagged } from '../../lib/items';
+import { isFlagged, isCategoryExcluded } from '../../lib/items';
 import { useItems } from '../../store/items';
+import { useCategories } from '../../store/categories';
 import { Search, Package, X, Loader2, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Browse() {
   const { currentUser, appUser } = useAuth();
   const { items } = useItems();
+  const { excludedCategories } = useCategories();
   const [query, setQuery] = useState('');
   const [checkoutItem, setCheckoutItem] = useState<Item | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
 
   const filtered = items.filter((item) => {
-    if (item.status !== 'available' || isFlagged(item)) return false;
+    if (item.status !== 'available' || isFlagged(item) || isCategoryExcluded(item, excludedCategories)) return false;
     if (!query) return true;
     const q = query.toLowerCase();
     return (

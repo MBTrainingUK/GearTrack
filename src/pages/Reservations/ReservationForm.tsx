@@ -17,10 +17,12 @@ import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { writeAuditLog } from '../../lib/auditLog';
-import { isFlagged } from '../../lib/items';
+import { isFlagged, isCategoryExcluded } from '../../lib/items';
+import { useCategories } from '../../store/categories';
 
 export default function ReservationForm() {
   const { currentUser, appUser } = useAuth();
+  const { excludedCategories } = useCategories();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedItemId = searchParams.get('itemId');
@@ -76,7 +78,7 @@ export default function ReservationForm() {
       // Only block flagged items (damaged/needs_investigating) — checked-out
       // items that are due back before the reservation starts are still bookable;
       // the conflict check at submit time will catch any real overlap.
-      if (!item || isFlagged(item)) {
+      if (!item || isFlagged(item) || isCategoryExcluded(item, excludedCategories)) {
         warned.push(item?.name ?? id);
       } else {
         available.push(id);
@@ -216,7 +218,7 @@ export default function ReservationForm() {
 
   function toggleItem(id: string) {
     const item = items.find((i) => i.id === id);
-    if (item && isFlagged(item)) return;
+    if (item && (isFlagged(item) || isCategoryExcluded(item, excludedCategories))) return;
     // Manually picking an item deselects any active kit
     if (selectedKitId) { setSelectedKitId(null); setKitWarnings([]); }
     setSelectedItems((prev) =>
@@ -345,7 +347,7 @@ export default function ReservationForm() {
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);
               const isSelected = selectedItems.includes(item.id);
-              const isBlocked = isFlagged(item);
+              const isBlocked = isFlagged(item) || isCategoryExcluded(item, excludedCategories);
               return (
                 <button
                   key={item.id}
@@ -366,9 +368,11 @@ export default function ReservationForm() {
                   </div>
                   <div className="flex items-center gap-2">
                     {isConflict && <span className="text-xs text-red-600">Conflict</span>}
-                    {isBlocked
-                      ? <ConditionBadge condition={item.condition} />
-                      : <StatusBadge status={item.status} type="item" />}
+                    {isCategoryExcluded(item, excludedCategories)
+                      ? <span className="text-xs text-amber-600">Not bookable</span>
+                      : isBlocked
+                        ? <ConditionBadge condition={item.condition} />
+                        : <StatusBadge status={item.status} type="item" />}
                     {isSelected && !isBlocked && <Check size={14} className="text-blue-600 shrink-0" />}
                   </div>
                 </button>

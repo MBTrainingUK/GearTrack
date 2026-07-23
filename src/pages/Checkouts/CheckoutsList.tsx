@@ -20,8 +20,9 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { isOverdue, createCheckout } from '../../lib/checkout';
-import { isFlagged } from '../../lib/items';
+import { isFlagged, isCategoryExcluded } from '../../lib/items';
 import { useItems } from '../../store/items';
+import { useCategories } from '../../store/categories';
 
 export default function CheckoutsList() {
   const { appUser } = useAuth();
@@ -270,6 +271,7 @@ function NewCheckoutModal({
   onCreated: () => void;
 }) {
   const { currentUser, appUser } = useAuth();
+  const { excludedCategories } = useCategories();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -298,7 +300,7 @@ function NewCheckoutModal({
     const warned: string[] = [];
     kit.itemIds.forEach((id) => {
       const item = items.find((i) => i.id === id);
-      if (!item || isFlagged(item) || item.status !== 'available') {
+      if (!item || isFlagged(item) || isCategoryExcluded(item, excludedCategories) || item.status !== 'available') {
         warned.push(item?.name ?? id);
       } else {
         available.push(id);
@@ -368,6 +370,7 @@ function NewCheckoutModal({
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
       !isFlagged(i) &&
+      !isCategoryExcluded(i, excludedCategories) &&
       (i.name.toLowerCase().includes(search.toLowerCase()) ||
         (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (i.serialNumber ?? '').toLowerCase().includes(search.toLowerCase()))

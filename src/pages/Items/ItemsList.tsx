@@ -10,6 +10,7 @@ import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
+import { isCategoryExcluded } from '../../lib/items';
 
 const CONDITIONS = [
   { value: 'all', label: 'All Conditions' },
@@ -22,7 +23,7 @@ const CONDITIONS = [
 export default function ItemsList() {
   const { appUser, currentUser } = useAuth();
   const { items } = useItems();
-  const { categories } = useCategories();
+  const { categories, excludedCategories } = useCategories();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [condition, setCondition] = useState<'all' | 'good' | 'attention_needed' | 'needs_investigating' | 'damaged'>('all');
@@ -119,10 +120,14 @@ export default function ItemsList() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((item) => (
+          {filtered.map((item) => {
+            const excluded = isCategoryExcluded(item, excludedCategories);
+            return (
             <div
               key={item.id}
-              className="group relative rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+              className={`group relative rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden ${
+                excluded ? 'border-amber-400' : 'border-gray-200'
+              }`}
             >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -146,12 +151,16 @@ export default function ItemsList() {
                   </div>
                 )}
                 <div className="mt-3 flex items-center justify-between">
-                  <Link
-                    to={`/reservations/new?itemId=${item.id}`}
-                    className="text-xs font-medium text-blue-600 hover:underline"
-                  >
-                    Reserve
-                  </Link>
+                  {excluded ? (
+                    <span className="text-xs font-medium text-amber-600">Not bookable</span>
+                  ) : (
+                    <Link
+                      to={`/reservations/new?itemId=${item.id}`}
+                      className="text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      Reserve
+                    </Link>
+                  )}
                   {appUser?.role !== 'user' && (
                     <div className="flex gap-2">
                       <Link
@@ -171,7 +180,8 @@ export default function ItemsList() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,6 +1,10 @@
 import type { Item } from '../types';
 import { differenceInMonths } from 'date-fns';
 
+export function isCategoryExcluded(item: Item, excludedCategories: string[]): boolean {
+  return excludedCategories.includes(item.category);
+}
+
 // Items needing inspection or repair are blocked from booking and checkout
 // everywhere — desktop and mobile. 'attention_needed' (minor damage, still
 // usable) is informational only and does not block.

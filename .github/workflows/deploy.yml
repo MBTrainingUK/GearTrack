@@ -75,4 +75,4 @@ jobs:
         run: npm ci --prefix functions
 
       - name: Deploy Cloud Functions to production
-        run: npx firebase-tools deploy --only functions --project production --token "${{ secrets.FIREBASE_TOKEN }}"
+        run: npx firebase-tools deploy --only functions --project production --force --token "${{ secrets.FIREBASE_TOKEN }}"

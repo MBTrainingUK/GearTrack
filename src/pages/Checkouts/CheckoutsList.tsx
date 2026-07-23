@@ -27,6 +27,7 @@ export default function CheckoutsList() {
   const { appUser } = useAuth();
   const [searchParams] = useSearchParams();
   const reservationId = searchParams.get('reservationId');
+  const returnId = searchParams.get('returnId');
 
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { items: itemsList, byId: items } = useItems();
@@ -59,6 +60,15 @@ export default function CheckoutsList() {
     ];
     return () => unsubs.forEach((u) => u());
   }, [appUser?.orgId]);
+
+  useEffect(() => {
+    if (!returnId || checkouts.length === 0) return;
+    const c = checkouts.find((ch) => ch.id === returnId && ch.status === 'active');
+    if (!c) return;
+    const names = c.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Item').join(', ');
+    const extra = c.itemIds.length > 2 ? ` +${c.itemIds.length - 2} more` : '';
+    setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return', reservationId: c.reservationId ?? undefined });
+  }, [returnId, checkouts, items]);
 
   const cutoff = subDays(new Date(), dateRange);
   const dateFiltered = checkouts.filter((c) => {

@@ -12,7 +12,7 @@ import { useItems } from '../../store/items';
 import StatusBadge from '../../components/StatusBadge';
 import { format, subDays } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
-import { History, RotateCcw, LogOut } from 'lucide-react';
+import { History, RotateCcw, LogOut, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function UserHistory() {
@@ -56,6 +56,10 @@ export default function UserHistory() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [currentUser, appUser?.orgId]);
+
+  const checkoutByReservation = Object.fromEntries(
+    checkouts.filter((c) => c.reservationId && c.status === 'active').map((c) => [c.reservationId, c.id])
+  );
 
   const cutoff = subDays(new Date(), dateRange);
   const filteredCheckouts = checkouts.filter((c) => {
@@ -214,6 +218,16 @@ export default function UserHistory() {
                         >
                           <LogOut size={11} />
                           Check Out
+                        </button>
+                      )}
+                      {r.status === 'checked_out' && checkoutByReservation[r.id] && (
+                        <button
+                          onClick={() => navigate(`/checkouts?returnId=${checkoutByReservation[r.id]}`)}
+                          title="Return these items"
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-100 transition-colors"
+                        >
+                          <LogIn size={11} />
+                          Check In
                         </button>
                       )}
                     </td>

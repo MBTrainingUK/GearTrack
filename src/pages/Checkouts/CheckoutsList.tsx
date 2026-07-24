@@ -25,7 +25,7 @@ import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
 
 export default function CheckoutsList() {
-  const { appUser } = useAuth();
+  const { appUser, currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const reservationId = searchParams.get('reservationId');
   const returnId = searchParams.get('returnId');
@@ -34,6 +34,7 @@ export default function CheckoutsList() {
   const { items: itemsList, byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'returned'>('all');
+  const [userFilter, setUserFilter] = useState<'mine' | 'all'>('mine');
   const [dateRange, setDateRange] = useState<30 | 90>(30);
   const [conditionModal, setConditionModal] = useState<{
     checkoutId: string;
@@ -78,7 +79,11 @@ export default function CheckoutsList() {
     try { return ts.toDate() >= cutoff; } catch { return true; }
   });
 
-  const filtered = dateFiltered.filter((c) => {
+  const userFiltered =
+    userFilter === 'mine'
+      ? dateFiltered.filter((c) => c.userId === currentUser?.uid)
+      : dateFiltered;
+  const filtered = userFiltered.filter((c) => {
     if (filter === 'all') return true;
     if (filter === 'overdue') return isOverdue(c);
     if (filter === 'active') return c.status === 'active' && !isOverdue(c);
@@ -92,7 +97,7 @@ export default function CheckoutsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Checkouts</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{dateFiltered.length} total</p>
+          <p className="mt-0.5 text-sm text-gray-500">{filtered.length} total</p>
         </div>
         {appUser?.role !== 'user' && (
           <button
@@ -116,7 +121,23 @@ export default function CheckoutsList() {
 
       {/* Filter tabs + date range toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Owner filter */}
+          {(['mine', 'all'] as const).map((u) => (
+            <button
+              key={u}
+              onClick={() => setUserFilter(u)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                userFilter === u
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
+              }`}
+            >
+              {u === 'mine' ? 'Mine' : 'Everyone'}
+            </button>
+          ))}
+          <div className="h-4 w-px bg-gray-200" />
+          {/* Status filter */}
           {(['all', 'active', 'overdue', 'returned'] as const).map((f) => (
             <button
               key={f}

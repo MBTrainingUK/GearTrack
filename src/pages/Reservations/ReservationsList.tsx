@@ -36,6 +36,7 @@ export default function ReservationsList() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<Reservation['status'] | 'all'>('all');
+  const [userFilter, setUserFilter] = useState<'mine' | 'all'>('mine');
   const { byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -259,8 +260,12 @@ export default function ReservationsList() {
     if (activeStatuses.includes(r.status)) return true;
     try { return r.endDate.toDate() >= cutoff; } catch { return true; }
   });
+  const userFiltered =
+    userFilter === 'mine'
+      ? visibleReservations.filter((r) => r.userId === currentUser?.uid)
+      : visibleReservations;
   const filtered =
-    filter === 'all' ? visibleReservations : visibleReservations.filter((r) => r.status === filter);
+    filter === 'all' ? userFiltered : userFiltered.filter((r) => r.status === filter);
 
   const geartrackEvents = reservations
     .filter((r) => r.status !== 'cancelled' && r.status !== 'completed')
@@ -293,7 +298,7 @@ export default function ReservationsList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reservations</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{visibleReservations.length} total</p>
+          <p className="mt-0.5 text-sm text-gray-500">{filtered.length} total</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View toggle */}
@@ -360,7 +365,23 @@ export default function ReservationsList() {
         <>
           {/* Status filter + date range toggle */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Owner filter */}
+              {(['mine', 'all'] as const).map((u) => (
+                <button
+                  key={u}
+                  onClick={() => setUserFilter(u)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                    userFilter === u
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                  }`}
+                >
+                  {u === 'mine' ? 'Mine' : 'Everyone'}
+                </button>
+              ))}
+              <div className="h-4 w-px bg-gray-200" />
+              {/* Status filter */}
               {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled'] as const).map(
                 (s) => (
                   <button

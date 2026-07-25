@@ -166,14 +166,18 @@ export const syncClaims = onCall(async (request) => {
   const data = userDoc.data()!;
   const orgId = data.orgId as string | undefined;
   const role = (data.role as Role | undefined) ?? 'user';
-  const isPlatformAdmin = data.isPlatformAdmin === true;
 
   if (!orgId) {
     throw new HttpsError('failed-precondition', 'No organisation assigned — contact your administrator.');
   }
 
+  // platformAdmin is deliberately NOT derived from the Firestore doc. Users can
+  // edit their own user doc, so trusting that field here would let anyone mint
+  // themselves cross-org access. An existing claim is carried over untouched;
+  // granting it to someone new is a deliberate out-of-band operation (Firebase
+  // console or a one-off Admin SDK script), never a self-service call.
   const claims: Record<string, unknown> = { orgId, role };
-  if (isPlatformAdmin) claims.platformAdmin = true;
+  if (request.auth.token.platformAdmin === true) claims.platformAdmin = true;
 
   await auth.setCustomUserClaims(request.auth.uid, claims);
 

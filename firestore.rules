@@ -21,6 +21,12 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    // Field may be absent on most user docs, so read it with a default rather
+    // than indexing straight into the map.
+    function platformAdminUnchanged() {
+      return request.resource.data.get('isPlatformAdmin', false)
+          == resource.data.get('isPlatformAdmin', false);
+    }
 
     // ── organizations ─────────────────────────────────────
     match /organizations/{orgId} {
@@ -46,12 +52,17 @@ service cloud.firestore {
       allow create: if false;
       // Users may edit their own profile but never their own role/org.
       // Org admins may change role for users within their own org.
+      // isPlatformAdmin is pinned on every branch except the platform-admin
+      // one: syncClaims trusts this field to mint the platformAdmin claim, so
+      // letting anyone set it on their own doc would hand out cross-org access.
       allow update: if isPlatformAdmin()
         || (isAdmin() && sameOrg(resource.data.orgId)
-            && request.resource.data.orgId == resource.data.orgId)
+            && request.resource.data.orgId == resource.data.orgId
+            && platformAdminUnchanged())
         || (isOwner(userId)
             && request.resource.data.role == resource.data.role
-            && request.resource.data.orgId == resource.data.orgId);
+            && request.resource.data.orgId == resource.data.orgId
+            && platformAdminUnchanged());
       allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
     }
 

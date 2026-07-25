@@ -30,7 +30,19 @@ const roleIcons: Record<UserRole, React.ReactNode> = {
   user: <User size={12} />,
 };
 
+// Role guard lives in its own component so the panel's hooks are never skipped.
+// Putting the early return inside the panel meant that once appUser resolved to
+// a non-admin, React saw fewer hooks than on the first render and crashed the
+// whole app ("Rendered fewer hooks than expected") — there is no error boundary.
 export default function AdminPanel() {
+  const { appUser } = useAuth();
+  if (appUser && appUser.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  return <AdminPanelBody />;
+}
+
+function AdminPanelBody() {
   const { appUser, currentUser } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -76,55 +88,10 @@ export default function AdminPanel() {
     }, (err) => console.error('Users query failed:', err));
   }, [appUser?.orgId]);
 
-  // Silently purge records older than 180 days whenever an admin visits this page
-  useEffect(() => {
-    if (!appUser || appUser.role !== 'admin' || !appUser.orgId) return;
-    const orgId = appUser.orgId;
-    const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
-    (async () => {
-      try {
-        // Reset items belonging to old active checkouts before deleting them
-        const oldCheckouts = await getDocs(query(collection(db, 'checkouts'), where('orgId', '==', orgId), where('checkedOutAt', '<', cutoff)));
-        if (!oldCheckouts.empty) {
-          const itemIds = new Set<string>();
-          oldCheckouts.docs.forEach((d) => {
-            const data = d.data();
-            if (data.status === 'active') (data.itemIds as string[]).forEach((id) => itemIds.add(id));
-          });
-          if (itemIds.size > 0) {
-            const itemBatches: ReturnType<typeof writeBatch>[] = [];
-            [...itemIds].forEach((id, i) => {
-              if (i % 500 === 0) itemBatches.push(writeBatch(db));
-              itemBatches[itemBatches.length - 1].update(doc(db, 'items', id), { status: 'available', updatedAt: serverTimestamp() });
-            });
-            await Promise.all(itemBatches.map((b) => b.commit()));
-          }
-          const delBatches: ReturnType<typeof writeBatch>[] = [];
-          oldCheckouts.docs.forEach((d, i) => {
-            if (i % 500 === 0) delBatches.push(writeBatch(db));
-            delBatches[delBatches.length - 1].delete(d.ref);
-          });
-          await Promise.all(delBatches.map((b) => b.commit()));
-        }
-        // Reservations have no item status side-effect — delete directly
-        const oldReservations = await getDocs(query(collection(db, 'reservations'), where('orgId', '==', orgId), where('createdAt', '<', cutoff)));
-        if (!oldReservations.empty) {
-          const batches: ReturnType<typeof writeBatch>[] = [];
-          oldReservations.docs.forEach((d, i) => {
-            if (i % 500 === 0) batches.push(writeBatch(db));
-            batches[batches.length - 1].delete(d.ref);
-          });
-          await Promise.all(batches.map((b) => b.commit()));
-        }
-      } catch { /* silent */ }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appUser?.uid]);
-
-  // Guard: only admins can access this page (checked after hooks to keep hook order stable)
-  if (appUser && appUser.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
+  // Retention is a deliberate, confirmed action only — see purgeOldRecords and
+  // the "Purge old records" button. This page used to purge silently on every
+  // admin visit, which destroyed still-active long-term checkouts without
+  // warning and flipped their items back to available.
 
   async function changeRole(uid: string, newRole: UserRole) {
     if (uid === currentUser?.uid && newRole !== 'admin') {

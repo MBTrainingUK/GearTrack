@@ -55,15 +55,18 @@ service cloud.firestore {
       // isPlatformAdmin is pinned on every branch except the platform-admin
       // one: syncClaims trusts this field to mint the platformAdmin claim, so
       // letting anyone set it on their own doc would hand out cross-org access.
+      // Org admins no longer edit user docs directly. Role changes and removals
+      // go through setOrgUserRole / removeOrgUser, which also update custom
+      // claims and revoke sessions — a Firestore-only write left the user's
+      // token, and therefore their real access, completely unchanged.
+      // Users may still edit their own profile, but never their own role, org
+      // or platform-admin flag.
       allow update: if isPlatformAdmin()
-        || (isAdmin() && sameOrg(resource.data.orgId)
-            && request.resource.data.orgId == resource.data.orgId
-            && platformAdminUnchanged())
         || (isOwner(userId)
             && request.resource.data.role == resource.data.role
             && request.resource.data.orgId == resource.data.orgId
             && platformAdminUnchanged());
-      allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
+      allow delete: if isPlatformAdmin();
     }
 
     // ── items ─────────────────────────────────────────────

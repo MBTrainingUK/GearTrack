@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDocs, getDoc, setDoc, writeBatch, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../../lib/firebase';
 import { useAuth } from '../../context/useAuth';
@@ -93,6 +93,10 @@ function AdminPanelBody() {
   // admin visit, which destroyed still-active long-term checkouts without
   // warning and flipped their items back to available.
 
+  // Both of these go through Cloud Functions rather than writing users/{uid}
+  // directly. Only the Admin SDK can update custom claims and revoke sessions,
+  // and without that a demotion or removal left the user's token — and so their
+  // actual access — untouched until it expired.
   async function changeRole(uid: string, newRole: UserRole) {
     if (uid === currentUser?.uid && newRole !== 'admin') {
       toast.error("You can't demote yourself");
@@ -100,10 +104,13 @@ function AdminPanelBody() {
     }
     setUpdatingId(uid);
     try {
-      await updateDoc(doc(db, 'users', uid), { role: newRole });
-      toast.success(`Role updated to ${ROLE_LABELS[newRole]}`);
-    } catch {
-      toast.error('Failed to update role');
+      await httpsCallable<{ uid: string; role: UserRole }, { uid: string }>(
+        functions,
+        'setOrgUserRole'
+      )({ uid, role: newRole });
+      toast.success(`Role updated to ${ROLE_LABELS[newRole]} — they'll be signed out`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update role');
     } finally {
       setUpdatingId(null);
     }
@@ -113,10 +120,10 @@ function AdminPanelBody() {
     setRemovingId(u.uid);
     setConfirmRemove(null);
     try {
-      await deleteDoc(doc(db, 'users', u.uid));
-      toast.success(`${u.displayName} removed`);
-    } catch {
-      toast.error('Failed to remove user');
+      await httpsCallable<{ uid: string }, { uid: string }>(functions, 'removeOrgUser')({ uid: u.uid });
+      toast.success(`${u.displayName} removed and signed out`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove user');
     } finally {
       setRemovingId(null);
     }

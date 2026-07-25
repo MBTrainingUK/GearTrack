@@ -138,6 +138,118 @@ export const createOrgUser = onCall(async (request) => {
 });
 
 /**
+ * Shared authorisation for the two user-management callables below. Returns the
+ * target's Firestore data once the caller is proven allowed to act on them.
+ *
+ * Org admins are scoped to their own org and may never act on a platform admin;
+ * platform admins may act on anyone. Callers cannot act on themselves — losing
+ * your own admin rights or account locks the org out with no way back.
+ */
+async function authoriseUserAction(
+  request: { auth?: { uid?: string; token?: Record<string, unknown> } },
+  uid: string | undefined,
+  verb: string
+) {
+  const callerUid = request.auth?.uid;
+  const callerIsPlatformAdmin = request.auth?.token?.platformAdmin === true;
+  const callerOrgId = request.auth?.token?.orgId as string | undefined;
+  const callerRole = request.auth?.token?.role as Role | undefined;
+
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+  if (!callerIsPlatformAdmin && callerRole !== 'admin') {
+    throw new HttpsError('permission-denied', `Only an org admin or platform admin can ${verb} users.`);
+  }
+  if (!uid?.trim()) {
+    throw new HttpsError('invalid-argument', 'uid is required.');
+  }
+  if (uid === callerUid) {
+    throw new HttpsError('failed-precondition', `You can't ${verb} your own account.`);
+  }
+
+  const snap = await getFirestore().collection('users').doc(uid).get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'No such user.');
+  }
+  const target = snap.data()!;
+
+  if (!callerIsPlatformAdmin) {
+    if (target.orgId !== callerOrgId) {
+      throw new HttpsError('permission-denied', "That user isn't in your organisation.");
+    }
+    if (target.isPlatformAdmin === true) {
+      throw new HttpsError('permission-denied', 'Only a platform admin can manage a platform admin.');
+    }
+  }
+
+  return target;
+}
+
+/**
+ * Changes a user's role everywhere it actually matters: the Firestore doc, the
+ * custom claims that security rules and the other callables read, and the
+ * user's live session.
+ *
+ * Previously the client wrote the Firestore field directly, which left claims
+ * stale — a demoted admin kept token-level admin rights (and could still call
+ * createOrgUser) until their token happened to refresh, up to an hour later or
+ * never if they simply left the tab open.
+ */
+export const setOrgUserRole = onCall(async (request) => {
+  const { uid, role } = (request.data ?? {}) as { uid?: string; role?: Role };
+  if (!role || !VALID_ROLES.includes(role)) {
+    throw new HttpsError('invalid-argument', 'A valid role is required.');
+  }
+
+  const target = await authoriseUserAction(request, uid, 'change the role of');
+  const auth = getAuth();
+
+  // Claims are set wholesale, so anything not restated here is dropped —
+  // read platformAdmin back off the existing claims rather than losing it.
+  const existing = (await auth.getUser(uid!)).customClaims ?? {};
+  const claims: Record<string, unknown> = { orgId: target.orgId, role };
+  if (existing.platformAdmin === true) claims.platformAdmin = true;
+
+  await auth.setCustomUserClaims(uid!, claims);
+  await getFirestore().collection('users').doc(uid!).update({ role });
+  // Invalidate outstanding tokens so the new role takes effect on the next
+  // request instead of whenever the old token happens to expire.
+  await auth.revokeRefreshTokens(uid!);
+
+  return { uid, role };
+});
+
+/**
+ * Removes a user for real: Firestore doc, live sessions, and the Auth account.
+ *
+ * Deleting only the Firestore doc (what the client used to do) left the Auth
+ * account intact and the user's token still carrying orgId — so a "removed"
+ * person could keep signing in and reading, and in this deployment editing,
+ * the whole organisation's inventory until their token expired.
+ */
+export const removeOrgUser = onCall(async (request) => {
+  const { uid } = (request.data ?? {}) as { uid?: string };
+  await authoriseUserAction(request, uid, 'remove');
+
+  const auth = getAuth();
+  await getFirestore().collection('users').doc(uid!).delete();
+
+  // Revoke before deleting: if deleteUser fails for any reason, the session is
+  // already dead rather than left alive by a half-finished removal.
+  try {
+    await auth.revokeRefreshTokens(uid!);
+    await auth.deleteUser(uid!);
+  } catch (err) {
+    // An orphaned Firestore doc with no Auth account is a valid state to hit
+    // here — the goal (no access, no record) is still met.
+    if ((err as { code?: string }).code !== 'auth/user-not-found') throw err;
+  }
+
+  return { uid };
+});
+
+/**
  * One-time bootstrap: creates a default organization for the data that
  * existed before multi-tenancy, moves every existing user into it
  * (keeping their current role), backfills orgId onto every existing

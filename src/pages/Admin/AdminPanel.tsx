@@ -861,7 +861,7 @@ function AdminPanelBody() {
                 Are you sure you want to remove <strong>{confirmRemove.displayName}</strong>?
               </p>
               <p className="text-xs text-gray-500 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                This removes their account from GearTrack. If they log in again they will be added back as a basic user.
+                This deletes their account and signs them out of any device they're currently using. They won't be able to log in again, and their checkout history stays on record.
               </p>
             </div>
             <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">

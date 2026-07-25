@@ -594,7 +594,7 @@ export default function ReportsPanel() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-sm font-semibold text-gray-900">Cost per Checkout</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Items with the lowest cost-per-checkout give the best return on investment. Utilisation shows % of time in use since purchase.
+                Items with the lowest cost-per-checkout give the best return on investment. Utilisation shows % of time in use since the item was added to GearTrack.
               </p>
             </div>
             {itemStats.filter((i) => i.purchasePrice != null).length === 0 ? (

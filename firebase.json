@@ -9,7 +9,15 @@
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "comment": "Order matters: when several header rules match one request, Hosting applies the LAST match for a given key. The broad no-cache rule therefore comes first and the immutable overrides follow it.",
     "headers": [
+      {
+        "comment": "Default for index.html, sw.js, registerSW.js, the manifest and every SPA route: always revalidate. Firebase's default of max-age=3600 combined with the PWA precache left users on a stale build for up to an hour after a deploy, security fixes included. no-cache still allows a cheap 304 via ETag; it does not mean 'do not store'.",
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
       {
         "comment": "Vite content-hashes everything under /assets, so a given URL never changes contents and can be cached forever.",
         "source": "/assets/**",
@@ -22,13 +30,6 @@
         "source": "/workbox-*.js",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-        ]
-      },
-      {
-        "comment": "Everything else — index.html, sw.js, registerSW.js, the manifest and every SPA route — must revalidate. Firebase defaults these to max-age=3600, which combined with the PWA precache left users on a stale build for up to an hour after a deploy, security fixes included. no-cache still allows a cheap 304 via ETag; it does not mean 'do not store'.",
-        "source": "**",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache" }
         ]
       }
     ],

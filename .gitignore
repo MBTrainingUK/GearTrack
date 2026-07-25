@@ -28,3 +28,7 @@ dist-ssr
 # Firebase Functions env files (config today, but never let a secret slip in)
 functions/.env.local
 functions/.env*.local
+
+# Service account keys — full admin access to the project. Never commit.
+*serviceAccount*.json
+*-firebase-adminsdk-*.json

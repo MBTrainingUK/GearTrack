@@ -245,13 +245,27 @@ export default function ReservationsList() {
     }
   }
 
+  // Toggling the calendar off and on, or orgMondayKey arriving late, can leave
+  // two fetches in flight; without this guard the slower one wins and paints
+  // stale bookings over fresh ones.
   useEffect(() => {
     if (!showMonday) return;
+    let cancelled = false;
+    // Kicking off a fetch when the calendar is opened — the flag has to be set
+    // before the request starts, so it cannot move into the promise chain.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMondayLoading(true);
     fetchMondayFilmingDates(orgMondayKey ?? undefined)
-      .then(setMondayEvents)
-      .catch(() => toast.error('Failed to load Monday.com bookings'))
-      .finally(() => setMondayLoading(false));
+      .then((events) => {
+        if (!cancelled) setMondayEvents(events);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Failed to load Monday.com bookings');
+      })
+      .finally(() => {
+        if (!cancelled) setMondayLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [showMonday, orgMondayKey]);
 
   const cutoff = subDays(new Date(), dateRange);

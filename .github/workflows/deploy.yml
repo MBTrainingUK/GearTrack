@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc -b
+
       - name: Build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -73,6 +79,12 @@ jobs:
 
       - name: Install functions dependencies
         run: npm ci --prefix functions
+
+      # Hosting is served from GitHub Pages, so it is deliberately excluded —
+      # but rules and indexes previously reached production through no path at
+      # all, leaving prod running whatever was last deployed by hand.
+      - name: Deploy Firestore rules, indexes and storage rules to production
+        run: npx firebase-tools deploy --only firestore,storage --project production --force --token "${{ secrets.FIREBASE_TOKEN }}"
 
       - name: Deploy Cloud Functions to production
         run: npx firebase-tools deploy --only functions --project production --force --token "${{ secrets.FIREBASE_TOKEN }}"

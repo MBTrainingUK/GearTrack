@@ -26,7 +26,7 @@ import { useCategories } from '../../store/categories';
 
 export default function CheckoutsList() {
   const { appUser, currentUser } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const reservationId = searchParams.get('reservationId');
   const returnId = searchParams.get('returnId');
 
@@ -63,14 +63,30 @@ export default function CheckoutsList() {
     return () => unsubs.forEach((u) => u());
   }, [appUser?.orgId]);
 
+  // Open the return dialog once when arriving via ?returnId=…, then strip the
+  // param. `checkouts` is a live snapshot array whose identity changes on every
+  // Firestore update, so without consuming the param here, dismissing the
+  // dialog only lasted until the next unrelated write re-ran this effect and
+  // reopened it.
   useEffect(() => {
     if (!returnId || checkouts.length === 0) return;
     const c = checkouts.find((ch) => ch.id === returnId && ch.status === 'active');
     if (!c) return;
     const names = c.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Item').join(', ');
     const extra = c.itemIds.length > 2 ? ` +${c.itemIds.length - 2} more` : '';
+    // Consuming a one-shot deep link: the param is stripped immediately below,
+    // so this runs once on arrival rather than cascading.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return', reservationId: c.reservationId ?? undefined });
-  }, [returnId, checkouts, items]);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('returnId');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [returnId, checkouts, items, setSearchParams]);
 
   const cutoff = subDays(new Date(), dateRange);
   const dateFiltered = checkouts.filter((c) => {

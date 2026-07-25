@@ -20,6 +20,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      # Redundant with `npm run build` (which runs tsc -b first) on purpose:
+      # this workflow previously called `npx vite build` directly and so never
+      # typechecked at all. An explicit gate survives that mistake recurring.
+      - name: Typecheck
+        run: npx tsc -b
+
       - name: Build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_STAGING_FIREBASE_API_KEY }}
@@ -30,7 +39,7 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_STAGING_FIREBASE_APP_ID }}
           VITE_STORAGE_ENABLED: 'false'
           VITE_MONDAY_API_KEY: ${{ secrets.VITE_STAGING_MONDAY_API_KEY }}
-        run: npx vite build --mode staging
+        run: npm run build -- --mode staging
 
       - name: Install functions dependencies
         run: npm ci --prefix functions

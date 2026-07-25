@@ -20,6 +20,13 @@ interface ItemStat {
   checkoutCount: number;
   totalDaysOut: number;
   conditionCounts: Record<string, number>;
+  // Derived once when the data loads, not during render — these depend on the
+  // current time, which makes them impure to compute inside JSX.
+  ageMonths: number | null;
+  costPerCheckout: number | null;
+  // Share of time the item has been out since it was added to GearTrack.
+  // null when the item has no createdAt to measure from.
+  utilisationPct: number | null;
 }
 
 interface UserStat {
@@ -100,7 +107,7 @@ export default function ReportsPanel() {
       // --- Item stats ---
       const iMap: Record<string, ItemStat> = {};
       items.forEach((i) => {
-        iMap[i.id] = { id: i.id, name: i.name, category: i.category, purchaseDate: i.purchaseDate, purchasePrice: i.purchasePrice, status: i.status, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {} };
+        iMap[i.id] = { id: i.id, name: i.name, category: i.category, purchaseDate: i.purchaseDate, purchasePrice: i.purchasePrice, status: i.status, checkoutCount: 0, totalDaysOut: 0, conditionCounts: {}, ageMonths: null, costPerCheckout: null, utilisationPct: null };
       });
 
       checkouts.forEach((c) => {
@@ -119,6 +126,30 @@ export default function ReportsPanel() {
             iMap[itemId].conditionCounts[cond] = (iMap[itemId].conditionCounts[cond] ?? 0) + 1;
           }
         });
+      });
+
+      // Utilisation is measured from the date the item was added to GearTrack,
+      // not its purchase date: kit bought years before the system existed would
+      // otherwise show a near-zero share purely because of when it was bought.
+      // Measuring from createdAt also keeps the two sides consistent for free —
+      // an item cannot be checked out before it exists here, so every day in
+      // totalDaysOut necessarily falls inside the window.
+      const nowMs = Date.now();
+      const MS_PER_DAY = 86400000;
+      const AVG_DAYS_PER_MONTH = 30.44;
+      items.forEach((i) => {
+        const stat = iMap[i.id];
+        stat.ageMonths = i.purchaseDate
+          ? (nowMs - i.purchaseDate.toMillis()) / (AVG_DAYS_PER_MONTH * MS_PER_DAY)
+          : null;
+        stat.costPerCheckout =
+          i.purchasePrice && stat.checkoutCount > 0 ? i.purchasePrice / stat.checkoutCount : null;
+
+        const trackedDays = i.createdAt ? (nowMs - i.createdAt.toMillis()) / MS_PER_DAY : null;
+        stat.utilisationPct =
+          trackedDays && trackedDays > 0
+            ? Math.min(100, (stat.totalDaysOut / trackedDays) * 100)
+            : null;
       });
 
       const sortedItems = Object.values(iMap).sort((a, b) => b.checkoutCount - a.checkoutCount);
@@ -600,14 +631,7 @@ export default function ReportsPanel() {
                 <tbody className="divide-y divide-gray-50">
                   {itemStats
                     .filter((i) => i.purchasePrice != null)
-                    .map((i) => {
-                      const trackingStart = new Date('2026-07-01').getTime();
-                      const ageDays = i.purchaseDate ? (Date.now() - Math.max(i.purchaseDate.toMillis(), trackingStart)) / 86400000 : null;
-                      const ageMonths = i.purchaseDate ? (Date.now() - i.purchaseDate.toMillis()) / (30.44 * 86400000) : null;
-                      const costPerCheckout = i.purchasePrice && i.checkoutCount > 0 ? i.purchasePrice / i.checkoutCount : null;
-                      const utilisationPct = ageDays && i.totalDaysOut > 0 ? Math.min(100, (i.totalDaysOut / ageDays) * 100) : 0;
-                      return { ...i, ageMonths, costPerCheckout, utilisationPct };
-                    })
+                    .slice()
                     .sort((a, b) => {
                       if (finSort === 'name') { const r = a.name.localeCompare(b.name); return finAsc ? r : -r; }
                       if (finSort === 'category') { const r = a.category.localeCompare(b.category); return finAsc ? r : -r; }
@@ -616,7 +640,7 @@ export default function ReportsPanel() {
                       else if (finSort === 'age') { av = a.ageMonths ?? 0; bv = b.ageMonths ?? 0; }
                       else if (finSort === 'checkouts') { av = a.checkoutCount; bv = b.checkoutCount; }
                       else if (finSort === 'daysOut') { av = a.totalDaysOut; bv = b.totalDaysOut; }
-                      else if (finSort === 'utilisation') { av = a.utilisationPct; bv = b.utilisationPct; }
+                      else if (finSort === 'utilisation') { av = a.utilisationPct ?? -1; bv = b.utilisationPct ?? -1; }
                       else { av = a.costPerCheckout ?? Infinity; bv = b.costPerCheckout ?? Infinity; }
                       return finAsc ? av - bv : bv - av;
                     })
@@ -636,12 +660,16 @@ export default function ReportsPanel() {
                           {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
                         </td>
                         <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-16 rounded-full bg-emerald-100">
-                              <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${i.utilisationPct}%` }} />
+                          {i.utilisationPct == null ? (
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-16 rounded-full bg-emerald-100">
+                                <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${i.utilisationPct}%` }} />
+                              </div>
+                              <span className="text-xs text-gray-500 tabular-nums">{i.utilisationPct.toFixed(0)}%</span>
                             </div>
-                            <span className="text-xs text-gray-500 tabular-nums">{i.utilisationPct.toFixed(0)}%</span>
-                          </div>
+                          )}
                         </td>
                       </tr>
                     ))}

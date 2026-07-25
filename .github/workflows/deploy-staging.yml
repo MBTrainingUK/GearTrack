@@ -38,7 +38,11 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_STAGING_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_STAGING_FIREBASE_APP_ID }}
           VITE_STORAGE_ENABLED: 'false'
-          VITE_MONDAY_API_KEY: ${{ secrets.VITE_STAGING_MONDAY_API_KEY }}
+        # VITE_MONDAY_API_KEY is deliberately not injected. It is a build-time
+        # variable, so it was compiled into the public staging bundle where
+        # anyone could read it. The key is read from Firestore at runtime
+        # instead (organizations/{orgId}/private/integrations), which is what
+        # production has always done — production never had this variable.
         run: npm run build -- --mode staging
 
       - name: Install functions dependencies

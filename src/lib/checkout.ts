@@ -7,7 +7,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Checkout, Item } from '../types';
+import type { Checkout, CheckoutType, Item } from '../types';
 
 // A checkout is overdue when it's still active and its due date is before today.
 // `overdue` is never persisted as a status — it is always derived from the due date,
@@ -21,6 +21,16 @@ export function isOverdue(c: Checkout): boolean {
   }
 }
 
+// `type` is absent on every checkout written before personal checkouts existed,
+// so a missing value means work rather than unknown.
+export function isPersonal(c: Pick<Checkout, 'type'>): boolean {
+  return c.type === 'personal';
+}
+
+export function checkoutType(c: Pick<Checkout, 'type'>): CheckoutType {
+  return c.type === 'personal' ? 'personal' : 'work';
+}
+
 export interface NewCheckout {
   orgId: string;
   userId: string;
@@ -31,13 +41,21 @@ export interface NewCheckout {
   reservationId?: string | null;
   kitId?: string | null;
   notes?: string;
+  type?: CheckoutType;
+  personalReason?: string;
 }
 
 // Creates the checkout, flips item statuses, and marks a linked reservation as
 // checked out — all in one transaction, so two people can't grab the same item
 // at once and a mid-write failure can't leave items half-updated.
 // Throws with a user-readable message if any item is no longer available.
+//
+// Personal checkouts are written as 'pending_approval' and still take the items
+// out of circulation, so nobody else can book gear that is awaiting a decision.
+// Only approveCheckout (admin-only, server-side) can make one active.
 export async function createCheckout(input: NewCheckout): Promise<string> {
+  const type = input.type ?? 'work';
+  const isPersonalCheckout = type === 'personal';
   const checkoutRef = doc(collection(db, 'checkouts'));
   await runTransaction(db, async (tx) => {
     for (const itemId of input.itemIds) {
@@ -57,7 +75,9 @@ export async function createCheckout(input: NewCheckout): Promise<string> {
       itemIds: input.itemIds,
       checkedOutAt: serverTimestamp(),
       dueDate: input.dueDate,
-      status: 'active',
+      status: isPersonalCheckout ? 'pending_approval' : 'active',
+      type,
+      ...(isPersonalCheckout ? { personalReason: input.personalReason ?? '' } : {}),
       notes: input.notes ?? '',
     });
     for (const itemId of input.itemIds) {
@@ -66,7 +86,7 @@ export async function createCheckout(input: NewCheckout): Promise<string> {
         updatedAt: serverTimestamp(),
       });
     }
-    if (input.reservationId) {
+    if (input.reservationId && !isPersonalCheckout) {
       tx.update(doc(db, 'reservations', input.reservationId), {
         status: 'checked_out',
         updatedAt: serverTimestamp(),

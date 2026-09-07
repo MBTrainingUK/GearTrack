@@ -90,7 +90,20 @@ Managers see all pending reservations on the **Reservations** screen and can **A
 
 ### Quick Grab
 
-**Quick Grab** is a fast checkout for end-of-day loans where gear is expected back the same day. It skips the full checkout form.
+**Quick Grab** is a fast checkout for end-of-day loans where gear is expected back the same day. It skips the full checkout form. Quick Grab is for work use only — personal loans always go through the full form so they can be approved.
+
+### Personal Checkouts
+
+If you're taking something home for your own use rather than for work, switch the **Checkout type** at the top of the New Checkout form from **Work** to **Personal**.
+
+1. Choose **Personal** and give a short **reason** — this is shown to the admin who decides.
+2. Pick the items and a due date, then click **Request approval**.
+3. The gear is held for you straight away, so nobody else can book it, but **don't take it yet** — it shows as *Awaiting Approval* until an admin decides.
+4. An admin is emailed automatically. When they approve or decline, you get an email back, and the status updates on both the website and the mobile app.
+
+If you change your mind before a decision is made, use **Withdraw** to cancel the request and put the gear straight back into the pool.
+
+**For admins:** pending requests appear in a banner at the top of the **Checkouts** screen and under the **Awaiting approval** filter. Only admins can approve or decline — managers cannot. Declining releases the gear immediately and emails the requester your reason. Every decision is recorded, including who approved it, and appears in **Reports → Personal**.
 
 ### Returning Gear (Check-In)
 
@@ -223,7 +236,7 @@ The item is automatically flagged for inspection. A manager must clear the flag 
 Yes — open the app on a mobile browser and navigate to the Browse or My Gear section. You can add it to your home screen as a PWA for faster access.
 
 **Why did an old checkout or reservation disappear?**
-GearTrack clears out checkout and reservation records older than 180 days to keep things tidy. Your current and recent history isn't affected — only old, completed records are removed.
+GearTrack clears out checkout and reservation records older than 180 days to keep things tidy. Personal checkout records are kept for 2 years. Your current and recent history isn't affected — only old, completed records are removed.
 
 **How do I get an account?**
 There's no sign-up form — ask your organisation's Admin to add you from the Admin Panel. You'll get a one-time link to set your password.

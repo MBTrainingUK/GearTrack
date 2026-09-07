@@ -51,6 +51,7 @@ We do not sell personal data, and we do not use any other third-party processors
 
 - **Account data** is kept for as long as your account is active, and is deleted when your organisation removes you or terminates its contract with us.
 - **Checkout, reservation, and history records** are automatically purged once they are **older than 180 days**.
+- **Personal checkout records** — where equipment was borrowed for personal use rather than work — are retained for **2 years**. They record who borrowed what, when, and which administrator authorised it, and are kept longer because they evidence authorised personal use of company property.
 - **Audit log entries** are retained for as long as the related organisation's account is active (no automatic purge currently applied).
 - Deleted data may still exist in encrypted daily backups for up to **7 days** after deletion, after which it is permanently removed (see Section 6).
 

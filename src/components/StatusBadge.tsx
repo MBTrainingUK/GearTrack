@@ -14,9 +14,11 @@ const reservationColors: Record<ReservationStatus, string> = {
 };
 
 const checkoutColors: Record<CheckoutStatus, string> = {
+  pending_approval: 'bg-amber-100 text-amber-800',
   active: 'bg-blue-100 text-blue-800',
   overdue: 'bg-red-100 text-red-800',
   returned: 'bg-gray-100 text-gray-700',
+  declined: 'bg-red-100 text-red-800',
 };
 
 const labels: Record<string, string> = {
@@ -29,6 +31,8 @@ const labels: Record<string, string> = {
   active: 'Checked Out',
   overdue: 'Overdue',
   returned: 'Returned',
+  pending_approval: 'Awaiting Approval',
+  declined: 'Declined',
 };
 
 interface Props {

@@ -97,13 +97,15 @@ Managers see all pending reservations on the **Reservations** screen and can **A
 If you're taking something home for your own use rather than for work, switch the **Checkout type** at the top of the New Checkout form from **Work** to **Personal**.
 
 1. Choose **Personal** and give a short **reason** — this is shown to the admin who decides.
-2. Pick the items and a due date, then click **Request approval**.
-3. The gear is held for you straight away, so nobody else can book it, but **don't take it yet** — it shows as *Awaiting Approval* until an admin decides.
-4. An admin is emailed automatically. When they approve or decline, you get an email back, and the status updates on both the website and the mobile app.
+2. Pick the items and a due date.
+3. Read and tick **both declarations** — one confirming you've checked the equipment isn't needed for business use, and one accepting responsibility for safe use and the £1000 excess in the event of loss or damage. The request button stays disabled until both are ticked, and no approval email is sent without them.
+4. Click **Request approval**.
+5. The gear is held for you straight away, so nobody else can book it, but **don't take it yet** — it shows as *Awaiting Approval* until an admin decides.
+6. An admin is emailed automatically. When they approve or decline, you get an email back, and the status updates on both the website and the mobile app.
 
 If you change your mind before a decision is made, use **Withdraw** to cancel the request and put the gear straight back into the pool.
 
-**For admins:** pending requests appear in a banner at the top of the **Checkouts** screen and under the **Awaiting approval** filter. Only admins can approve or decline — managers cannot. Declining releases the gear immediately and emails the requester your reason. Every decision is recorded, including who approved it, and appears in **Reports → Personal**.
+**For admins:** pending requests appear in a banner at the top of the **Checkouts** screen and under the **Awaiting approval** filter. Only admins can approve or decline — managers cannot. The approval email confirms the requester accepted both declarations. Declining releases the gear immediately and emails the requester your reason. Every decision is recorded, including who approved it, and appears in **Reports → Personal**.
 
 ### Returning Gear (Check-In)
 

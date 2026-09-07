@@ -99,6 +99,14 @@ export type CheckoutStatus =
 // Personal = taken home, unrelated to work, and requires admin authorisation.
 export type CheckoutType = 'work' | 'personal';
 
+// Recorded on the checkout itself: the £1000 excess makes this a liability
+// record, so what was agreed and which wording was shown must survive.
+export interface CheckoutDeclarations {
+  availabilityChecked: boolean;
+  liabilityAccepted: boolean;
+  version: string;
+}
+
 export interface ConditionReport {
   condition: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
   notes?: string;
@@ -124,6 +132,8 @@ export interface Checkout {
   // consumers must read it via isPersonal() rather than comparing directly.
   type?: CheckoutType;
   personalReason?: string;
+  declarations?: CheckoutDeclarations;
+  declarationsAcceptedAt?: Timestamp;
   approvedBy?: string;
   approvedByName?: string;
   approvedAt?: Timestamp;

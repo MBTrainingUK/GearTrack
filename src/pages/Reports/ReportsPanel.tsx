@@ -54,6 +54,8 @@ interface PersonalRow {
   declinedByName?: string;
   status: CheckoutStatus;
   selfApproved: boolean;
+  declarationsAccepted: boolean;
+  declarationsVersion?: string;
   reason?: string;
   purchasePrice?: number;
 }
@@ -153,6 +155,10 @@ export default function ReportsPanel() {
               declinedByName: c.declinedByName,
               status: c.status,
               selfApproved: Boolean(c.approvedBy && c.approvedBy === c.userId),
+              declarationsAccepted: Boolean(
+                c.declarations?.availabilityChecked && c.declarations?.liabilityAccepted
+              ),
+              declarationsVersion: c.declarations?.version,
               reason: c.personalReason,
               purchasePrice: item?.purchasePrice,
             });
@@ -684,7 +690,19 @@ export default function ReportsPanel() {
                               <p className="text-gray-900">{r.userName}</p>
                               {r.reason && <p className="text-xs text-gray-400 max-w-[200px] truncate" title={r.reason}>{r.reason}</p>}
                             </td>
-                            <td className="px-5 py-3 text-gray-600">{tsDate(r.checkedOutAt)}</td>
+                            <td className="px-5 py-3 text-gray-600">
+                              {tsDate(r.checkedOutAt)}
+                              {r.declarationsAccepted ? (
+                                <p
+                                  className="text-xs text-emerald-700"
+                                  title={`Availability and £1000 excess liability declarations accepted${r.declarationsVersion ? ` (v${r.declarationsVersion})` : ''}`}
+                                >
+                                  Declarations accepted
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-400">No declarations on record</p>
+                              )}
+                            </td>
                             <td className="px-5 py-3">
                               {r.approvedByName ? (
                                 <>

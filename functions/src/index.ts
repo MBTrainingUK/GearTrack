@@ -727,6 +727,8 @@ export const onCheckoutCreated = onDocumentCreated(
         itemNames,
         dueDate: (c.dueDate as Timestamp).toDate(),
         reason: c.personalReason,
+        declarationsAccepted:
+          c.declarations?.availabilityChecked === true && c.declarations?.liabilityAccepted === true,
       }),
     });
   }

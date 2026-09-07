@@ -219,7 +219,11 @@ export function personalCheckoutPendingEmail(input: {
   itemNames: string[];
   dueDate: Date;
   reason?: string;
+  declarationsAccepted?: boolean;
 }): Pick<Email, 'subject' | 'html'> {
+  const declarations = input.declarationsAccepted
+    ? `<p style="color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;font-size:13px;">The requester has accepted both declarations: equipment availability checked, and liability for the £1000 excess accepted.</p>`
+    : '';
   return {
     subject: `Personal checkout needs approval — ${input.userName}`,
     html: layout(
@@ -228,7 +232,7 @@ export function personalCheckoutPendingEmail(input: {
         input.itemNames
       )}${reasonBlock(input.reason)}<p style="color:#374151;">Due back <strong>${formatDay(
         input.dueDate
-      )}</strong>.</p>`,
+      )}</strong>.</p>${declarations}`,
       'Review request',
       '/checkouts'
     ),

@@ -88,7 +88,16 @@ export interface Reservation {
 }
 
 // ── Checkout ─────────────────────────────────────────────────────────
-export type CheckoutStatus = 'active' | 'overdue' | 'returned';
+// 'pending_approval' and 'declined' only ever apply to personal checkouts.
+export type CheckoutStatus =
+  | 'pending_approval'
+  | 'active'
+  | 'overdue'
+  | 'returned'
+  | 'declined';
+
+// Personal = taken home, unrelated to work, and requires admin authorisation.
+export type CheckoutType = 'work' | 'personal';
 
 export interface ConditionReport {
   condition: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged';
@@ -111,6 +120,17 @@ export interface Checkout {
   dueDate: Timestamp;
   returnedAt?: Timestamp;
   status: CheckoutStatus;
+  // Absent on every checkout created before personal checkouts existed, so
+  // consumers must read it via isPersonal() rather than comparing directly.
+  type?: CheckoutType;
+  personalReason?: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedAt?: Timestamp;
+  declinedBy?: string;
+  declinedByName?: string;
+  declinedAt?: Timestamp;
+  declineReason?: string;
   checkoutCondition?: ConditionReport;
   returnCondition?: ConditionReport;
   notes?: string;
@@ -118,12 +138,17 @@ export interface Checkout {
   // sent at most once per checkout.
   dueSoonEmailAt?: Timestamp;
   overdueEmailAt?: Timestamp;
+  approvalReminderEmailAt?: Timestamp;
 }
 
 // ── Audit Log ────────────────────────────────────────────────────────
 export type AuditAction =
   | 'checkout'
   | 'checkin'
+  | 'request_personal_checkout'
+  | 'approve_personal_checkout'
+  | 'decline_personal_checkout'
+  | 'cancel_personal_checkout'
   | 'reserve'
   | 'cancel_reservation'
   | 'flag'

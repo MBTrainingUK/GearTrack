@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { Item, Checkout, Reservation } from '../../types';
+import type { Item, Checkout, CheckoutStatus, Reservation } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
-import { BarChart2 } from 'lucide-react';
+import { BarChart2, Home } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
+import StatusBadge from '../../components/StatusBadge';
 import { getLifespanStatus, formatMonths, type LifespanStatus } from '../../lib/items';
 
 interface ItemStat {
@@ -36,6 +37,27 @@ interface UserStat {
   itemsCheckedOut: number;
 }
 
+// One row per item per personal checkout, so "which items are out personally"
+// is answerable directly rather than hidden inside a multi-item checkout.
+interface PersonalRow {
+  key: string;
+  itemId: string;
+  itemName: string;
+  assetLabel: string | null;
+  userName: string;
+  userId: string;
+  checkedOutAt: Timestamp;
+  dueDate: Timestamp;
+  returnedAt?: Timestamp;
+  approvedByName?: string;
+  approvedAt?: Timestamp;
+  declinedByName?: string;
+  status: CheckoutStatus;
+  selfApproved: boolean;
+  reason?: string;
+  purchasePrice?: number;
+}
+
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function ReportsPanel() {
@@ -48,7 +70,9 @@ export default function ReportsPanel() {
   const [avgDuration, setAvgDuration] = useState(0);
   const [overdueRate, setOverdueRate] = useState(0);
   const [neverUsed, setNeverUsed] = useState<Item[]>([]);
-  const [tab, setTab] = useState<'overview' | 'items' | 'inspections' | 'users' | 'reservations' | 'financials'>('overview');
+  const [tab, setTab] = useState<'overview' | 'items' | 'inspections' | 'users' | 'personal' | 'reservations' | 'financials'>('overview');
+  const [personalRows, setPersonalRows] = useState<PersonalRow[]>([]);
+  const [personalFilter, setPersonalFilter] = useState<'all' | 'out' | 'pending' | 'returned'>('all');
   const [inspectionRows, setInspectionRows] = useState<{ item: Item; status: LifespanStatus }[]>([]);
   const [totalReservations, setTotalReservations] = useState(0);
   const [reservationsByStatus, setReservationsByStatus] = useState<{ name: string; value: number }[]>([]);
@@ -103,6 +127,41 @@ export default function ReportsPanel() {
           })
           .filter((r): r is { item: Item; status: LifespanStatus } => r !== null)
       );
+
+      // --- Personal checkout register ---
+      // Built from the checkouts already fetched above, so this costs no extra reads.
+      const itemById: Record<string, Item> = {};
+      items.forEach((i) => { itemById[i.id] = i; });
+      const pRows: PersonalRow[] = [];
+      checkouts
+        .filter((c) => c.type === 'personal')
+        .forEach((c) => {
+          c.itemIds.forEach((itemId) => {
+            const item = itemById[itemId];
+            pRows.push({
+              key: `${c.id}-${itemId}`,
+              itemId,
+              itemName: item?.name ?? 'Deleted item',
+              assetLabel: item?.assetNumber ?? item?.serialNumber ?? null,
+              userName: c.userName,
+              userId: c.userId,
+              checkedOutAt: c.checkedOutAt,
+              dueDate: c.dueDate,
+              returnedAt: c.returnedAt,
+              approvedByName: c.approvedByName,
+              approvedAt: c.approvedAt,
+              declinedByName: c.declinedByName,
+              status: c.status,
+              selfApproved: Boolean(c.approvedBy && c.approvedBy === c.userId),
+              reason: c.personalReason,
+              purchasePrice: item?.purchasePrice,
+            });
+          });
+        });
+      pRows.sort((a, b) => {
+        try { return b.checkedOutAt.toMillis() - a.checkedOutAt.toMillis(); } catch { return 0; }
+      });
+      setPersonalRows(pRows);
 
       // --- Item stats ---
       const iMap: Record<string, ItemStat> = {};
@@ -281,7 +340,7 @@ export default function ReportsPanel() {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        {(['overview', 'items', 'inspections', 'users', 'reservations', 'financials'] as const).map((t) => (
+        {(['overview', 'items', 'inspections', 'users', 'personal', 'reservations', 'financials'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -553,6 +612,116 @@ export default function ReportsPanel() {
           )}
         </div>
       )}
+      {/* ── PERSONAL TAB ── */}
+      {tab === 'personal' && (() => {
+        const outNow = personalRows.filter((r) => r.status === 'active');
+        const pendingRows = personalRows.filter((r) => r.status === 'pending_approval');
+        const valueOut = outNow.reduce((s, r) => s + (r.purchasePrice ?? 0), 0);
+        const today = startOfDay(new Date());
+        const rows = personalRows.filter((r) => {
+          if (personalFilter === 'out') return r.status === 'active';
+          if (personalFilter === 'pending') return r.status === 'pending_approval';
+          if (personalFilter === 'returned') return r.status === 'returned';
+          return true;
+        });
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="Out personally now" value={outNow.length} color="text-purple-700" />
+              <StatCard label="Awaiting approval" value={pendingRows.length} color="text-amber-600" />
+              <StatCard label="Personal loans (all time)" value={personalRows.length} />
+              <StatCard label="Value out personally" value={fmt(valueOut)} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(['all', 'out', 'pending', 'returned'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setPersonalFilter(f)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                    personalFilter === f
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                  }`}
+                >
+                  {f === 'out' ? 'Currently out' : f === 'pending' ? 'Awaiting approval' : f}
+                </button>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              {rows.length === 0 ? (
+                <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
+                  <Home size={28} className="text-gray-200" />
+                  <p className="text-sm text-gray-400">No personal checkouts to show</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-xs text-gray-500">
+                        <th className="px-5 py-3 text-left font-medium">Item</th>
+                        <th className="px-5 py-3 text-left font-medium">Borrower</th>
+                        <th className="px-5 py-3 text-left font-medium">Requested</th>
+                        <th className="px-5 py-3 text-left font-medium">Approved by</th>
+                        <th className="px-5 py-3 text-left font-medium">Due</th>
+                        <th className="px-5 py-3 text-left font-medium">Returned</th>
+                        <th className="px-5 py-3 text-left font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {rows.map((r) => {
+                        const overdueRow = r.status === 'active' && isPastDue(r.dueDate, today);
+                        return (
+                          <tr key={r.key} className={`hover:bg-gray-50 ${overdueRow ? 'bg-red-50/40' : ''}`}>
+                            <td className="px-5 py-3">
+                              <Link to={`/items/${r.itemId}`} className="font-medium text-blue-600 hover:underline">
+                                {r.itemName}
+                              </Link>
+                              {r.assetLabel && <p className="text-xs text-gray-400">#{r.assetLabel}</p>}
+                            </td>
+                            <td className="px-5 py-3">
+                              <p className="text-gray-900">{r.userName}</p>
+                              {r.reason && <p className="text-xs text-gray-400 max-w-[200px] truncate" title={r.reason}>{r.reason}</p>}
+                            </td>
+                            <td className="px-5 py-3 text-gray-600">{tsDate(r.checkedOutAt)}</td>
+                            <td className="px-5 py-3">
+                              {r.approvedByName ? (
+                                <>
+                                  <span className="text-gray-900">{r.approvedByName}</span>
+                                  {/* Self-approval is allowed, so surface it rather than prevent it. */}
+                                  {r.selfApproved && (
+                                    <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                                      self
+                                    </span>
+                                  )}
+                                  <p className="text-xs text-gray-400">{tsDate(r.approvedAt)}</p>
+                                </>
+                              ) : r.declinedByName ? (
+                                <span className="text-xs text-gray-400">Declined by {r.declinedByName}</span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
+                              {tsDate(r.dueDate)}
+                            </td>
+                            <td className="px-5 py-3 text-gray-600">{r.returnedAt ? tsDate(r.returnedAt) : '—'}</td>
+                            <td className="px-5 py-3">
+                              <StatusBadge status={overdueRow ? 'overdue' : r.status} type="checkout" />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── FINANCIALS TAB ── */}
       {tab === 'financials' && (
         <div className="space-y-6">
@@ -770,6 +939,24 @@ export default function ReportsPanel() {
 
 function fmt(n: number) {
   return '£' + Math.round(n).toLocaleString('en-GB');
+}
+
+function tsDate(ts?: Timestamp) {
+  if (!ts) return '—';
+  try {
+    return format(ts.toDate(), 'd MMM yyyy');
+  } catch {
+    return '—';
+  }
+}
+
+// Day-level comparison, matching isOverdue() in src/lib/checkout.ts.
+function isPastDue(due: Timestamp, today: Date) {
+  try {
+    return today > startOfDay(due.toDate());
+  } catch {
+    return false;
+  }
 }
 
 function StatCard({ label, value, color = 'text-gray-900' }: { label: string; value: string | number; color?: string }) {

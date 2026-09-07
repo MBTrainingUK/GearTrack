@@ -12,15 +12,16 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 - **Kits** — group items into named kits that can be reserved and checked out together, and edited in place rather than rebuilt
 - **Reservations** — book equipment for a date range, with approval workflow and a calendar view
 - **Checkouts** — sign gear out with a condition report; Quick Grab for instant end-of-day loans
+- **Personal checkouts** — gear taken home for personal use is requested rather than taken: the items are held, an admin is emailed to approve or decline, and the decision is emailed back to the borrower
 - **Check-in** — log return condition; damaged or flagged-for-investigation returns block re-booking until cleared
 - **Mobile PWA** — installable mobile experience (`/m`) for browsing inventory and managing "My Gear" on the go
 - **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and a calendar of upcoming reservations
-- **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, and cost-per-checkout financials
+- **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, cost-per-checkout financials, and a personal-checkout register showing which items are out personally, with who, and who authorised them
 - **Activity log** — full audit trail of who did what, when
 - **Admin panel** — manage user roles, add new teammates, and run data maintenance
-- **Email notifications** — managers are emailed when a reservation needs approval, requesters when it's approved, and borrowers get due-tomorrow reminders and overdue alerts (overdue alerts CC the org's admins)
+- **Email notifications** — managers are emailed when a reservation needs approval, requesters when it's approved, and borrowers get due-tomorrow reminders and overdue alerts (overdue alerts CC the org's admins); admins are emailed when a personal checkout needs authorising, and the requester is emailed the decision
 - **Backup & restore** — export an organisation's items and kits to a JSON file, and re-import to restore
-- **Date-range filtering & retention** — 30/90-day filters on reservations, checkouts, and history; records older than 180 days are automatically purged
+- **Date-range filtering & retention** — 30/90-day filters on reservations, checkouts, and history; an admin can purge records older than 180 days from the Admin Panel, with personal checkout records kept for 2 years
 
 ## Multi-tenancy
 
@@ -117,6 +118,8 @@ Notification emails are sent by Cloud Functions via [Resend](https://resend.com)
    - `MAIL_REDIRECT` — staging only: redirects every email to this address so real users are never emailed from staging
 
 Three functions do the sending: `onReservationCreated` (pending reservation → org admins/managers), `onReservationUpdated` (approved → requester), and `sendDueDateEmails` (daily at 08:00 UK time: due-tomorrow reminders, plus overdue alerts CC'd to org admins, with the borrower's name in the subject line for shared inboxes). Reminder emails are stamped on the checkout doc (`dueSoonEmailAt`/`overdueEmailAt`) so each is sent at most once. Overdue is derived at calendar-day level, matching `src/lib/checkout.ts`.
+
+Personal checkouts add two more: `onCheckoutCreated` (new request → the org's admins only, since managers can't authorise these) and `onCheckoutUpdated` (approved or declined → the requester). `sendDueDateEmails` also nudges admins about requests still undecided after 24 hours, stamped with `approvalReminderEmailAt` so the nudge is sent once.
 
 > Until a sending domain is verified in Resend, the `onboarding@resend.dev` test sender can only deliver to the Resend account owner's own address — verify a domain before going to production.
 

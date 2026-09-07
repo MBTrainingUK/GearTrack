@@ -12,6 +12,9 @@ import { Navigate } from 'react-router-dom';
 import { fetchMondayFilmingDates } from '../../lib/monday';
 import { useCategories, setExcludedCategories } from '../../store/categories';
 
+// Personal checkouts are retained for two years; everything else for 180 days.
+const PERSONAL_RETENTION_DAYS = 730;
+
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
   manager: 'Team Member',
@@ -167,15 +170,28 @@ function AdminPanelBody() {
     setPurgingOld(true);
     setConfirmPurgeOld(false);
     const cutoff = Timestamp.fromDate(subDays(new Date(), 180));
+    // Personal checkouts are a record of who took what home, which can be needed
+    // long after work usage stats stop mattering, so they are kept for two years.
+    const personalCutoff = Timestamp.fromDate(subDays(new Date(), PERSONAL_RETENTION_DAYS));
     let total = 0;
     try {
       // Reset items belonging to old active checkouts before deleting them
       const oldCheckouts = await getDocs(query(collection(db, 'checkouts'), where('orgId', '==', appUser.orgId), where('checkedOutAt', '<', cutoff)));
-      if (!oldCheckouts.empty) {
+      // The single 180-day query covers both windows: personal records still
+      // inside their two-year window are held back here rather than re-queried.
+      const deletable = oldCheckouts.docs.filter((d) => {
+        const data = d.data();
+        if (data.type !== 'personal') return true;
+        const ts = data.checkedOutAt as Timestamp | undefined;
+        return !ts || ts.toMillis() < personalCutoff.toMillis();
+      });
+      if (deletable.length > 0) {
         const itemIds = new Set<string>();
-        oldCheckouts.docs.forEach((d) => {
+        deletable.forEach((d) => {
           const data = d.data();
-          if (data.status === 'active') (data.itemIds as string[]).forEach((id) => itemIds.add(id));
+          if (data.status === 'active' || data.status === 'pending_approval') {
+            (data.itemIds as string[]).forEach((id) => itemIds.add(id));
+          }
         });
         if (itemIds.size > 0) {
           const itemBatches: ReturnType<typeof writeBatch>[] = [];
@@ -186,12 +202,12 @@ function AdminPanelBody() {
           await Promise.all(itemBatches.map((b) => b.commit()));
         }
         const delBatches: ReturnType<typeof writeBatch>[] = [];
-        oldCheckouts.docs.forEach((d, i) => {
+        deletable.forEach((d, i) => {
           if (i % 500 === 0) delBatches.push(writeBatch(db));
           delBatches[delBatches.length - 1].delete(d.ref);
         });
         await Promise.all(delBatches.map((b) => b.commit()));
-        total += oldCheckouts.size;
+        total += deletable.length;
       }
       const oldReservations = await getDocs(query(collection(db, 'reservations'), where('orgId', '==', appUser.orgId), where('createdAt', '<', cutoff)));
       if (!oldReservations.empty) {
@@ -203,8 +219,8 @@ function AdminPanelBody() {
         await Promise.all(batches.map((b) => b.commit()));
         total += oldReservations.size;
       }
-      if (total > 0) toast.success(`Purged ${total} record${total !== 1 ? 's' : ''} older than 180 days`);
-      else toast.success('No records older than 180 days found');
+      if (total > 0) toast.success(`Purged ${total} old record${total !== 1 ? 's' : ''}`);
+      else toast.success('No records old enough to purge');
     } catch {
       toast.error('Failed to purge old records');
     } finally {
@@ -723,7 +739,7 @@ function AdminPanelBody() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-gray-800">Purge old records</p>
-            <p className="text-xs text-gray-500 mt-0.5">Permanently deletes checkouts and reservations older than 180 days. This also runs automatically each time you visit this page.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Permanently deletes checkouts and reservations older than 180 days. Personal checkouts are kept for 2 years. This only runs when you press the button.</p>
           </div>
           <button
             onClick={() => setConfirmPurgeOld(true)}
@@ -760,11 +776,11 @@ function AdminPanelBody() {
               <p className="text-sm text-gray-700">This will permanently delete:</p>
               <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
                 <li>All activity log entries</li>
-                <li>All checkouts</li>
+                <li>All checkouts, including the personal checkout record</li>
                 <li>All reservations</li>
               </ul>
               <p className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
-                Items and kits will not be affected. This cannot be undone.
+                Items and kits will not be affected. This ignores retention periods and cannot be undone.
               </p>
             </div>
             <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
@@ -793,7 +809,7 @@ function AdminPanelBody() {
               <button onClick={() => setConfirmPurgeOld(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-gray-700">This will permanently delete all checkouts and reservations older than <strong>180 days</strong>.</p>
+              <p className="text-sm text-gray-700">This will permanently delete all checkouts and reservations older than <strong>180 days</strong>. Personal checkouts are kept for <strong>2 years</strong> before they are removed.</p>
               <p className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-800">
                 Active checkouts and upcoming reservations will not be affected. This cannot be undone.
               </p>

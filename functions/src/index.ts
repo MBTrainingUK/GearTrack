@@ -14,6 +14,10 @@ import {
   reservationApprovedEmail,
   dueTomorrowEmail,
   overdueEmail,
+  personalCheckoutPendingEmail,
+  personalCheckoutApprovedEmail,
+  personalCheckoutDeclinedEmail,
+  personalCheckoutReminderEmail,
 } from './email';
 
 initializeApp();
@@ -443,6 +447,207 @@ export const autoCheckoutReservations = onSchedule('every 5 minutes', async () =
   );
 });
 
+// ── Personal checkout approval ───────────────────────────────────────
+
+/**
+ * Shared authorisation and load for the personal-checkout decision callables.
+ *
+ * Admin-only by deliberate choice: managers approve reservations, but gear
+ * going home for personal use is a different risk. The check reads the role
+ * from the token rather than the Firestore doc because setOrgUserRole revokes
+ * refresh tokens on demotion, so a former admin can't linger with rights here.
+ *
+ * Self-approval is permitted. With a small admin team, forbidding it would
+ * stall every request whenever one admin is away; the control is the recorded
+ * approver name, which makes a self-approval plainly visible in reports.
+ */
+async function loadPendingPersonalCheckout(
+  request: { auth?: { uid?: string; token?: Record<string, unknown> } },
+  checkoutId: string | undefined,
+  verb: string
+) {
+  const callerUid = request.auth?.uid;
+  const callerIsPlatformAdmin = request.auth?.token?.platformAdmin === true;
+  const callerRole = request.auth?.token?.role as Role | undefined;
+  const callerOrgId = request.auth?.token?.orgId as string | undefined;
+
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+  if (!callerIsPlatformAdmin && callerRole !== 'admin') {
+    throw new HttpsError('permission-denied', `Only an admin can ${verb} a personal checkout.`);
+  }
+  if (!checkoutId?.trim()) {
+    throw new HttpsError('invalid-argument', 'checkoutId is required.');
+  }
+
+  const ref = getFirestore().collection('checkouts').doc(checkoutId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'No such checkout.');
+  }
+  const data = snap.data()!;
+
+  if (!callerIsPlatformAdmin && data.orgId !== callerOrgId) {
+    throw new HttpsError('permission-denied', "That checkout isn't in your organisation.");
+  }
+  if (data.type !== 'personal') {
+    throw new HttpsError('failed-precondition', 'Only personal checkouts need approval.');
+  }
+  if (data.status !== 'pending_approval') {
+    throw new HttpsError('failed-precondition', 'That request has already been decided.');
+  }
+
+  return { ref, data, callerUid };
+}
+
+async function displayNameOf(uid: string, fallback: string): Promise<string> {
+  const snap = await getFirestore().collection('users').doc(uid).get();
+  return (snap.data()?.displayName as string | undefined) ?? fallback;
+}
+
+/**
+ * Releases the items a pending request was holding, but only those still marked
+ * checked_out, so a decision can never resurrect an item that has since been
+ * reassigned by other means.
+ */
+async function releaseHeldItems(
+  ref: FirebaseFirestore.DocumentReference,
+  itemIds: string[],
+  checkoutUpdate: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData>
+) {
+  const db = getFirestore();
+  await db.runTransaction(async (tx) => {
+    const snaps =
+      itemIds.length > 0
+        ? await tx.getAll(...itemIds.map((id) => db.collection('items').doc(id)))
+        : [];
+    tx.update(ref, checkoutUpdate);
+    for (const snap of snaps) {
+      if (snap.exists && snap.data()?.status === 'checked_out') {
+        tx.update(snap.ref, { status: 'available', updatedAt: FieldValue.serverTimestamp() });
+      }
+    }
+  });
+}
+
+/** Admin approves a pending personal checkout. Items are already held, so only the status changes. */
+export const approveCheckout = onCall(async (request) => {
+  const { checkoutId } = (request.data ?? {}) as { checkoutId?: string };
+  const { ref, data, callerUid } = await loadPendingPersonalCheckout(request, checkoutId, 'approve');
+  const approvedByName = await displayNameOf(callerUid, 'An admin');
+
+  await ref.update({
+    status: 'active',
+    approvedBy: callerUid,
+    approvedByName,
+    approvedAt: FieldValue.serverTimestamp(),
+  });
+
+  await getFirestore().collection('auditLog').add({
+    orgId: data.orgId,
+    action: 'approve_personal_checkout',
+    performedBy: callerUid,
+    performedByName: approvedByName,
+    targetType: 'checkout',
+    targetId: ref.id,
+    targetName: data.userName ?? '',
+    timestamp: FieldValue.serverTimestamp(),
+    details: { selfApproved: String(callerUid === data.userId) },
+  });
+
+  return { checkoutId: ref.id };
+});
+
+/** Admin declines a pending personal checkout, returning the held items to the pool. */
+export const declineCheckout = onCall(async (request) => {
+  const { checkoutId, reason } = (request.data ?? {}) as { checkoutId?: string; reason?: string };
+  const { ref, data, callerUid } = await loadPendingPersonalCheckout(request, checkoutId, 'decline');
+  const declinedByName = await displayNameOf(callerUid, 'An admin');
+
+  await releaseHeldItems(ref, (data.itemIds as string[]) ?? [], {
+    status: 'declined',
+    declinedBy: callerUid,
+    declinedByName,
+    declinedAt: FieldValue.serverTimestamp(),
+    declineReason: reason?.trim() ?? '',
+  });
+
+  await getFirestore().collection('auditLog').add({
+    orgId: data.orgId,
+    action: 'decline_personal_checkout',
+    performedBy: callerUid,
+    performedByName: declinedByName,
+    targetType: 'checkout',
+    targetId: ref.id,
+    targetName: data.userName ?? '',
+    timestamp: FieldValue.serverTimestamp(),
+    ...(reason?.trim() ? { details: { reason: reason.trim() } } : {}),
+  });
+
+  return { checkoutId: ref.id };
+});
+
+/**
+ * Withdraws a pending request and frees the gear. Available to the requester as
+ * well as admins: without it, a mistaken request would hold an item hostage
+ * until an admin happened to notice it.
+ */
+export const cancelCheckoutRequest = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+  const { checkoutId } = (request.data ?? {}) as { checkoutId?: string };
+  if (!checkoutId?.trim()) {
+    throw new HttpsError('invalid-argument', 'checkoutId is required.');
+  }
+
+  const db = getFirestore();
+  const ref = db.collection('checkouts').doc(checkoutId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'No such checkout.');
+  }
+  const data = snap.data()!;
+
+  const callerIsPlatformAdmin = request.auth?.token?.platformAdmin === true;
+  const callerRole = request.auth?.token?.role as Role | undefined;
+  const callerOrgId = request.auth?.token?.orgId as string | undefined;
+  const isOwner = data.userId === callerUid;
+  const isOrgAdmin = callerRole === 'admin' && data.orgId === callerOrgId;
+
+  if (!callerIsPlatformAdmin && !isOwner && !isOrgAdmin) {
+    throw new HttpsError('permission-denied', 'You can only cancel your own request.');
+  }
+  if (data.status !== 'pending_approval') {
+    throw new HttpsError('failed-precondition', 'Only a pending request can be cancelled.');
+  }
+
+  const performedByName = await displayNameOf(callerUid, 'A user');
+
+  await releaseHeldItems(ref, (data.itemIds as string[]) ?? [], {
+    status: 'declined',
+    declinedBy: callerUid,
+    declinedByName: performedByName,
+    declinedAt: FieldValue.serverTimestamp(),
+    declineReason: isOwner ? 'Withdrawn by requester' : 'Cancelled by an admin',
+  });
+
+  await db.collection('auditLog').add({
+    orgId: data.orgId,
+    action: 'cancel_personal_checkout',
+    performedBy: callerUid,
+    performedByName,
+    targetType: 'checkout',
+    targetId: ref.id,
+    targetName: data.userName ?? '',
+    timestamp: FieldValue.serverTimestamp(),
+  });
+
+  return { checkoutId: ref.id };
+});
+
 // ── Email notifications ──────────────────────────────────────────────
 
 /**
@@ -502,6 +707,64 @@ function ukDayKey(d: Date): string {
   return d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
 }
 
+/** New personal checkout request → notify the org's admins so someone decides. */
+export const onCheckoutCreated = onDocumentCreated(
+  { document: 'checkouts/{checkoutId}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const c = event.data?.data();
+    if (!c || c.type !== 'personal' || c.status !== 'pending_approval') return;
+
+    // Admins only — managers can't authorise these, so copying them in would
+    // invite a decision they have no way to action.
+    const adminEmails = await getOrgStaffEmails(c.orgId, ['admin']);
+    if (adminEmails.length === 0) return;
+
+    const itemNames = await getItemNames(c.itemIds ?? []);
+    await sendEmail({
+      to: adminEmails,
+      ...personalCheckoutPendingEmail({
+        userName: c.userName,
+        itemNames,
+        dueDate: (c.dueDate as Timestamp).toDate(),
+        reason: c.personalReason,
+      }),
+    });
+  }
+);
+
+/** Personal checkout approved or declined → tell the requester either way. */
+export const onCheckoutUpdated = onDocumentUpdated(
+  { document: 'checkouts/{checkoutId}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || !after.userEmail) return;
+    if (before.status !== 'pending_approval') return;
+
+    const itemNames = await getItemNames(after.itemIds ?? []);
+
+    if (after.status === 'active') {
+      await sendEmail({
+        to: [after.userEmail],
+        ...personalCheckoutApprovedEmail({
+          itemNames,
+          dueDate: (after.dueDate as Timestamp).toDate(),
+          approvedByName: after.approvedByName ?? 'An admin',
+        }),
+      });
+    } else if (after.status === 'declined') {
+      await sendEmail({
+        to: [after.userEmail],
+        ...personalCheckoutDeclinedEmail({
+          itemNames,
+          declinedByName: after.declinedByName ?? 'An admin',
+          reason: after.declineReason,
+        }),
+      });
+    }
+  }
+);
+
 /**
  * Daily at 08:00 UK time. Sends "due tomorrow" reminders to borrowers and
  * first-overdue alerts to borrowers (CC org admins). Each email is stamped
@@ -518,7 +781,6 @@ export const sendDueDateEmails = onSchedule(
     const tomorrow = ukDayKey(new Date(now.getTime() + 24 * 60 * 60 * 1000));
 
     const snap = await db.collection('checkouts').where('status', '==', 'active').get();
-    if (snap.empty) return;
 
     // Org admin lists are reused across checkouts within this run.
     const adminEmailsByOrg = new Map<string, string[]>();
@@ -556,6 +818,38 @@ export const sendDueDateEmails = onSchedule(
         }
       } catch (err) {
         console.error(`sendDueDateEmails failed for checkout ${doc.id}:`, err);
+      }
+    }
+
+    // Second pass: personal requests still undecided after a day. These hold
+    // gear out of circulation, so a forgotten request costs the whole team.
+    const pending = await db
+      .collection('checkouts')
+      .where('status', '==', 'pending_approval')
+      .get();
+
+    const dayAgoMs = now.getTime() - 24 * 60 * 60 * 1000;
+    for (const doc of pending.docs) {
+      const c = doc.data();
+      if (c.approvalReminderEmailAt || !c.checkedOutAt) continue;
+      const requestedAt = (c.checkedOutAt as Timestamp).toDate();
+      if (requestedAt.getTime() > dayAgoMs) continue;
+
+      try {
+        const admins = await orgAdmins(c.orgId);
+        if (admins.length === 0) continue;
+        const itemNames = await getItemNames(c.itemIds ?? []);
+        await sendEmail({
+          to: admins,
+          ...personalCheckoutReminderEmail({
+            userName: c.userName,
+            itemNames,
+            requestedAt,
+          }),
+        });
+        await doc.ref.update({ approvalReminderEmailAt: FieldValue.serverTimestamp() });
+      } catch (err) {
+        console.error(`Pending-approval reminder failed for checkout ${doc.id}:`, err);
       }
     }
   }

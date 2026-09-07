@@ -206,3 +206,93 @@ export function overdueEmail(input: {
     ),
   };
 }
+
+// ── Personal checkout approval ───────────────────────────────────────
+
+function reasonBlock(reason?: string): string {
+  if (!reason?.trim()) return '';
+  return `<p style="color:#374151;">Reason given: <em>${escapeHtml(reason.trim())}</em></p>`;
+}
+
+export function personalCheckoutPendingEmail(input: {
+  userName: string;
+  itemNames: string[];
+  dueDate: Date;
+  reason?: string;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: `Personal checkout needs approval — ${input.userName}`,
+    html: layout(
+      `${escapeHtml(input.userName)} has requested a personal checkout`,
+      `<p style="color:#374151;">This gear is being taken home for personal use, not for work. It is being held and cannot be booked by anyone else until you approve or decline.</p>${itemList(
+        input.itemNames
+      )}${reasonBlock(input.reason)}<p style="color:#374151;">Due back <strong>${formatDay(
+        input.dueDate
+      )}</strong>.</p>`,
+      'Review request',
+      '/checkouts'
+    ),
+  };
+}
+
+export function personalCheckoutApprovedEmail(input: {
+  itemNames: string[];
+  dueDate: Date;
+  approvedByName: string;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: 'Your personal checkout has been approved',
+    html: layout(
+      'Your personal checkout has been approved',
+      `<p style="color:#374151;">Approved by <strong>${escapeHtml(
+        input.approvedByName
+      )}</strong>. Please return it by <strong>${formatDay(input.dueDate)}</strong>:</p>${itemList(
+        input.itemNames
+      )}`,
+      'View my gear',
+      '/m/gear'
+    ),
+  };
+}
+
+export function personalCheckoutDeclinedEmail(input: {
+  itemNames: string[];
+  declinedByName: string;
+  reason?: string;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: 'Your personal checkout was declined',
+    html: layout(
+      'Your personal checkout was declined',
+      `<p style="color:#374151;">Declined by <strong>${escapeHtml(
+        input.declinedByName
+      )}</strong>. The gear has been returned to the available pool:</p>${itemList(
+        input.itemNames
+      )}${reasonBlock(input.reason)}`,
+      'View checkouts',
+      '/checkouts'
+    ),
+  };
+}
+
+export function personalCheckoutReminderEmail(input: {
+  userName: string;
+  itemNames: string[];
+  requestedAt: Date;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: `Still waiting: personal checkout approval — ${input.userName}`,
+    html: layout(
+      'A personal checkout is still awaiting approval',
+      `<p style="color:#374151;">Requested by <strong>${escapeHtml(
+        input.userName
+      )}</strong> on <strong>${formatDay(
+        input.requestedAt
+      )}</strong>. This gear is being held and nobody else can book it until a decision is made.</p>${itemList(
+        input.itemNames
+      )}`,
+      'Review request',
+      '/checkouts'
+    ),
+  };
+}

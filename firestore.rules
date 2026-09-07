@@ -114,13 +114,44 @@ service cloud.firestore {
     }
 
     // ── checkouts ─────────────────────────────────────────
+    // Personal checkouts are authorised by an admin via the approveCheckout /
+    // declineCheckout Cloud Functions, which use the Admin SDK and bypass these
+    // rules. The fields carrying that decision are closed to every client:
+    // update below already lets a borrower write their own checkout, so without
+    // this they could flip their own pending request to active and self-authorise.
+    function approvalFieldsUntouched() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['type', 'approvedBy', 'approvedByName', 'approvedAt',
+                 'declinedBy', 'declinedByName', 'declinedAt', 'declineReason']);
+    }
+    // Clients may only close out an already-authorised checkout. Any status
+    // change touching pending_approval or declined is server-side only.
+    function allowedCheckoutStatusChange() {
+      return request.resource.data.status == resource.data.status
+        || (resource.data.status == 'active' && request.resource.data.status == 'returned');
+    }
+    // While a request awaits a decision its gear and dates are frozen, so an
+    // admin always approves exactly what they were shown.
+    function pendingRequestFrozen() {
+      return resource.data.status != 'pending_approval'
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes']);
+    }
+
     match /checkouts/{checkoutId} {
       allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
       // Users may check gear out for themselves and return their own checkouts.
-      allow create: if isPlatformAdmin()
-        || ((isManager() || isOwner(request.resource.data.userId)) && sameOrg(request.resource.data.orgId));
+      // A personal checkout may only be created pending, never pre-approved.
+      allow create: if (isPlatformAdmin()
+          || ((isManager() || isOwner(request.resource.data.userId)) && sameOrg(request.resource.data.orgId)))
+        && (request.resource.data.get('type', 'work') != 'personal'
+            || request.resource.data.status == 'pending_approval')
+        && !request.resource.data.keys().hasAny(['approvedBy', 'approvedAt', 'declinedBy', 'declinedAt']);
       allow update: if isPlatformAdmin()
-        || ((isManager() || isOwner(resource.data.userId)) && sameOrg(resource.data.orgId));
+        || ((isManager() || isOwner(resource.data.userId))
+            && sameOrg(resource.data.orgId)
+            && approvalFieldsUntouched()
+            && allowedCheckoutStatusChange()
+            && pendingRequestFrozen());
       allow delete: if isPlatformAdmin() || (isAdmin() && sameOrg(resource.data.orgId));
     }
 

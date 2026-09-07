@@ -9,17 +9,18 @@ import {
   getDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import type { Checkout, Item, Reservation, Kit } from '../../types';
+import { db, functions } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import type { Checkout, Item, Reservation, Kit, CheckoutType } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, AlertTriangle, X, Check, Zap, AlertCircle } from 'lucide-react';
+import { Plus, AlertTriangle, X, Check, Zap, AlertCircle, Home, Briefcase } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionModal from '../../components/ConditionModal';
 import { format, subDays, endOfDay } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
-import { isOverdue, createCheckout } from '../../lib/checkout';
+import { isOverdue, createCheckout, isPersonal } from '../../lib/checkout';
 import { isFlagged, isCategoryExcluded } from '../../lib/items';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
@@ -33,9 +34,11 @@ export default function CheckoutsList() {
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { items: itemsList, byId: items } = useItems();
   const [kits, setKits] = useState<Record<string, Kit>>({});
-  const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'returned'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'active' | 'overdue' | 'returned'>('all');
   const [userFilter, setUserFilter] = useState<'mine' | 'all'>('mine');
   const [dateRange, setDateRange] = useState<30 | 90>(30);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [declineTarget, setDeclineTarget] = useState<Checkout | null>(null);
   const [conditionModal, setConditionModal] = useState<{
     checkoutId: string;
     itemIds: string[];
@@ -90,8 +93,8 @@ export default function CheckoutsList() {
 
   const cutoff = subDays(new Date(), dateRange);
   const dateFiltered = checkouts.filter((c) => {
-    if (c.status !== 'returned') return true;
-    const ts = c.returnedAt ?? c.checkedOutAt;
+    if (c.status !== 'returned' && c.status !== 'declined') return true;
+    const ts = c.returnedAt ?? c.declinedAt ?? c.checkedOutAt;
     try { return ts.toDate() >= cutoff; } catch { return true; }
   });
 
@@ -103,10 +106,47 @@ export default function CheckoutsList() {
     if (filter === 'all') return true;
     if (filter === 'overdue') return isOverdue(c);
     if (filter === 'active') return c.status === 'active' && !isOverdue(c);
+    if (filter === 'pending') return c.status === 'pending_approval';
     return c.status === filter;
   });
 
   const overdue = checkouts.filter(isOverdue).length;
+  const pendingApproval = checkouts.filter((c) => c.status === 'pending_approval');
+  const isAdmin = appUser?.role === 'admin';
+
+  async function decide(checkout: Checkout, approve: boolean, reason?: string) {
+    setDecidingId(checkout.id);
+    try {
+      await httpsCallable<{ checkoutId: string; reason?: string }, { checkoutId: string }>(
+        functions,
+        approve ? 'approveCheckout' : 'declineCheckout'
+      )({ checkoutId: checkout.id, ...(reason ? { reason } : {}) });
+      toast.success(
+        approve
+          ? `Approved — ${checkout.userName} has been emailed`
+          : `Declined — the gear is available again`
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to record that decision');
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
+  async function cancelRequest(checkout: Checkout) {
+    setDecidingId(checkout.id);
+    try {
+      await httpsCallable<{ checkoutId: string }, { checkoutId: string }>(
+        functions,
+        'cancelCheckoutRequest'
+      )({ checkoutId: checkout.id });
+      toast.success('Request withdrawn — the gear is available again');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to withdraw the request');
+    } finally {
+      setDecidingId(null);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -115,15 +155,15 @@ export default function CheckoutsList() {
           <h1 className="text-2xl font-bold text-gray-900">Checkouts</h1>
           <p className="mt-0.5 text-sm text-gray-500">{filtered.length} total</p>
         </div>
-        {appUser?.role !== 'user' && (
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus size={16} />
-            New Checkout
-          </button>
-        )}
+        {/* Open to every role: a personal checkout is a request, not an approval,
+            and the rules already allow anyone to check gear out to themselves. */}
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Plus size={16} />
+          New Checkout
+        </button>
       </div>
 
       {overdue > 0 && (
@@ -133,6 +173,21 @@ export default function CheckoutsList() {
             <span className="font-semibold">{overdue} overdue</span> checkout{overdue > 1 ? 's' : ''} require attention.
           </p>
         </div>
+      )}
+
+      {isAdmin && pendingApproval.length > 0 && (
+        <button
+          onClick={() => { setFilter('pending'); setUserFilter('all'); }}
+          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100"
+        >
+          <Home size={16} className="shrink-0 text-amber-600" />
+          <p className="text-sm text-amber-900">
+            <span className="font-semibold">
+              {pendingApproval.length} personal checkout{pendingApproval.length > 1 ? 's' : ''}
+            </span>{' '}
+            awaiting your approval — this gear is held until you decide.
+          </p>
+        </button>
       )}
 
       {/* Filter tabs + date range toggle */}
@@ -154,7 +209,7 @@ export default function CheckoutsList() {
           ))}
           <div className="h-4 w-px bg-gray-200" />
           {/* Status filter */}
-          {(['all', 'active', 'overdue', 'returned'] as const).map((f) => (
+          {(['all', 'pending', 'active', 'overdue', 'returned'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -164,7 +219,7 @@ export default function CheckoutsList() {
                   : 'border-gray-200 text-gray-600 hover:border-blue-300'
               }`}
             >
-              {f}
+              {f === 'pending' ? 'Awaiting approval' : f}
             </button>
           ))}
         </div>
@@ -210,7 +265,15 @@ export default function CheckoutsList() {
                 return (
                   <tr key={c.id} className={`hover:bg-gray-50 ${overdueRow ? 'bg-red-50/40' : ''}`}>
                     <td className="px-5 py-3">
-                      <p className="font-medium text-gray-900">{c.userName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900">{c.userName}</p>
+                        {isPersonal(c) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800">
+                            <Home size={10} />
+                            Personal
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">{c.userEmail}</p>
                     </td>
                     <td className="px-5 py-3">
@@ -233,6 +296,37 @@ export default function CheckoutsList() {
                       <StatusBadge status={displayStatus} type="checkout" />
                     </td>
                     <td className="px-5 py-3">
+                      {c.status === 'pending_approval' && (
+                        <div className="flex items-center gap-1.5">
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => decide(c, true)}
+                                disabled={decidingId === c.id}
+                                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => setDeclineTarget(c)}
+                                disabled={decidingId === c.id}
+                                className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+                          {!isAdmin && c.userId === currentUser?.uid && (
+                            <button
+                              onClick={() => cancelRequest(c)}
+                              disabled={decidingId === c.id}
+                              className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Withdraw
+                            </button>
+                          )}
+                        </div>
+                      )}
                       {c.status === 'active' && appUser?.role !== 'user' && (
                         <button
                           onClick={() => {
@@ -249,6 +343,11 @@ export default function CheckoutsList() {
                       {c.status === 'returned' && c.returnCondition && (
                         <span className="text-xs text-gray-400 capitalize">
                           Returned: {c.returnCondition.condition}
+                        </span>
+                      )}
+                      {c.status === 'declined' && (
+                        <span className="text-xs text-gray-400">
+                          {c.declineReason || 'Declined'}
                         </span>
                       )}
                     </td>
@@ -284,12 +383,77 @@ export default function CheckoutsList() {
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
           onClose={() => setShowNewModal(false)}
-          onCreated={() => {
+          onCreated={(wasPersonal) => {
             setShowNewModal(false);
-            toast.success('Items checked out successfully');
+            toast.success(
+              wasPersonal
+                ? 'Request sent — an admin has been emailed to approve it'
+                : 'Items checked out successfully'
+            );
           }}
         />
       )}
+
+      {declineTarget && (
+        <DeclineModal
+          checkout={declineTarget}
+          onClose={() => setDeclineTarget(null)}
+          onConfirm={(reason) => {
+            const target = declineTarget;
+            setDeclineTarget(null);
+            void decide(target, false, reason);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function DeclineModal({
+  checkout,
+  onClose,
+  onConfirm,
+}: {
+  checkout: Checkout;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="font-semibold text-gray-900">Decline personal checkout?</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="space-y-3 px-6 py-4">
+          <p className="text-sm text-gray-700">
+            <strong>{checkout.userName}</strong> will be emailed and the gear will go back into the
+            available pool.
+          </p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Reason (optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              placeholder="Shared with the requester"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(reason.trim())}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Decline
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -305,7 +469,7 @@ function NewCheckoutModal({
   kits: Kit[];
   reservationId?: string;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (wasPersonal: boolean) => void;
 }) {
   const { currentUser, appUser } = useAuth();
   const { excludedCategories } = useCategories();
@@ -317,6 +481,10 @@ function NewCheckoutModal({
   const [checkoutTab, setCheckoutTab] = useState<'items' | 'kit'>('items');
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
   const [kitWarnings, setKitWarnings] = useState<string[]>([]);
+  // A checkout against an existing reservation is work by definition.
+  const [kind, setKind] = useState<CheckoutType>('work');
+  const [personalReason, setPersonalReason] = useState('');
+  const isPersonalRequest = kind === 'personal' && !reservationId;
 
   useEffect(() => {
     if (!reservationId) return;
@@ -369,18 +537,20 @@ function NewCheckoutModal({
         itemIds,
         dueDate: due,
         notes: checkoutNotes,
+        type: isPersonalRequest ? 'personal' : 'work',
+        ...(isPersonalRequest ? { personalReason } : {}),
       });
       const name = checkoutName(itemIds);
       await writeAuditLog({
         orgId: appUser.orgId,
-        action: 'checkout',
+        action: isPersonalRequest ? 'request_personal_checkout' : 'checkout',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'checkout',
         targetId: id,
         targetName: name,
       });
-      onCreated();
+      onCreated(isPersonalRequest);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create checkout');
     } finally {
@@ -400,6 +570,10 @@ function NewCheckoutModal({
       toast.error('Select items and due date');
       return;
     }
+    if (isPersonalRequest && !personalReason.trim()) {
+      toast.error('Add a reason for the personal checkout');
+      return;
+    }
     await create(selectedItems, Timestamp.fromDate(new Date(dueDate)), notes, true);
   }
 
@@ -417,10 +591,58 @@ function NewCheckoutModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <h2 className="font-semibold text-gray-900">New Checkout</h2>
+          <h2 className="font-semibold text-gray-900">
+            {isPersonalRequest ? 'Personal Checkout Request' : 'New Checkout'}
+          </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <div className="overflow-y-auto px-6 py-4 space-y-4">
+          {!reservationId && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Checkout type</label>
+              <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setKind('work')}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <Briefcase size={12} />
+                  Work
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKind('personal')}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  <Home size={12} />
+                  Personal
+                </button>
+              </div>
+              {isPersonalRequest && (
+                <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
+                  <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600" />
+                  <span>
+                    An admin must approve this before you can take it. The gear is held for you in
+                    the meantime.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          {isPersonalRequest && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Reason for personal use *
+              </label>
+              <textarea
+                value={personalReason}
+                onChange={(e) => setPersonalReason(e.target.value)}
+                rows={2}
+                placeholder="Shown to the admin who approves it"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Due Date *</label>
             <input
@@ -478,16 +700,19 @@ function NewCheckoutModal({
                           )}
                         </button>
                         <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                          <button
-                            type="button"
-                            title="Quick Grab — check out now, due end of today"
-                            onClick={() => quickGrab([item.id])}
-                            disabled={saving}
-                            className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
-                          >
-                            <Zap size={11} />
-                            Quick Grab
-                          </button>
+                          {/* Quick Grab is a same-day work loan, so it has no place in an approval flow. */}
+                          {!isPersonalRequest && (
+                            <button
+                              type="button"
+                              title="Quick Grab — check out now, due end of today"
+                              onClick={() => quickGrab([item.id])}
+                              disabled={saving}
+                              className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              <Zap size={11} />
+                              Quick Grab
+                            </button>
+                          )}
                           {isSel && <Check size={13} className="text-blue-600" />}
                         </div>
                       </div>
@@ -550,7 +775,7 @@ function NewCheckoutModal({
           <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
-          {selectedItems.length > 0 && (
+          {selectedItems.length > 0 && !isPersonalRequest && (
             <button
               onClick={() => quickGrab(selectedItems)}
               disabled={saving}
@@ -564,9 +789,11 @@ function NewCheckoutModal({
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${isPersonalRequest ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
-            {saving ? 'Creating…' : 'Check Out'}
+            {saving
+              ? isPersonalRequest ? 'Sending…' : 'Creating…'
+              : isPersonalRequest ? 'Request approval' : 'Check Out'}
           </button>
         </div>
       </div>

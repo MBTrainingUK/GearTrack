@@ -125,7 +125,23 @@ Personal checkouts add two more: `onCheckoutCreated` (new request → the org's 
 
 ### Deploy
 
-Pushing to `main` triggers the `Deploy to GitHub Pages` GitHub Actions workflow, which builds the project and publishes `dist` to GitHub Pages. Cloud Functions and Firestore rules/indexes are **not** part of that workflow — deploy them manually with `firebase deploy` when changed.
+Deployment is push-based. There is no manual deploy step for normal changes, and running `firebase deploy` by hand is not required — or wanted.
+
+| Push to | Workflow | What it deploys |
+| --- | --- | --- |
+| `staging` | `Deploy to Staging` | Everything in `firebase.json` to the `geartrack-staging` project, including its Hosting site at <https://geartrack-staging.web.app> |
+| `main` | `Deploy to GitHub Pages` | Firestore rules, then indexes, then Cloud Functions to the production project — and only then the frontend to <https://mbtraininguk.github.io/GearTrack/> |
+
+Usual flow: push to `staging`, check it there, then merge to `main`.
+
+On `main` the backend deliberately lands before the frontend, so a build that tightens security rules can never have its client go live first. If the backend job fails, Pages is never deployed and the previous frontend keeps serving — which is safe, because that frontend already works against the old rules.
+
+Before pushing, `npm run check` runs the same lint, typecheck and build gates as CI. After pushing, `npm run deploy:status` lists recent workflow runs.
+
+Two things that surprise people:
+
+- **Firebase Hosting does not serve the production frontend.** GitHub Pages does. The Hosting site on the production project is unused and will look permanently out of date.
+- **Firebase Storage has never been enabled on the production project.** `VITE_STORAGE_ENABLED` is `false` in both workflows, and `storage` is excluded from the production deploy because including it fails the deploy outright.
 
 ### Backup & Restore
 

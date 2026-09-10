@@ -8,8 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy:staging": "vite build --mode staging && firebase deploy --project staging",
-    "deploy:prod": "vite build --mode production && firebase deploy --project production"
+    "check": "npm run lint && npm run build",
+    "deploy:status": "gh run list --limit 5"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.20",

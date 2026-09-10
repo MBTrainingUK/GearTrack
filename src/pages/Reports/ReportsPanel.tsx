@@ -88,7 +88,7 @@ export default function ReportsPanel() {
   const [valueCurrentlyOut, setValueCurrentlyOut] = useState(0);
   const [avgItemValue, setAvgItemValue] = useState(0);
   const [avgActiveCheckoutValue, setAvgActiveCheckoutValue] = useState(0);
-  const [itemsMissingPriceCount, setItemsMissingPriceCount] = useState(0);
+  const [itemsMissingPrice, setItemsMissingPrice] = useState<Item[]>([]);
   const [valueByCat, setValueByCat] = useState<{ name: string; value: number }[]>([]);
 
   type FinSort = 'name' | 'category' | 'price' | 'age' | 'checkouts' | 'daysOut' | 'costPerCheckout' | 'utilisation';
@@ -223,6 +223,11 @@ export default function ReportsPanel() {
 
       // --- Financial stats ---
       const priced = items.filter((i) => i.purchasePrice != null);
+      // Loose null check on purpose: ItemForm writes an explicit null when the
+      // price field is left blank, while older items have no key at all.
+      const missingPrice = items
+        .filter((i) => i.purchasePrice == null)
+        .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
       const totInvValue = items.reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
       const valOut = items.filter((i) => i.status === 'checked_out').reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
       const avgVal = priced.length > 0 ? priced.reduce((s, i) => s + (i.purchasePrice ?? 0), 0) / priced.length : 0;
@@ -236,7 +241,7 @@ export default function ReportsPanel() {
       setValueCurrentlyOut(valOut);
       setAvgItemValue(avgVal);
       setAvgActiveCheckoutValue(avgActChkVal);
-      setItemsMissingPriceCount(items.length - priced.length);
+      setItemsMissingPrice(missingPrice);
       setValueByCat(Object.entries(catValueMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value));
 
       // --- User stats ---
@@ -886,10 +891,57 @@ export default function ReportsPanel() {
             );
           })()}
 
-          {itemsMissingPriceCount > 0 && (
-            <p className="text-center text-xs text-gray-400">
-              {itemsMissingPriceCount} item{itemsMissingPriceCount !== 1 ? 's' : ''} without a purchase price are excluded from value calculations.
-            </p>
+          {/* Missing purchase price */}
+          {itemsMissingPrice.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-amber-900">
+                    Missing Purchase Price — {itemsMissingPrice.length} item{itemsMissingPrice.length !== 1 ? 's' : ''}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-amber-800">
+                    Excluded from every value figure on this tab. Add a price to bring them into the totals.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => downloadMissingPriceCsv(itemsMissingPrice)}
+                  className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Download CSV
+                </button>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-gray-100 text-xs text-gray-500">
+                      <th className="px-5 py-2 text-left font-medium">Item</th>
+                      <th className="px-5 py-2 text-left font-medium">Category</th>
+                      <th className="px-5 py-2 text-left font-medium">Asset / Serial</th>
+                      <th className="px-5 py-2 text-left font-medium">Status</th>
+                      <th className="px-5 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemsMissingPrice.map((i) => (
+                      <tr key={i.id} className="border-b border-gray-50 last:border-0">
+                        <td className="px-5 py-2.5 font-medium text-gray-900">{i.name}</td>
+                        <td className="px-5 py-2.5 text-gray-600">{i.category}</td>
+                        <td className="px-5 py-2.5 tabular-nums text-gray-500">
+                          {i.assetNumber || i.serialNumber || '—'}
+                        </td>
+                        <td className="px-5 py-2.5"><StatusBadge status={i.status} /></td>
+                        <td className="px-5 py-2.5 text-right">
+                          <Link to={`/items/${i.id}/edit`} className="text-xs font-medium text-blue-600 hover:underline">
+                            Add price →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -957,6 +1009,28 @@ export default function ReportsPanel() {
 
 function fmt(n: number) {
   return '£' + Math.round(n).toLocaleString('en-GB');
+}
+
+// Every field is quoted so commas or quotes in item names can't shift columns.
+function csvRow(cells: string[]) {
+  return cells.map((c) => `"${c.replace(/"/g, '""')}"`).join(',');
+}
+
+function downloadMissingPriceCsv(items: Item[]) {
+  const csv = [
+    csvRow(['Name', 'Category', 'Asset Number', 'Serial Number', 'Status', 'Location']),
+    ...items.map((i) =>
+      csvRow([i.name, i.category, i.assetNumber ?? '', i.serialNumber ?? '', i.status, i.location ?? ''])
+    ),
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `geartrack-missing-price-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function tsDate(ts?: Timestamp) {

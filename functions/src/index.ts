@@ -405,8 +405,8 @@ export const autoCheckoutReservations = onSchedule(
     .where('startDate', '<=', now)
     .get();
 
-  if (snap.empty) return;
-
+  // No early return on an empty result: the auto-decline pass below has to run
+  // whether or not anything is due for checkout, and those are independent.
   await Promise.all(
     snap.docs.map(async (resDoc) => {
       const res = resDoc.data();

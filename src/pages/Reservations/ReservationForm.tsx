@@ -10,14 +10,16 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { AppUser, Checkout, Item, Kit, Reservation } from '../../types';
+import type { AppUser, Checkout, CheckoutType, Item, Kit, Reservation } from '../../types';
 import { useAuth } from '../../context/useAuth';
-import { ArrowLeft, Check, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle, AlertCircle, Briefcase, Home } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { writeAuditLog } from '../../lib/auditLog';
 import { isFlagged, isCategoryExcluded } from '../../lib/items';
+import { PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
+import PersonalDeclarations from '../../components/PersonalDeclarations';
 import { useCategories } from '../../store/categories';
 
 export default function ReservationForm() {
@@ -41,9 +43,20 @@ export default function ReservationForm() {
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [kind, setKind] = useState<CheckoutType>('work');
+  const [personalReason, setPersonalReason] = useState('');
+  const [availabilityChecked, setAvailabilityChecked] = useState(false);
+  const [liabilityAccepted, setLiabilityAccepted] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [kitWarnings, setKitWarnings] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+
+  const isPersonalRequest = kind === 'personal';
+  const declarationsAccepted = availabilityChecked && liabilityAccepted;
+  // A personal booking is a liability acceptance in the requester's own name,
+  // so it is never raised on someone else's behalf.
+  const canAssign =
+    !isPersonalRequest && (appUser?.role === 'admin' || appUser?.role === 'manager');
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -158,9 +171,16 @@ export default function ReservationForm() {
       toast.error('End must be after start');
       return;
     }
+    if (isPersonalRequest && !personalReason.trim()) {
+      toast.error('Add a reason for the personal booking');
+      return;
+    }
+    if (isPersonalRequest && !declarationsAccepted) {
+      toast.error('Accept both declarations before requesting approval');
+      return;
+    }
 
     setSaving(true);
-    const canAssign = appUser.role === 'admin' || appUser.role === 'manager';
     const assignedUser = canAssign && assignedUserId
       ? orgUsers.find((u) => u.uid === assignedUserId)
       : null;
@@ -177,6 +197,11 @@ export default function ReservationForm() {
         return;
       }
 
+      // A personal booking always needs an admin decision. A work booking made
+      // by a plain user does too — managers and admins book straight through.
+      const needsApproval =
+        isPersonalRequest || (appUser.role !== 'admin' && appUser.role !== 'manager');
+
       const resRef = await addDoc(collection(db, 'reservations'), {
         orgId: appUser.orgId,
         userId: reservationUserId,
@@ -186,8 +211,20 @@ export default function ReservationForm() {
         kitId: selectedKitId ?? null,
         startDate: Timestamp.fromDate(start),
         endDate: Timestamp.fromDate(end),
-        status: 'approved',
+        status: needsApproval ? 'pending' : 'approved',
         autoCheckout: true,
+        type: kind,
+        ...(isPersonalRequest
+          ? {
+              personalReason,
+              declarations: {
+                availabilityChecked,
+                liabilityAccepted,
+                version: PERSONAL_DECLARATIONS_VERSION,
+              },
+              declarationsAcceptedAt: serverTimestamp(),
+            }
+          : {}),
         notes,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -199,7 +236,7 @@ export default function ReservationForm() {
           (selectedItems.length > 2 ? ` +${selectedItems.length - 2} more` : '');
       await writeAuditLog({
         orgId: appUser.orgId,
-        action: 'reserve',
+        action: isPersonalRequest ? 'request_personal_reservation' : 'reserve',
         performedBy: currentUser.uid,
         performedByName: appUser.displayName,
         targetType: 'reservation',
@@ -207,7 +244,13 @@ export default function ReservationForm() {
         targetName,
       });
 
-      toast.success('Reservation created');
+      toast.success(
+        isPersonalRequest
+          ? 'Request sent — an admin has been emailed to approve it'
+          : needsApproval
+            ? 'Reservation submitted for approval'
+            : 'Reservation created'
+      );
       navigate('/reservations');
     } catch {
       toast.error('Failed to create reservation');
@@ -242,10 +285,58 @@ export default function ReservationForm() {
         <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">New Reservation</h1>
+        <h1 className="text-xl font-bold text-gray-900">
+          {isPersonalRequest ? 'Personal Booking Request' : 'New Reservation'}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Booking type */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Booking type</label>
+          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setKind('work')}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <Briefcase size={12} />
+              Work
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind('personal')}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            >
+              <Home size={12} />
+              Personal
+            </button>
+          </div>
+          {isPersonalRequest && (
+            <>
+              <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
+                <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600" />
+                <span>
+                  An admin must approve this before the dates are yours. The gear is reserved in
+                  the meantime, and is checked out to you automatically at the start time.
+                </span>
+              </div>
+              <div className="mt-3">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Reason for personal use *
+                </label>
+                <textarea
+                  value={personalReason}
+                  onChange={(e) => setPersonalReason(e.target.value)}
+                  rows={2}
+                  placeholder="Shown to the admin who approves it"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Date range */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-900">Date & Time Range</h2>
@@ -274,8 +365,8 @@ export default function ReservationForm() {
           </div>
         </div>
 
-        {/* Assign to (admin/manager only) */}
-        {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
+        {/* Assign to (admin/manager only, and never for a personal booking) */}
+        {canAssign && (
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">Assign To</h2>
             <select
@@ -396,7 +487,18 @@ export default function ReservationForm() {
           />
         </div>
 
-        {appUser?.role === 'user' && (
+        {isPersonalRequest && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <PersonalDeclarations
+              availabilityChecked={availabilityChecked}
+              liabilityAccepted={liabilityAccepted}
+              onAvailabilityChange={setAvailabilityChecked}
+              onLiabilityChange={setLiabilityAccepted}
+            />
+          </div>
+        )}
+
+        {!isPersonalRequest && appUser?.role === 'user' && (
           <p className="text-xs text-gray-500 text-center">
             Your reservation will be submitted for admin approval.
           </p>
@@ -412,10 +514,13 @@ export default function ReservationForm() {
           </button>
           <button
             type="submit"
-            disabled={saving}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            disabled={saving || (isPersonalRequest && !declarationsAccepted)}
+            title={isPersonalRequest && !declarationsAccepted ? 'Accept both declarations first' : undefined}
+            className={`rounded-lg px-5 py-2 text-sm font-medium text-white disabled:opacity-60 ${isPersonalRequest ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
-            {saving ? 'Checking availability…' : 'Create Reservation'}
+            {saving
+              ? 'Checking availability…'
+              : isPersonalRequest ? 'Request approval' : 'Create Reservation'}
           </button>
         </div>
       </form>

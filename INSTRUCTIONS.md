@@ -55,7 +55,8 @@ The **Kits** screen lists named bundles of related equipment (e.g. "Camera Kit A
 1. Go to **Reservations** and click **New Reservation**.
 2. Select the items or kits you need.
 3. Choose a **start date** and **end date**.
-4. Submit. If you're a **User**, the reservation is created with a **Pending** status and needs a manager's approval. If you're a **Manager** or **Admin**, it's **approved automatically**.
+4. Choose the **Booking type** — **Work** or **Personal** (see *Personal Bookings* below).
+5. Submit. A **Work** booking made by a **User** is created **Pending** and needs a manager's approval; a **Manager** or **Admin** booking one is **approved automatically**. A **Personal** booking is always **Pending** until an admin decides, whoever raised it.
 
 The system will warn you if:
 - Your chosen dates conflict with an existing approved reservation.
@@ -65,15 +66,35 @@ The system will warn you if:
 
 | Status | Meaning |
 |---|---|
-| Pending | Awaiting manager approval (only for reservations made by a User) |
+| Pending | Awaiting approval — a work booking made by a User, or any personal booking |
 | Approved | Approved and ready for checkout |
 | Checked Out | Gear has been taken out against this reservation |
 | Completed | Gear has been returned |
 | Cancelled | Reservation was cancelled by a manager |
+| Declined | A personal booking an admin turned down, or that nobody decided in time |
 
 ### Approving / Cancelling Reservations (Manager+)
 
-Managers see all pending reservations on the **Reservations** screen and can **Approve** or **Cancel** them from there.
+Managers see all pending reservations on the **Reservations** screen and can **Approve** or **Cancel** them from there. Personal bookings are the exception — only an admin can decide those.
+
+### Personal Bookings
+
+Booking gear ahead for your own use works the same way as a personal checkout, but for dates in the future. On the **New Reservation** form, switch the **Booking type** from **Work** to **Personal**.
+
+1. Choose **Personal** and give a short **reason** — this is shown to the admin who decides.
+2. Pick your dates and items as normal.
+3. Accept both **declarations**: that you have checked the gear isn't needed for business use over those dates, and that you accept liability for the £1000 excess. Both are recorded against the booking with the date you accepted them.
+4. Submit. The booking is held as **Pending** and the organisation's admins are emailed.
+
+While a personal booking is awaiting a decision, its items and dates are locked so the admin decides on exactly what you submitted — you can still edit the notes, or cancel the request outright. Nobody else can book those dates in the meantime.
+
+Once approved, the gear is checked out to you automatically at the start time — you don't need to do anything else — and it appears as a personal checkout, due back on your end date.
+
+**If nobody decides**, the booking is **declined automatically 30 minutes before it was due to start**, and you're emailed to say so. This is deliberate: it means you find out before you turn up expecting gear, rather than discovering it silently never happened.
+
+**For admins:** pending personal bookings appear in a banner at the top of the **Reservations** screen and under the **Pending** filter. Only admins can approve or decline them — managers see the request but have no buttons. Approving or declining emails the requester either way, and a booking still undecided a day after it was raised sends admins a reminder. Every decision is recorded, including who made it, and appears in **Reports → Personal**.
+
+A personal booking cannot be raised on someone else's behalf — the declarations are a personal liability acceptance, so the **Assign To** option is hidden for personal bookings.
 
 ---
 
@@ -126,8 +147,10 @@ An item is considered overdue when its checkout due date has passed and it has n
 
 GearTrack sends automatic emails so nothing slips through the cracks:
 
-- **Reservation requested** — admins and managers receive an email when a reservation is waiting for approval.
+- **Reservation requested** — admins and managers receive an email when a reservation is waiting for approval. A **personal** booking goes to admins only, since managers can't authorise one.
 - **Reservation approved** — the requester receives an email when their reservation is approved.
+- **Personal booking declined** — the requester is emailed when an admin declines their booking, with the reason. If it lapsed with no decision, the email says so and the org's admins are copied.
+- **Personal booking still waiting** — admins are reminded about a personal booking still undecided a day after it was raised.
 - **Due tomorrow** — borrowers receive a reminder the day before their gear is due back.
 - **Overdue** — borrowers receive an alert once their gear becomes overdue, with the organisation's admins copied in. The subject line includes the borrower's name (e.g. *"Overdue: Sam Taylor — gear was due back Tue 14 Jul 2026"*), so a shared inbox shows at a glance who needs to return gear.
 
@@ -203,6 +226,7 @@ The **Reports** screen provides analytics across the inventory:
 - Late return rates
 - Items that have never been checked out
 - Reservation approval rates
+- A personal register showing what's out personally now, what's booked ahead but not yet collected, what's awaiting approval, and who authorised each one
 
 ---
 

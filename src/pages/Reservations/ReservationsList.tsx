@@ -11,11 +11,13 @@ import {
   getDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../../lib/firebase';
 import type { AppUser, Checkout, Reservation, Item, Kit } from '../../types';
 import { Link } from 'react-router-dom';
-import { Plus, Calendar, List, X, Pencil, Check, Minus } from 'lucide-react';
+import { Plus, Calendar, List, X, Pencil, Check, Minus, Home } from 'lucide-react';
 import { isFlagged } from '../../lib/items';
+import { isPersonal } from '../../lib/checkout';
 import ConditionBadge from '../../components/ConditionBadge';
 import StatusBadge from '../../components/StatusBadge';
 import { format, subDays } from 'date-fns';
@@ -41,6 +43,8 @@ export default function ReservationsList() {
   const [kits, setKits] = useState<Record<string, Kit>>({});
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [dateRange, setDateRange] = useState<30 | 90>(30);
+  const [declineTarget, setDeclineTarget] = useState<Reservation | null>(null);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
   const [showMonday, setShowMonday] = useState(false);
   const [mondayEvents, setMondayEvents] = useState<MondayFilmingEvent[]>([]);
   const [mondayLoading, setMondayLoading] = useState(false);
@@ -92,6 +96,28 @@ export default function ReservationsList() {
       toast.success('Reservation approved');
     } catch {
       toast.error('Failed to approve');
+    }
+  }
+
+  // A personal booking is never approved by writing the doc — the rules refuse
+  // it, because that write is what would let a borrower authorise their own.
+  // It goes through the admin-only callables instead.
+  async function decidePersonal(r: Reservation, approve: boolean, reason?: string) {
+    setDecidingId(r.id);
+    try {
+      await httpsCallable<{ reservationId: string; reason?: string }, { reservationId: string }>(
+        functions,
+        approve ? 'approveReservation' : 'declineReservation'
+      )({ reservationId: r.id, ...(reason ? { reason } : {}) });
+      toast.success(
+        approve
+          ? `Approved — ${r.userName} has been emailed`
+          : 'Declined — the dates are free again'
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to record that decision');
+    } finally {
+      setDecidingId(null);
     }
   }
 
@@ -269,6 +295,8 @@ export default function ReservationsList() {
   }, [showMonday, orgMondayKey]);
 
   const cutoff = subDays(new Date(), dateRange);
+  const isAdmin = appUser?.role === 'admin';
+  const pendingPersonal = reservations.filter((r) => r.status === 'pending' && isPersonal(r));
   const activeStatuses: Reservation['status'][] = ['pending', 'approved', 'checked_out'];
   const visibleReservations = reservations.filter((r) => {
     if (activeStatuses.includes(r.status)) return true;
@@ -344,6 +372,22 @@ export default function ReservationsList() {
         </div>
       </div>
 
+      {isAdmin && pendingPersonal.length > 0 && (
+        <button
+          onClick={() => { setView('list'); setFilter('pending'); setUserFilter('all'); }}
+          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100"
+        >
+          <Home size={16} className="shrink-0 text-amber-600" />
+          <p className="text-sm text-amber-900">
+            <span className="font-semibold">
+              {pendingPersonal.length} personal booking{pendingPersonal.length > 1 ? 's' : ''}
+            </span>{' '}
+            awaiting your approval — if nobody decides, each is declined automatically 30 minutes
+            before it starts.
+          </p>
+        </button>
+      )}
+
       {view === 'calendar' ? (
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-3">
@@ -396,7 +440,7 @@ export default function ReservationsList() {
               ))}
               <div className="h-4 w-px bg-gray-200" />
               {/* Status filter */}
-              {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled'] as const).map(
+              {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled', 'declined'] as const).map(
                 (s) => (
                   <button
                     key={s}
@@ -454,6 +498,12 @@ export default function ReservationsList() {
                     <tr key={r.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedReservation(r)}>
                       <td className="px-5 py-3">
                         <p className="font-medium text-gray-900">{r.userName}</p>
+                        {isPersonal(r) && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+                            <Home size={10} />
+                            Personal
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-sm text-gray-900">{bookingLabel(r, items, kits)}</p>
@@ -469,7 +519,7 @@ export default function ReservationsList() {
                       {appUser?.role !== 'user' && (
                         <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2">
-                            {r.status === 'pending' && (
+                            {r.status === 'pending' && !isPersonal(r) && (
                               <button
                                 onClick={() => handleApprove(r.id)}
                                 className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
@@ -477,7 +527,28 @@ export default function ReservationsList() {
                                 Approve
                               </button>
                             )}
-                            {['pending', 'approved'].includes(r.status) && (
+                            {/* Personal bookings are admin-only, and decided
+                                server-side — a manager sees the request but no
+                                buttons, because they cannot action it. */}
+                            {r.status === 'pending' && isPersonal(r) && isAdmin && (
+                              <>
+                                <button
+                                  onClick={() => decidePersonal(r, true)}
+                                  disabled={decidingId === r.id}
+                                  className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                >
+                                  {decidingId === r.id ? 'Saving…' : 'Approve'}
+                                </button>
+                                <button
+                                  onClick={() => setDeclineTarget(r)}
+                                  disabled={decidingId === r.id}
+                                  className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                >
+                                  Decline
+                                </button>
+                              </>
+                            )}
+                            {['pending', 'approved'].includes(r.status) && !(r.status === 'pending' && isPersonal(r)) && (
                               <button
                                 onClick={() => handleCancel(r.id)}
                                 className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
@@ -531,6 +602,36 @@ export default function ReservationsList() {
                 </div>
                 <StatusBadge status={selectedReservation.status} type="reservation" />
               </div>
+
+              {isPersonal(selectedReservation) && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm">
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+                    <Home size={12} />
+                    Personal booking
+                  </p>
+                  {selectedReservation.personalReason && (
+                    <p className="text-purple-900">{selectedReservation.personalReason}</p>
+                  )}
+                  {selectedReservation.declarations?.availabilityChecked &&
+                    selectedReservation.declarations?.liabilityAccepted && (
+                    <p className="mt-1.5 text-xs text-purple-700">
+                      Both declarations accepted (v{selectedReservation.declarations.version}) —
+                      availability checked, £1000 excess liability accepted.
+                    </p>
+                  )}
+                  {selectedReservation.approvedByName && (
+                    <p className="mt-1.5 text-xs text-purple-700">
+                      Approved by {selectedReservation.approvedByName}.
+                    </p>
+                  )}
+                  {selectedReservation.declinedByName && (
+                    <p className="mt-1.5 text-xs text-purple-700">
+                      Declined by {selectedReservation.declinedByName}
+                      {selectedReservation.declineReason ? ` — ${selectedReservation.declineReason}` : ''}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Period */}
               <div className="rounded-lg bg-gray-50 px-4 py-3 text-sm">
@@ -664,6 +765,7 @@ export default function ReservationsList() {
             <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
               {/* Edit button — only shown for editable statuses */}
               {!editing && ['pending', 'approved'].includes(selectedReservation.status) &&
+                !(isPersonal(selectedReservation) && selectedReservation.status === 'pending') &&
                 (appUser?.role !== 'user' || selectedReservation.userId === currentUser?.uid) && (
                 <button
                   onClick={() => openEdit(selectedReservation)}
@@ -706,6 +808,18 @@ export default function ReservationsList() {
           </div>
         </div>
       )}
+
+      {declineTarget && (
+        <DeclineReservationModal
+          reservation={declineTarget}
+          onClose={() => setDeclineTarget(null)}
+          onConfirm={(reason) => {
+            const target = declineTarget;
+            setDeclineTarget(null);
+            void decidePersonal(target, false, reason);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -714,6 +828,55 @@ function bookingLabel(r: Reservation, items: Record<string, Item>, kits: Record<
   if (r.kitId && kits[r.kitId]) return kits[r.kitId].name;
   const names = r.itemIds.slice(0, 2).map((id) => items[id]?.name ?? 'Unknown item');
   return names.join(', ') || `${r.itemIds.length} items`;
+}
+
+function DeclineReservationModal({
+  reservation,
+  onClose,
+  onConfirm,
+}: {
+  reservation: Reservation;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="font-semibold text-gray-900">Decline personal booking?</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="space-y-3 px-6 py-4">
+          <p className="text-sm text-gray-700">
+            <strong>{reservation.userName}</strong> will be emailed, and these dates will be free
+            for everyone else to book.
+          </p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Reason (optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              placeholder="Shared with the requester"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(reason.trim())}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function statusColor(s: Reservation['status']) {

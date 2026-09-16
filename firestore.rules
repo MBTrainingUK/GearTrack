@@ -98,18 +98,75 @@ service cloud.firestore {
     }
 
     // ── reservations ──────────────────────────────────────
+    // A personal booking is authorised by an admin via the approveReservation /
+    // declineReservation Cloud Functions, which use the Admin SDK and bypass
+    // these rules. The fields carrying that decision are closed to every client:
+    // update below already lets a manager — and the owner, while pending —
+    // write a reservation, so without this a borrower could flip their own
+    // personal request to approved and self-authorise a £1000-excess loan.
+    //
+    // Every function below reads `type` with a 'work' default: reservations
+    // written before personal bookings existed have no such field, and none of
+    // these constraints should apply to them.
+    function reservationApprovalFieldsUntouched() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['type', 'approvedBy', 'approvedByName', 'approvedAt',
+                 'declinedBy', 'declinedByName', 'declinedAt', 'declineReason',
+                 'declarations', 'declarationsAcceptedAt']);
+    }
+    // Work reservations are still approved in-app by a manager. On a personal
+    // booking a client may only leave the status alone, withdraw the booking,
+    // or close out gear it has already returned — approving and declining are
+    // server-side only.
+    function allowedReservationStatusChange() {
+      return resource.data.get('type', 'work') != 'personal'
+        || request.resource.data.status == resource.data.status
+        || (resource.data.status in ['pending', 'approved']
+            && request.resource.data.status == 'cancelled')
+        || (resource.data.status == 'checked_out'
+            && request.resource.data.status == 'completed');
+    }
+    // While a personal request awaits a decision its gear and dates are frozen,
+    // so an admin always approves exactly what they were shown. Notes stay
+    // editable, and the requester may still withdraw the whole booking.
+    function pendingPersonalReservationFrozen() {
+      return resource.data.get('type', 'work') != 'personal'
+        || resource.data.status != 'pending'
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes', 'updatedAt'])
+        || (request.resource.data.status == 'cancelled'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+    }
+    // The £1000 excess makes a personal booking a liability record, so the two
+    // declarations must be recorded on the document itself — not merely ticked
+    // in a form that a crafted write could skip. It may only be created
+    // awaiting a decision, and only ever in the requester's own name: nobody
+    // can accept that liability on someone else's behalf.
+    function personalReservationValid() {
+      return request.resource.data.get('type', 'work') != 'personal'
+        || (request.resource.data.declarations.availabilityChecked == true
+            && request.resource.data.declarations.liabilityAccepted == true
+            && request.resource.data.status == 'pending'
+            && isOwner(request.resource.data.userId));
+    }
+
     match /reservations/{resId} {
       allow read: if isPlatformAdmin() || sameOrg(resource.data.orgId);
-      allow create: if isPlatformAdmin() || (isSignedIn() && sameOrg(request.resource.data.orgId));
+      allow create: if (isPlatformAdmin()
+          || (isSignedIn() && sameOrg(request.resource.data.orgId)))
+        && personalReservationValid()
+        && !request.resource.data.keys().hasAny(['approvedBy', 'approvedAt', 'declinedBy', 'declinedAt']);
       // Owners may edit while pending, and may close out their own
       // checked-out reservation when returning gear from mobile.
-      allow update: if isPlatformAdmin()
-        || (isManager() && sameOrg(resource.data.orgId))
-        || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId) && resource.data.status == 'pending')
-        || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId)
-            && resource.data.status == 'checked_out'
-            && request.resource.data.status == 'completed'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow update: if (isPlatformAdmin()
+          || (isManager() && sameOrg(resource.data.orgId))
+          || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId) && resource.data.status == 'pending')
+          || (isOwner(resource.data.userId) && sameOrg(resource.data.orgId)
+              && resource.data.status == 'checked_out'
+              && request.resource.data.status == 'completed'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])))
+        && reservationApprovalFieldsUntouched()
+        && allowedReservationStatusChange()
+        && pendingPersonalReservationFrozen();
       allow delete: if isPlatformAdmin() || (isManager() && sameOrg(resource.data.orgId));
     }
 

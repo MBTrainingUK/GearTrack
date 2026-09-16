@@ -211,7 +211,8 @@
   <li>Go to <strong>Reservations</strong> and click <strong>New Reservation</strong>.</li>
   <li>Select the items or kits you need.</li>
   <li>Choose a <strong>start date</strong> and <strong>end date</strong>.</li>
-  <li>Submit. If you're a <strong>User</strong>, the reservation is created with a <strong>Pending</strong> status and needs a manager's approval. If you're a <strong>Manager</strong> or <strong>Admin</strong>, it's <strong>approved automatically</strong>.</li>
+  <li>Choose the <strong>Booking type</strong> — <strong>Work</strong> or <strong>Personal</strong> (see <em>Personal Bookings</em> below).</li>
+  <li>Submit. A <strong>Work</strong> booking made by a <strong>User</strong> is created <strong>Pending</strong> and needs a manager's approval; a <strong>Manager</strong> or <strong>Admin</strong> booking one is <strong>approved automatically</strong>. A <strong>Personal</strong> booking is always <strong>Pending</strong> until an admin decides, whoever raised it.</li>
 </ol>
 <p>The system will warn you if:</p>
 <ul>
@@ -227,10 +228,25 @@
   <tr><td>Checked Out</td><td>Gear has been taken out against this reservation</td></tr>
   <tr><td>Completed</td><td>Gear has been returned</td></tr>
   <tr><td>Cancelled</td><td>Reservation was cancelled by a manager</td></tr>
+  <tr><td>Declined</td><td>A personal booking an admin turned down, or that nobody decided in time</td></tr>
 </table>
 
 <h3>Approving / Cancelling Reservations (Manager+)</h3>
-<p>Managers see all pending reservations on the <strong>Reservations</strong> screen and can <strong>Approve</strong> or <strong>Cancel</strong> them from there.</p>
+<p>Managers see all pending reservations on the <strong>Reservations</strong> screen and can <strong>Approve</strong> or <strong>Cancel</strong> them from there. Personal bookings are the exception — only an admin can decide those.</p>
+
+<h3>Personal Bookings</h3>
+<p>Booking gear ahead for your own use works the same way as a personal checkout, but for dates in the future. On the <strong>New Reservation</strong> form, switch the <strong>Booking type</strong> from <strong>Work</strong> to <strong>Personal</strong>.</p>
+<ol>
+  <li>Choose <strong>Personal</strong> and give a short <strong>reason</strong> — this is shown to the admin who decides.</li>
+  <li>Pick your dates and items as normal.</li>
+  <li>Accept <strong>both declarations</strong> — one confirming you've checked the gear isn't needed for business use over those dates, and one accepting responsibility for safe use and the £1000 excess in the event of loss or damage. Both are recorded against the booking with the date you accepted them, and the request button stays disabled until both are ticked.</li>
+  <li>Submit. The booking is held as <strong>Pending</strong> and the organisation's admins are emailed.</li>
+</ol>
+<p>While a personal booking is awaiting a decision, its items and dates are locked so the admin decides on exactly what you submitted — you can still edit the notes, or cancel the request outright. Nobody else can book those dates in the meantime.</p>
+<p>Once approved, the gear is checked out to you <strong>automatically at the start time</strong> — you don't need to do anything else — and it appears as a personal checkout, due back on your end date.</p>
+<div class="callout">If nobody decides, the booking is <strong>declined automatically 30 minutes before it was due to start</strong>, and you're emailed to say so. This is deliberate: it means you find out before you turn up expecting gear, rather than discovering it silently never happened.</div>
+<p><strong>For admins:</strong> pending personal bookings appear in a banner at the top of the <strong>Reservations</strong> screen and under the <strong>Pending</strong> filter. Only admins can approve or decline them — managers see the request but have no buttons. Approving or declining emails the requester either way, and a booking still undecided a day after it was raised sends admins a reminder. Every decision is recorded, including who made it, and appears in <strong>Reports → Personal</strong>.</p>
+<p>A personal booking cannot be raised on someone else's behalf — the declarations are a personal liability acceptance, so the <strong>Assign To</strong> option is hidden for personal bookings.</p>
 </section>
 
 <section>
@@ -278,8 +294,10 @@
 <h2>Email Notifications</h2>
 <p>GearTrack sends automatic emails so nothing slips through the cracks:</p>
 <ul>
-  <li><strong>Reservation requested</strong> — admins and managers receive an email when a reservation is waiting for approval.</li>
+  <li><strong>Reservation requested</strong> — admins and managers receive an email when a reservation is waiting for approval. A <strong>personal</strong> booking goes to admins only, since managers can't authorise one.</li>
   <li><strong>Reservation approved</strong> — the requester receives an email when their reservation is approved.</li>
+  <li><strong>Personal booking declined</strong> — the requester is emailed when an admin declines their booking, with the reason. If it lapsed with no decision, the email says so and the organisation's admins are copied.</li>
+  <li><strong>Personal booking still waiting</strong> — admins are reminded about a personal booking still undecided a day after it was raised.</li>
   <li><strong>Due tomorrow</strong> — borrowers receive a reminder the day before their gear is due back.</li>
   <li><strong>Overdue</strong> — borrowers receive an alert once their gear becomes overdue, with the organisation's admins copied in. The subject line includes the borrower's name (e.g. <em>"Overdue: Sam Taylor — gear was due back Tue 14 Jul 2026"</em>), so a shared inbox shows at a glance who needs to return gear.</li>
 </ul>
@@ -349,6 +367,7 @@
   <li>Late return rates</li>
   <li>Items that have never been checked out</li>
   <li>Reservation approval rates</li>
+  <li>A personal register showing what's out personally now, what's booked ahead but not yet collected, what's awaiting approval, and who authorised each one</li>
 </ul>
 </section>
 

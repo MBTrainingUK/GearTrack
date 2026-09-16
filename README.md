@@ -11,15 +11,16 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 - **Inventory management** — add items with serial numbers, asset numbers, categories, custom fields, and dropdown filters
 - **Kits** — group items into named kits that can be reserved and checked out together, and edited in place rather than rebuilt
 - **Reservations** — book equipment for a date range, with approval workflow and a calendar view
+- **Personal bookings** — gear booked ahead for personal use is requested rather than taken: the booking is held pending, an admin is emailed to approve or decline, the decision is emailed back, and an undecided booking is declined automatically 30 minutes before it would have started
 - **Checkouts** — sign gear out with a condition report; Quick Grab for instant end-of-day loans
 - **Personal checkouts** — gear taken home for personal use is requested rather than taken: the items are held, an admin is emailed to approve or decline, and the decision is emailed back to the borrower
 - **Check-in** — log return condition; damaged or flagged-for-investigation returns block re-booking until cleared
 - **Mobile PWA** — installable mobile experience (`/m`) for browsing inventory and managing "My Gear" on the go
 - **Dashboard** — live overview of available/checked-out/overdue items, 7-day activity chart, and a calendar of upcoming reservations
-- **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, cost-per-checkout financials, and a personal-checkout register showing which items are out personally, with who, and who authorised them
+- **Reports** — usage analytics per item and per user, checkout duration, late-return rate, unused items, equipment lifespan/inspection tracking, cost-per-checkout financials, and a personal register showing which items are out personally or booked ahead, with who, and who authorised them
 - **Activity log** — full audit trail of who did what, when
 - **Admin panel** — manage user roles, add new teammates, and run data maintenance
-- **Email notifications** — managers are emailed when a reservation needs approval, requesters when it's approved, and borrowers get due-tomorrow reminders and overdue alerts (overdue alerts CC the org's admins); admins are emailed when a personal checkout needs authorising, and the requester is emailed the decision
+- **Email notifications** — managers are emailed when a reservation needs approval, requesters when it's approved, and borrowers get due-tomorrow reminders and overdue alerts (overdue alerts CC the org's admins); admins are emailed when a personal checkout or personal booking needs authorising, and the requester is emailed the decision either way
 - **Backup & restore** — export an organisation's items and kits to a JSON file, and re-import to restore
 - **Date-range filtering & retention** — 30/90-day filters on reservations, checkouts, and history; an admin can purge records older than 180 days from the Admin Panel, with personal checkout records kept for 2 years
 

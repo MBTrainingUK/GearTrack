@@ -903,12 +903,19 @@ export const onReservationCreated = onDocumentCreated(
     const isPersonal = res.type === 'personal';
     // Admins only for a personal booking — managers can't authorise these, so
     // copying them in would invite a decision they have no way to action.
-    const staffEmails = (
-      await getOrgStaffEmails(res.orgId, isPersonal ? ['admin'] : ['admin', 'manager'])
-    ).filter(
-      // Don't notify the requester about their own reservation.
-      (e) => e !== res.userEmail
+    const recipients = await getOrgStaffEmails(
+      res.orgId,
+      isPersonal ? ['admin'] : ['admin', 'manager']
     );
+    // A work reservation doesn't email its own requester — that's just noise to
+    // someone who already knows. A personal booking always does, matching
+    // onCheckoutCreated: self-approval is permitted, so an admin requesting for
+    // themselves still needs the request in front of them, and in an org with a
+    // single admin filtering them out means the request is never announced at
+    // all. That silence is how this was missed until a live test.
+    const staffEmails = isPersonal
+      ? recipients
+      : recipients.filter((e) => e !== res.userEmail);
     if (staffEmails.length === 0) return;
 
     const itemNames = await getItemNames(res.itemIds ?? []);

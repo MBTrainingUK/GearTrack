@@ -279,6 +279,134 @@ export function personalCheckoutDeclinedEmail(input: {
   };
 }
 
+// ── Personal reservation approval ────────────────────────────────────
+// Deliberately worded apart from the personal *checkout* templates above: a
+// booking is a date range decided in advance, not a single due date, and the
+// gear is not held until the start time.
+
+export function personalReservationPendingEmail(input: {
+  userName: string;
+  itemNames: string[];
+  startDate: Date;
+  endDate: Date;
+  reason?: string;
+  declarationsAccepted?: boolean;
+}): Pick<Email, 'subject' | 'html'> {
+  const declarations = input.declarationsAccepted
+    ? `<p style="color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;font-size:13px;">The requester has accepted both declarations: equipment availability checked, and liability for the £1000 excess accepted.</p>`
+    : '';
+  return {
+    subject: `Personal booking needs approval — ${input.userName}`,
+    html: layout(
+      `${escapeHtml(input.userName)} has requested a personal booking`,
+      `<p style="color:#374151;">This gear is being booked to take home for personal use, not for work. Nobody else can book these dates while the request stands, and the gear is checked out automatically at the start time once you approve.</p>${itemList(
+        input.itemNames
+      )}${reasonBlock(input.reason)}<p style="color:#374151;">Booked from <strong>${formatDay(
+        input.startDate
+      )}</strong> to <strong>${formatDay(
+        input.endDate
+      )}</strong>. If nobody decides, the request is declined automatically 30 minutes before it starts.</p>${declarations}`,
+      'Review request',
+      '/reservations'
+    ),
+  };
+}
+
+export function personalReservationApprovedEmail(input: {
+  itemNames: string[];
+  startDate: Date;
+  endDate: Date;
+  approvedByName: string;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: 'Your personal booking has been approved',
+    html: layout(
+      'Your personal booking has been approved',
+      `<p style="color:#374151;">Approved by <strong>${escapeHtml(
+        input.approvedByName
+      )}</strong>. The gear is checked out to you automatically at the start time, and is due back <strong>${formatDay(
+        input.endDate
+      )}</strong>:</p>${itemList(
+        input.itemNames
+      )}<p style="color:#374151;">Booked from <strong>${formatDay(input.startDate)}</strong> to <strong>${formatDay(
+        input.endDate
+      )}</strong>.</p>`,
+      'View reservation',
+      '/reservations'
+    ),
+  };
+}
+
+export function personalReservationDeclinedEmail(input: {
+  itemNames: string[];
+  startDate: Date;
+  declinedByName: string;
+  reason?: string;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: 'Your personal booking was declined',
+    html: layout(
+      'Your personal booking was declined',
+      `<p style="color:#374151;">Declined by <strong>${escapeHtml(
+        input.declinedByName
+      )}</strong>. The dates from <strong>${formatDay(
+        input.startDate
+      )}</strong> are free again and this gear will not be checked out to you:</p>${itemList(
+        input.itemNames
+      )}${reasonBlock(input.reason)}`,
+      'View reservations',
+      '/reservations'
+    ),
+  };
+}
+
+export function personalReservationLapsedEmail(input: {
+  userName: string;
+  itemNames: string[];
+  startDate: Date;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: 'Your personal booking was declined — no decision in time',
+    html: layout(
+      'Your personal booking was not approved in time',
+      `<p style="color:#374151;">Nobody decided on this request before it was due to start at <strong>${formatDay(
+        input.startDate
+      )}</strong>, so it has been declined automatically and the gear will not be checked out to you:</p>${itemList(
+        input.itemNames
+      )}<p style="color:#374151;">Requested by <strong>${escapeHtml(
+        input.userName
+      )}</strong>. If it is still needed, please raise a new booking and chase an admin.</p>`,
+      'View reservations',
+      '/reservations'
+    ),
+  };
+}
+
+export function personalReservationReminderEmail(input: {
+  userName: string;
+  itemNames: string[];
+  requestedAt: Date;
+  startDate: Date;
+}): Pick<Email, 'subject' | 'html'> {
+  return {
+    subject: `Still waiting: personal booking approval — ${input.userName}`,
+    html: layout(
+      'A personal booking is still awaiting approval',
+      `<p style="color:#374151;">Requested by <strong>${escapeHtml(
+        input.userName
+      )}</strong> on <strong>${formatDay(
+        input.requestedAt
+      )}</strong>, to start <strong>${formatDay(
+        input.startDate
+      )}</strong>. Nobody else can book these dates until a decision is made, and the request is declined automatically 30 minutes before it starts.</p>${itemList(
+        input.itemNames
+      )}`,
+      'Review request',
+      '/reservations'
+    ),
+  };
+}
+
 export function personalCheckoutReminderEmail(input: {
   userName: string;
   itemNames: string[];

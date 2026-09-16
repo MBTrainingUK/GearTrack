@@ -11,6 +11,7 @@ const reservationColors: Record<ReservationStatus, string> = {
   checked_out: 'bg-blue-100 text-blue-800',
   completed: 'bg-gray-100 text-gray-700',
   cancelled: 'bg-red-100 text-red-800',
+  declined: 'bg-red-100 text-red-800',
 };
 
 const checkoutColors: Record<CheckoutStatus, string> = {

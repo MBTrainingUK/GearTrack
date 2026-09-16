@@ -64,12 +64,15 @@ export interface Kit {
 }
 
 // ── Reservation ──────────────────────────────────────────────────────
+// 'declined' only ever applies to personal reservations — a work reservation
+// that is turned down is cancelled instead.
 export type ReservationStatus =
   | 'pending'
   | 'approved'
   | 'checked_out'
   | 'completed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'declined';
 
 export interface Reservation {
   id: string;
@@ -82,7 +85,24 @@ export interface Reservation {
   startDate: Timestamp;
   endDate: Timestamp;
   status: ReservationStatus;
+  // Absent on every reservation created before personal bookings existed, so
+  // consumers must read it via isPersonal() rather than comparing directly.
+  type?: CheckoutType;
+  personalReason?: string;
+  declarations?: CheckoutDeclarations;
+  declarationsAcceptedAt?: Timestamp;
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedAt?: Timestamp;
+  declinedBy?: string;
+  declinedByName?: string;
+  declinedAt?: Timestamp;
+  declineReason?: string;
+  // Set by the reservation form; drives the autoCheckoutReservations job.
+  autoCheckout?: boolean;
   notes?: string;
+  // Stamped by sendDueDateEmails so a pending personal booking is chased once.
+  approvalReminderEmailAt?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -159,6 +179,9 @@ export type AuditAction =
   | 'approve_personal_checkout'
   | 'decline_personal_checkout'
   | 'cancel_personal_checkout'
+  | 'request_personal_reservation'
+  | 'approve_personal_reservation'
+  | 'decline_personal_reservation'
   | 'reserve'
   | 'cancel_reservation'
   | 'flag'

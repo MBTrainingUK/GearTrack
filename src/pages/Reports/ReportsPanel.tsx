@@ -39,7 +39,15 @@ interface UserStat {
 
 // One row per item per personal checkout, so "which items are out personally"
 // is answerable directly rather than hidden inside a multi-item checkout.
+//
+// Rows also come from personal *reservations* that haven't been collected yet:
+// a booking made three weeks out is a commitment against that gear, and reading
+// only checkouts would leave it invisible until the morning it went home.
+// 'booked' is the one status with no checkout behind it.
+type PersonalRowStatus = CheckoutStatus | 'booked';
+
 interface PersonalRow {
+  source: 'checkout' | 'reservation';
   key: string;
   itemId: string;
   itemName: string;
@@ -52,7 +60,7 @@ interface PersonalRow {
   approvedByName?: string;
   approvedAt?: Timestamp;
   declinedByName?: string;
-  status: CheckoutStatus;
+  status: PersonalRowStatus;
   selfApproved: boolean;
   declarationsAccepted: boolean;
   declarationsVersion?: string;
@@ -74,7 +82,7 @@ export default function ReportsPanel() {
   const [neverUsed, setNeverUsed] = useState<Item[]>([]);
   const [tab, setTab] = useState<'overview' | 'items' | 'inspections' | 'users' | 'personal' | 'reservations' | 'financials'>('overview');
   const [personalRows, setPersonalRows] = useState<PersonalRow[]>([]);
-  const [personalFilter, setPersonalFilter] = useState<'all' | 'out' | 'pending' | 'returned'>('all');
+  const [personalFilter, setPersonalFilter] = useState<'all' | 'out' | 'booked' | 'pending' | 'returned'>('all');
   const [inspectionRows, setInspectionRows] = useState<{ item: Item; status: LifespanStatus }[]>([]);
   const [totalReservations, setTotalReservations] = useState(0);
   const [reservationsByStatus, setReservationsByStatus] = useState<{ name: string; value: number }[]>([]);
@@ -141,6 +149,7 @@ export default function ReportsPanel() {
           c.itemIds.forEach((itemId) => {
             const item = itemById[itemId];
             pRows.push({
+              source: 'checkout',
               key: `${c.id}-${itemId}`,
               itemId,
               itemName: item?.name ?? 'Deleted item',
@@ -164,6 +173,42 @@ export default function ReportsPanel() {
             });
           });
         });
+      // Personal bookings still ahead of collection. Anything checked_out or
+      // completed already has a checkout row above, and a cancelled or declined
+      // booking never touches the gear, so neither belongs in the register.
+      reservationsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Reservation))
+        .filter((r) => r.type === 'personal' && (r.status === 'pending' || r.status === 'approved'))
+        .forEach((r) => {
+          r.itemIds.forEach((itemId) => {
+            const item = itemById[itemId];
+            pRows.push({
+              source: 'reservation',
+              key: `res-${r.id}-${itemId}`,
+              itemId,
+              itemName: item?.name ?? 'Deleted item',
+              assetLabel: item?.assetNumber ?? item?.serialNumber ?? null,
+              userName: r.userName,
+              userId: r.userId,
+              // The booking's own dates: requested when it was raised, due when
+              // it is meant to come back.
+              checkedOutAt: r.createdAt,
+              dueDate: r.endDate,
+              approvedByName: r.approvedByName,
+              approvedAt: r.approvedAt,
+              declinedByName: r.declinedByName,
+              status: r.status === 'approved' ? 'booked' : 'pending_approval',
+              selfApproved: Boolean(r.approvedBy && r.approvedBy === r.userId),
+              declarationsAccepted: Boolean(
+                r.declarations?.availabilityChecked && r.declarations?.liabilityAccepted
+              ),
+              declarationsVersion: r.declarations?.version,
+              reason: r.personalReason,
+              purchasePrice: item?.purchasePrice,
+            });
+          });
+        });
+
       pRows.sort((a, b) => {
         try { return b.checkedOutAt.toMillis() - a.checkedOutAt.toMillis(); } catch { return 0; }
       });
@@ -627,25 +672,28 @@ export default function ReportsPanel() {
       {tab === 'personal' && (() => {
         const outNow = personalRows.filter((r) => r.status === 'active');
         const pendingRows = personalRows.filter((r) => r.status === 'pending_approval');
+        const bookedRows = personalRows.filter((r) => r.status === 'booked');
         const valueOut = outNow.reduce((s, r) => s + (r.purchasePrice ?? 0), 0);
         const today = startOfDay(new Date());
         const rows = personalRows.filter((r) => {
           if (personalFilter === 'out') return r.status === 'active';
+          if (personalFilter === 'booked') return r.status === 'booked';
           if (personalFilter === 'pending') return r.status === 'pending_approval';
           if (personalFilter === 'returned') return r.status === 'returned';
           return true;
         });
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               <StatCard label="Out personally now" value={outNow.length} color="text-purple-700" />
+              <StatCard label="Booked, not yet out" value={bookedRows.length} color="text-blue-600" />
               <StatCard label="Awaiting approval" value={pendingRows.length} color="text-amber-600" />
               <StatCard label="Personal loans (all time)" value={personalRows.length} />
               <StatCard label="Value out personally" value={fmt(valueOut)} />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {(['all', 'out', 'pending', 'returned'] as const).map((f) => (
+              {(['all', 'out', 'booked', 'pending', 'returned'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setPersonalFilter(f)}
@@ -655,7 +703,13 @@ export default function ReportsPanel() {
                       : 'border-gray-200 text-gray-600 hover:border-blue-300'
                   }`}
                 >
-                  {f === 'out' ? 'Currently out' : f === 'pending' ? 'Awaiting approval' : f}
+                  {f === 'out'
+                    ? 'Currently out'
+                    : f === 'booked'
+                      ? 'Booked ahead'
+                      : f === 'pending'
+                        ? 'Awaiting approval'
+                        : f}
                 </button>
               ))}
             </div>
@@ -664,7 +718,7 @@ export default function ReportsPanel() {
               {rows.length === 0 ? (
                 <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
                   <Home size={28} className="text-gray-200" />
-                  <p className="text-sm text-gray-400">No personal checkouts to show</p>
+                  <p className="text-sm text-gray-400">No personal bookings or checkouts to show</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -731,7 +785,15 @@ export default function ReportsPanel() {
                             </td>
                             <td className="px-5 py-3 text-gray-600">{r.returnedAt ? tsDate(r.returnedAt) : '—'}</td>
                             <td className="px-5 py-3">
-                              <StatusBadge status={overdueRow ? 'overdue' : r.status} type="checkout" />
+                              {/* 'booked' has no checkout behind it yet, so it
+                                  has no CheckoutStatus badge to borrow. */}
+                              {r.status === 'booked' ? (
+                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                  Booked
+                                </span>
+                              ) : (
+                                <StatusBadge status={overdueRow ? 'overdue' : r.status} type="checkout" />
+                              )}
                             </td>
                           </tr>
                         );

@@ -18,6 +18,11 @@ import {
   personalCheckoutApprovedEmail,
   personalCheckoutDeclinedEmail,
   personalCheckoutReminderEmail,
+  personalReservationPendingEmail,
+  personalReservationApprovedEmail,
+  personalReservationDeclinedEmail,
+  personalReservationLapsedEmail,
+  personalReservationReminderEmail,
 } from './email';
 
 initializeApp();
@@ -371,11 +376,25 @@ export const backfillDefaultOrg = onCall(async (request) => {
 });
 
 /**
- * Runs every 5 minutes. Finds approved reservations with autoCheckout=true
- * whose startDate has passed, then creates a checkout and flips item statuses
- * in a single transaction — matching the atomicity guarantee of createCheckout.
+ * Runs every 5 minutes, doing two things.
+ *
+ * First: approved reservations with autoCheckout=true whose startDate has
+ * passed become checkouts, created with their item statuses flipped in a single
+ * transaction — matching the atomicity guarantee of createCheckout. A personal
+ * booking carries its type, reason and declarations onto the checkout it
+ * becomes, so the personal register keeps seeing it; it goes straight to
+ * 'active' because an admin already approved it at booking time.
+ *
+ * Second: personal bookings still undecided 30 minutes before they start are
+ * declined automatically. Without this they would simply never check out — the
+ * pass above only looks at 'approved' — and the borrower would turn up to no
+ * gear and no explanation.
  */
-export const autoCheckoutReservations = onSchedule('every 5 minutes', async () => {
+const AUTO_DECLINE_LEAD_MS = 30 * 60 * 1000;
+
+export const autoCheckoutReservations = onSchedule(
+  { schedule: 'every 5 minutes', secrets: [RESEND_API_KEY] },
+  async () => {
   const db = getFirestore();
   const now = new Date();
 
@@ -416,6 +435,21 @@ export const autoCheckoutReservations = onSchedule('every 5 minutes', async () =
             status: 'active',
             notes: res.notes ?? '',
             autoCheckedOut: true,
+            // The approval that authorised this happened on the reservation, so
+            // the whole liability record travels with it rather than being
+            // re-gathered. Without this a personal booking would become an
+            // ordinary work checkout and drop out of the personal register.
+            type: res.type === 'personal' ? 'personal' : 'work',
+            ...(res.type === 'personal'
+              ? {
+                  personalReason: res.personalReason ?? '',
+                  declarations: res.declarations,
+                  declarationsAcceptedAt: res.declarationsAcceptedAt ?? null,
+                  approvedBy: res.approvedBy ?? null,
+                  approvedByName: res.approvedByName ?? null,
+                  approvedAt: res.approvedAt ?? null,
+                }
+              : {}),
           });
           for (const itemId of itemIds) {
             tx.update(db.collection('items').doc(itemId), {
@@ -433,7 +467,7 @@ export const autoCheckoutReservations = onSchedule('every 5 minutes', async () =
           orgId: res.orgId,
           action: 'checkout',
           performedBy: 'system',
-          performedByName: 'Auto-checkout',
+          performedByName: res.type === 'personal' ? 'Auto-checkout (personal)' : 'Auto-checkout',
           targetType: 'checkout',
           targetId: checkoutRef.id,
           targetName: res.userName,
@@ -445,7 +479,86 @@ export const autoCheckoutReservations = onSchedule('every 5 minutes', async () =
       }
     })
   );
+
+  await autoDeclineLapsedPersonalBookings(now);
 });
+
+/**
+ * Declines personal bookings nobody decided on, 30 minutes before they were due
+ * to start. Runs on the back of the 5-minute auto-checkout sweep, so a booking
+ * is caught within 5 minutes of that mark.
+ *
+ * The decision is written as a normal decline — same status, same stamps — so
+ * the reservations list, the audit log and onReservationUpdated all treat it
+ * like any other, with 'system' as the decider. The requester is emailed and
+ * the org's admins are copied, because a lapse is usually a sign nobody was
+ * watching the queue.
+ */
+async function autoDeclineLapsedPersonalBookings(now: Date) {
+  const db = getFirestore();
+  const cutoff = new Date(now.getTime() + AUTO_DECLINE_LEAD_MS);
+
+  const snap = await db
+    .collection('reservations')
+    .where('status', '==', 'pending')
+    .where('type', '==', 'personal')
+    .where('startDate', '<=', cutoff)
+    .get();
+
+  if (snap.empty) return;
+
+  for (const resDoc of snap.docs) {
+    const res = resDoc.data();
+    try {
+      // Guarded rather than assumed: another admin may have decided between the
+      // query and this write, and their decision must win over the sweep's.
+      const decided = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(resDoc.ref);
+        if (fresh.data()?.status !== 'pending') return false;
+        tx.update(resDoc.ref, {
+          status: 'declined',
+          declinedBy: 'system',
+          declinedByName: 'Auto-declined',
+          declinedAt: FieldValue.serverTimestamp(),
+          declineReason: 'No decision was made before the booking was due to start.',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return true;
+      });
+      if (!decided) continue;
+
+      await db.collection('auditLog').add({
+        orgId: res.orgId,
+        action: 'decline_personal_reservation',
+        performedBy: 'system',
+        performedByName: 'Auto-declined',
+        targetType: 'reservation',
+        targetId: resDoc.id,
+        targetName: res.userName ?? '',
+        timestamp: FieldValue.serverTimestamp(),
+        details: { reason: 'No decision before start time' },
+      });
+
+      if (res.userEmail) {
+        const itemNames = await getItemNames((res.itemIds as string[]) ?? []);
+        const admins = (await getOrgStaffEmails(res.orgId, ['admin'])).filter(
+          (e) => e !== res.userEmail
+        );
+        await sendEmail({
+          to: [res.userEmail],
+          cc: admins,
+          ...personalReservationLapsedEmail({
+            userName: res.userName ?? 'A colleague',
+            itemNames,
+            startDate: (res.startDate as Timestamp).toDate(),
+          }),
+        });
+      }
+    } catch (err) {
+      console.error(`Auto-decline failed for reservation ${resDoc.id}:`, err);
+    }
+  }
+}
 
 // ── Personal checkout approval ───────────────────────────────────────
 
@@ -588,6 +701,132 @@ export const declineCheckout = onCall(async (request) => {
   return { checkoutId: ref.id };
 });
 
+// ── Personal reservation approval ────────────────────────────────────
+
+/**
+ * Shared authorisation and load for the personal-reservation decision
+ * callables. Admin-only on the same reasoning as loadPendingPersonalCheckout:
+ * managers approve ordinary work reservations, but gear going home for personal
+ * use is a different risk, and a personal booking approved here is checked out
+ * automatically at its start time without anyone looking at it again.
+ *
+ * The role comes from the token rather than the Firestore doc so a demoted
+ * admin cannot linger with rights — setOrgUserRole revokes refresh tokens.
+ */
+async function loadPendingPersonalReservation(
+  request: { auth?: { uid?: string; token?: Record<string, unknown> } },
+  reservationId: string | undefined,
+  verb: string
+) {
+  const callerUid = request.auth?.uid;
+  const callerIsPlatformAdmin = request.auth?.token?.platformAdmin === true;
+  const callerRole = request.auth?.token?.role as Role | undefined;
+  const callerOrgId = request.auth?.token?.orgId as string | undefined;
+
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+  if (!callerIsPlatformAdmin && callerRole !== 'admin') {
+    throw new HttpsError('permission-denied', `Only an admin can ${verb} a personal booking.`);
+  }
+  if (!reservationId?.trim()) {
+    throw new HttpsError('invalid-argument', 'reservationId is required.');
+  }
+
+  const ref = getFirestore().collection('reservations').doc(reservationId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'No such reservation.');
+  }
+  const data = snap.data()!;
+
+  if (!callerIsPlatformAdmin && data.orgId !== callerOrgId) {
+    throw new HttpsError('permission-denied', "That reservation isn't in your organisation.");
+  }
+  if (data.type !== 'personal') {
+    throw new HttpsError('failed-precondition', 'Only personal bookings need this approval.');
+  }
+  if (data.status !== 'pending') {
+    throw new HttpsError('failed-precondition', 'That request has already been decided.');
+  }
+
+  return { ref, data, callerUid };
+}
+
+/**
+ * Admin approves a pending personal booking. No items change hands here —
+ * a reservation holds nothing until autoCheckoutReservations runs at the start
+ * time, which is what turns this into a personal checkout.
+ */
+export const approveReservation = onCall(async (request) => {
+  const { reservationId } = (request.data ?? {}) as { reservationId?: string };
+  const { ref, data, callerUid } = await loadPendingPersonalReservation(
+    request,
+    reservationId,
+    'approve'
+  );
+  const approvedByName = await displayNameOf(callerUid, 'An admin');
+
+  await ref.update({
+    status: 'approved',
+    approvedBy: callerUid,
+    approvedByName,
+    approvedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await getFirestore().collection('auditLog').add({
+    orgId: data.orgId,
+    action: 'approve_personal_reservation',
+    performedBy: callerUid,
+    performedByName: approvedByName,
+    targetType: 'reservation',
+    targetId: ref.id,
+    targetName: data.userName ?? '',
+    timestamp: FieldValue.serverTimestamp(),
+    details: { selfApproved: String(callerUid === data.userId) },
+  });
+
+  return { reservationId: ref.id };
+});
+
+/** Admin declines a pending personal booking, freeing the dates for everyone else. */
+export const declineReservation = onCall(async (request) => {
+  const { reservationId, reason } = (request.data ?? {}) as {
+    reservationId?: string;
+    reason?: string;
+  };
+  const { ref, data, callerUid } = await loadPendingPersonalReservation(
+    request,
+    reservationId,
+    'decline'
+  );
+  const declinedByName = await displayNameOf(callerUid, 'An admin');
+
+  await ref.update({
+    status: 'declined',
+    declinedBy: callerUid,
+    declinedByName,
+    declinedAt: FieldValue.serverTimestamp(),
+    declineReason: reason?.trim() ?? '',
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await getFirestore().collection('auditLog').add({
+    orgId: data.orgId,
+    action: 'decline_personal_reservation',
+    performedBy: callerUid,
+    performedByName: declinedByName,
+    targetType: 'reservation',
+    targetId: ref.id,
+    targetName: data.userName ?? '',
+    timestamp: FieldValue.serverTimestamp(),
+    ...(reason?.trim() ? { details: { reason: reason.trim() } } : {}),
+  });
+
+  return { reservationId: ref.id };
+});
+
 /**
  * Withdraws a pending request and frees the gear. Available to the requester as
  * well as admins: without it, a mistaken request would hold an item hostage
@@ -661,44 +900,86 @@ export const onReservationCreated = onDocumentCreated(
     const res = event.data?.data();
     if (!res || res.status !== 'pending') return;
 
-    const staffEmails = (await getOrgStaffEmails(res.orgId, ['admin', 'manager'])).filter(
+    const isPersonal = res.type === 'personal';
+    // Admins only for a personal booking — managers can't authorise these, so
+    // copying them in would invite a decision they have no way to action.
+    const staffEmails = (
+      await getOrgStaffEmails(res.orgId, isPersonal ? ['admin'] : ['admin', 'manager'])
+    ).filter(
       // Don't notify the requester about their own reservation.
       (e) => e !== res.userEmail
     );
     if (staffEmails.length === 0) return;
 
     const itemNames = await getItemNames(res.itemIds ?? []);
+    const startDate = (res.startDate as Timestamp).toDate();
+    const endDate = (res.endDate as Timestamp).toDate();
+
     await sendEmail({
       to: staffEmails,
-      ...reservationPendingEmail({
-        userName: res.userName,
-        itemNames,
-        startDate: (res.startDate as Timestamp).toDate(),
-        endDate: (res.endDate as Timestamp).toDate(),
-      }),
+      ...(isPersonal
+        ? personalReservationPendingEmail({
+            userName: res.userName,
+            itemNames,
+            startDate,
+            endDate,
+            reason: res.personalReason,
+            declarationsAccepted:
+              res.declarations?.availabilityChecked === true &&
+              res.declarations?.liabilityAccepted === true,
+          })
+        : reservationPendingEmail({
+            userName: res.userName,
+            itemNames,
+            startDate,
+            endDate,
+          })),
     });
   }
 );
 
-/** Reservation approved (pending → approved) → notify the requester. */
+/** Reservation decided (pending → approved/declined) → notify the requester. */
 export const onReservationUpdated = onDocumentUpdated(
   { document: 'reservations/{reservationId}', secrets: [RESEND_API_KEY] },
   async (event) => {
     const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!before || !after) return;
-    if (before.status !== 'pending' || after.status !== 'approved') return;
+    if (before.status !== 'pending') return;
     if (!after.userEmail) return;
+    // A lapse is emailed by autoDeclineLapsedPersonalBookings, which explains
+    // why it was declined. Sending the ordinary decline notice too would tell
+    // the same person the same thing twice, in vaguer words.
+    if (after.declinedBy === 'system') return;
 
+    const isPersonal = after.type === 'personal';
     const itemNames = await getItemNames(after.itemIds ?? []);
-    await sendEmail({
-      to: [after.userEmail],
-      ...reservationApprovedEmail({
-        itemNames,
-        startDate: (after.startDate as Timestamp).toDate(),
-        endDate: (after.endDate as Timestamp).toDate(),
-      }),
-    });
+    const startDate = (after.startDate as Timestamp).toDate();
+    const endDate = (after.endDate as Timestamp).toDate();
+
+    if (after.status === 'approved') {
+      await sendEmail({
+        to: [after.userEmail],
+        ...(isPersonal
+          ? personalReservationApprovedEmail({
+              itemNames,
+              startDate,
+              endDate,
+              approvedByName: after.approvedByName ?? 'An admin',
+            })
+          : reservationApprovedEmail({ itemNames, startDate, endDate })),
+      });
+    } else if (after.status === 'declined') {
+      await sendEmail({
+        to: [after.userEmail],
+        ...personalReservationDeclinedEmail({
+          itemNames,
+          startDate,
+          declinedByName: after.declinedByName ?? 'An admin',
+          reason: after.declineReason,
+        }),
+      });
+    }
   }
 );
 
@@ -852,6 +1133,41 @@ export const sendDueDateEmails = onSchedule(
         await doc.ref.update({ approvalReminderEmailAt: FieldValue.serverTimestamp() });
       } catch (err) {
         console.error(`Pending-approval reminder failed for checkout ${doc.id}:`, err);
+      }
+    }
+
+    // Third pass: personal bookings still undecided a day after being raised.
+    // These block their dates for everyone else, and if they are still pending
+    // 30 minutes before they start the auto-decline throws them out — so a
+    // nudge now is the last useful chance to get a real decision.
+    const pendingBookings = await db
+      .collection('reservations')
+      .where('status', '==', 'pending')
+      .where('type', '==', 'personal')
+      .get();
+
+    for (const doc of pendingBookings.docs) {
+      const r = doc.data();
+      if (r.approvalReminderEmailAt || !r.createdAt) continue;
+      const requestedAt = (r.createdAt as Timestamp).toDate();
+      if (requestedAt.getTime() > dayAgoMs) continue;
+
+      try {
+        const admins = await orgAdmins(r.orgId);
+        if (admins.length === 0) continue;
+        const itemNames = await getItemNames((r.itemIds as string[]) ?? []);
+        await sendEmail({
+          to: admins,
+          ...personalReservationReminderEmail({
+            userName: r.userName,
+            itemNames,
+            requestedAt,
+            startDate: (r.startDate as Timestamp).toDate(),
+          }),
+        });
+        await doc.ref.update({ approvalReminderEmailAt: FieldValue.serverTimestamp() });
+      } catch (err) {
+        console.error(`Pending-approval reminder failed for reservation ${doc.id}:`, err);
       }
     }
   }

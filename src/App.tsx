@@ -16,6 +16,8 @@ import ReservationsList from './pages/Reservations/ReservationsList';
 import ReservationForm from './pages/Reservations/ReservationForm';
 import CheckoutsList from './pages/Checkouts/CheckoutsList';
 import UserHistory from './pages/History/UserHistory';
+import MyGearPage from './pages/MyGear/MyGearPage';
+import ApprovalsQueue from './pages/Approvals/ApprovalsQueue';
 import AdminPanel from './pages/Admin/AdminPanel';
 import OrganizationsConsole from './pages/Organizations/OrganizationsConsole';
 import ReportsPanel from './pages/Reports/ReportsPanel';
@@ -72,6 +74,8 @@ export default function App() {
                     <Route path="/reservations" element={<ReservationsList />} />
                     <Route path="/reservations/new" element={<ReservationForm />} />
                     <Route path="/checkouts" element={<CheckoutsList />} />
+                    <Route path="/my-gear" element={<MyGearPage />} />
+                    <Route path="/approvals" element={<ApprovalsQueue />} />
                     <Route path="/history" element={<UserHistory />} />
                     <Route path="/reports" element={<ReportsPanel />} />
                     <Route path="/activity" element={<ActivityLog />} />

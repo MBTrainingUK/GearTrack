@@ -3,10 +3,10 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  // Uncomment alongside the two nav entries below to restore Reservations and
-  // Checkouts to the sidebar.
-  // CalendarRange,
-  // ArrowLeftRight,
+  CalendarRange,
+  ArrowLeftRight,
+  PackageCheck,
+  CheckCircle2,
   History,
   LogOut,
   Menu,
@@ -22,19 +22,23 @@ import type { AppUser } from '../types';
 import AppLogo from './AppLogo';
 import BasketDrawer from './BasketDrawer';
 import { useBasket } from '../store/basket';
+import { usePendingApprovals } from '../store/approvals';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, minRole: 'user' },
   { to: '/items', label: 'Items', icon: Package, minRole: 'user' },
   { to: '/kits', label: 'Kits', icon: Layers, minRole: 'user' },
-  // TEMPORARY (trial, 20 Sep 2026): Reservations and Checkouts pulled out of the
-  // sidebar to see whether the basket has made them redundant as entry points.
-  // The routes still exist and both screens are still reachable — from the
-  // Dashboard, from My History, and from the basket's two hand-off buttons.
-  // Note they are also the only place to return gear, action pending approvals
-  // and cancel a booking, so restore these two lines if that proves awkward.
-  // { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'user' },
-  // { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'user' },
+  // My Gear is the counterpart to the basket: the basket is gear going out,
+  // My Gear is gear you already have. It carries the two actions that used to
+  // live only on the Checkouts and Reservations screens — returning kit and
+  // calling off your own booking.
+  { to: '/my-gear', label: 'My Gear', icon: PackageCheck, minRole: 'user' },
+  { to: '/approvals', label: 'Approvals', icon: CheckCircle2, minRole: 'manager', badge: 'approvals' as const },
+  // Reservations and Checkouts are now manager-and-above. Everything an
+  // ordinary user needs from them is on My Gear; what remains is the full
+  // org-wide list, the calendar, and chasing other people's overdue gear.
+  { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'manager' },
+  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'manager' },
   { to: '/history', label: 'My History', icon: History, minRole: 'user' },
   { to: '/activity', label: 'Activity', icon: Activity, minRole: 'manager' },
   { to: '/reports', label: 'Reports', icon: BarChart2, minRole: 'admin' },
@@ -48,6 +52,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [basketOpen, setBasketOpen] = useState(false);
   const { count: basketCount } = useBasket();
+  const { count: approvalsCount } = usePendingApprovals();
 
   async function handleLogout() {
     await logout();
@@ -61,6 +66,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <SidebarContent
           appUser={appUser}
           basketCount={basketCount}
+          approvalsCount={approvalsCount}
           onOpenBasket={() => setBasketOpen(true)}
           onNavigate={() => setMobileOpen(false)}
           onLogout={handleLogout}
@@ -78,6 +84,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <SidebarContent
               appUser={appUser}
               basketCount={basketCount}
+              approvalsCount={approvalsCount}
               onOpenBasket={() => { setBasketOpen(true); setMobileOpen(false); }}
               onNavigate={() => setMobileOpen(false)}
               onLogout={handleLogout}
@@ -124,12 +131,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 function SidebarContent({
   appUser,
   basketCount,
+  approvalsCount,
   onOpenBasket,
   onNavigate,
   onLogout,
 }: {
   appUser: AppUser | null;
   basketCount: number;
+  approvalsCount: number;
   onOpenBasket: () => void;
   onNavigate: () => void;
   onLogout: () => void;
@@ -150,7 +159,7 @@ function SidebarContent({
             if (minRole === 'admin') return appUser?.role === 'admin';
             if (minRole === 'manager') return appUser?.role === 'admin' || appUser?.role === 'manager';
             return true;
-          }).map(({ to, label, icon: Icon, exact }) => (
+          }).map(({ to, label, icon: Icon, exact, badge }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -166,6 +175,11 @@ function SidebarContent({
               >
                 <Icon size={17} />
                 {label}
+                {badge === 'approvals' && approvalsCount > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-semibold text-white">
+                    {approvalsCount}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}

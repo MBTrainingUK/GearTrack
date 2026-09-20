@@ -176,7 +176,7 @@ export default function ItemsList() {
                           }`}
                         >
                           {inBasket ? <Check size={11} /> : <Plus size={11} />}
-                          {inBasket ? 'In basket' : 'Add'}
+                          {inBasket ? 'In basket' : 'Add to basket'}
                         </button>
                       )}
                     </div>

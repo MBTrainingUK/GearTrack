@@ -22,7 +22,7 @@ import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { isOverdue, createCheckout, isPersonal, PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
 import PersonalDeclarations from '../../components/PersonalDeclarations';
-import { isFlagged, isCategoryExcluded } from '../../lib/items';
+import { isFlagged, isCategoryExcluded, categoryOptions } from '../../lib/items';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
 
@@ -479,6 +479,7 @@ function NewCheckoutModal({
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
   const [checkoutTab, setCheckoutTab] = useState<'items' | 'kit'>('items');
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
   const [kitWarnings, setKitWarnings] = useState<string[]>([]);
@@ -594,7 +595,7 @@ function NewCheckoutModal({
     await create(selectedItems, Timestamp.fromDate(new Date(dueDate)), notes, true);
   }
 
-  const available = items.filter(
+  const selectable = items.filter(
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
       !isFlagged(i) &&
@@ -602,6 +603,16 @@ function NewCheckoutModal({
       (i.name.toLowerCase().includes(search.toLowerCase()) ||
         (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (i.serialNumber ?? '').toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Options come from what is genuinely on offer here — already past the
+  // availability, condition and non-bookable filters above.
+  const catOptions = categoryOptions(selectable, category);
+
+  // A selected item stays on screen even when the category filter would hide
+  // it — otherwise "n selected" counts rows the user can no longer see.
+  const available = selectable.filter(
+    (i) => category === 'All' || i.category === category || selectedItems.includes(i.id)
   );
 
   return (
@@ -695,12 +706,24 @@ function NewCheckoutModal({
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Items ({selectedItems.length} selected) *
                 </label>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, asset no, serial no…"
-                  className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by name, asset no, serial no…"
+                    className="min-w-[160px] flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="All">All Categories</option>
+                    {catOptions.map((c) => (
+                      <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
                   {available.map((item) => {
                     const isSel = selectedItems.includes(item.id);

@@ -17,7 +17,7 @@ import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
 import { writeAuditLog } from '../../lib/auditLog';
-import { isFlagged, isCategoryExcluded } from '../../lib/items';
+import { isFlagged, isCategoryExcluded, categoryOptions } from '../../lib/items';
 import { PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
 import PersonalDeclarations from '../../components/PersonalDeclarations';
 import { useCategories } from '../../store/categories';
@@ -50,6 +50,7 @@ export default function ReservationForm() {
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [kitWarnings, setKitWarnings] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
 
   const isPersonalRequest = kind === 'personal';
   const declarationsAccepted = availabilityChecked && liabilityAccepted;
@@ -269,15 +270,25 @@ export default function ReservationForm() {
     );
   }
 
-  const filteredItems = items.filter((i) => {
+  const searchMatches = items.filter((i) => {
     const q = search.toLowerCase();
     return (
       i.name.toLowerCase().includes(q) ||
-      i.category.toLowerCase().includes(q) ||
+      (i.category ?? '').toLowerCase().includes(q) ||
       (i.assetNumber ?? '').toLowerCase().includes(q) ||
       (i.serialNumber ?? '').toLowerCase().includes(q)
     );
   });
+
+  // Counts come from what the search left behind, so the number beside a
+  // category is what picking it actually yields.
+  const catOptions = categoryOptions(searchMatches, category);
+
+  // A selected item stays on screen even when the category filter would hide
+  // it — otherwise "n selected" counts rows the user can no longer see.
+  const filteredItems = searchMatches.filter(
+    (i) => category === 'All' || i.category === category || selectedItems.includes(i.id)
+  );
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -428,12 +439,24 @@ export default function ReservationForm() {
           <h2 className="mb-3 text-sm font-semibold text-gray-900">
             Select Items ({selectedItems.length} selected)
           </h2>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search items…"
-            className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+          <div className="mb-3 flex flex-wrap gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search items…"
+              className="min-w-[180px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="All">All Categories</option>
+              {catOptions.map((c) => (
+                <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+              ))}
+            </select>
+          </div>
           <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);

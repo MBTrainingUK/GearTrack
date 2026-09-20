@@ -5,6 +5,29 @@ export function isCategoryExcluded(item: Item, excludedCategories: string[]): bo
   return excludedCategories.includes(item.category);
 }
 
+export interface CategoryOption {
+  name: string;
+  count: number;
+}
+
+// Category options for an item picker, built from the items actually on offer
+// rather than from the org's full category list — so choosing a category can
+// never leave the picker empty. `keep` is the caller's current selection,
+// retained at a count of zero so the dropdown never discards its own value
+// while the user is typing in the search box alongside it.
+export function categoryOptions(items: Item[], keep?: string): CategoryOption[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const name = item.category?.trim();
+    if (!name) continue;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  if (keep && keep !== 'All' && !counts.has(keep)) counts.set(keep, 0);
+  return [...counts]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Items needing inspection or repair are blocked from booking and checkout
 // everywhere — desktop and mobile. 'attention_needed' (minor damage, still
 // usable) is informational only and does not block.

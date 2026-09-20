@@ -23,6 +23,7 @@ import { writeAuditLog } from '../../lib/auditLog';
 import { isOverdue, createCheckout, isPersonal, PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
 import PersonalDeclarations from '../../components/PersonalDeclarations';
 import { isFlagged, isCategoryExcluded, categoryOptions } from '../../lib/items';
+import { removeManyFromBasket } from '../../store/basket';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
 
@@ -31,6 +32,8 @@ export default function CheckoutsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const reservationId = searchParams.get('reservationId');
   const returnId = searchParams.get('returnId');
+  // Set when the basket hands its contents over for an immediate checkout.
+  const preselectedItemIds = searchParams.get('itemIds')?.split(',').filter(Boolean) ?? [];
 
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { items: itemsList, byId: items } = useItems();
@@ -47,7 +50,7 @@ export default function CheckoutsList() {
     mode: 'checkout' | 'return';
     reservationId?: string;
   } | null>(null);
-  const [showNewModal, setShowNewModal] = useState(Boolean(reservationId));
+  const [showNewModal, setShowNewModal] = useState(Boolean(reservationId) || preselectedItemIds.length > 0);
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -146,6 +149,22 @@ export default function CheckoutsList() {
       toast.error(err instanceof Error ? err.message : 'Failed to withdraw the request');
     } finally {
       setDecidingId(null);
+    }
+  }
+
+  // ?itemIds= is a one-shot hand-off from the basket: strip it on close so
+  // reopening the modal doesn't silently re-fill it with the old selection.
+  function closeNewModal() {
+    setShowNewModal(false);
+    if (searchParams.has('itemIds')) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('itemIds');
+          return next;
+        },
+        { replace: true }
+      );
     }
   }
 
@@ -383,9 +402,10 @@ export default function CheckoutsList() {
           items={itemsList}
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
-          onClose={() => setShowNewModal(false)}
+          initialItemIds={preselectedItemIds}
+          onClose={closeNewModal}
           onCreated={(wasPersonal) => {
-            setShowNewModal(false);
+            closeNewModal();
             toast.success(
               wasPersonal
                 ? 'Request sent — an admin has been emailed to approve it'
@@ -463,18 +483,20 @@ function NewCheckoutModal({
   items,
   kits,
   reservationId,
+  initialItemIds,
   onClose,
   onCreated,
 }: {
   items: Item[];
   kits: Kit[];
   reservationId?: string;
+  initialItemIds?: string[];
   onClose: () => void;
   onCreated: (wasPersonal: boolean) => void;
 }) {
   const { currentUser, appUser } = useAuth();
   const { excludedCategories } = useCategories();
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>(initialItemIds ?? []);
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -564,6 +586,8 @@ function NewCheckoutModal({
         targetId: id,
         targetName: name,
       });
+      // Booked gear has no business still sitting in the basket.
+      removeManyFromBasket(itemIds);
       onCreated(isPersonalRequest);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create checkout');

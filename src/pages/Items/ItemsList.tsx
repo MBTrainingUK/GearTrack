@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Package, Trash2 } from 'lucide-react';
+import { Plus, Search, Package, Trash2, Check } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import ConditionBadge from '../../components/ConditionBadge';
 import toast from 'react-hot-toast';
@@ -10,7 +10,8 @@ import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
-import { isCategoryExcluded } from '../../lib/items';
+import { isCategoryExcluded, isFlagged } from '../../lib/items';
+import { useBasketStore, toggleBasketItem } from '../../store/basket';
 
 const CONDITIONS = [
   { value: 'all', label: 'All Conditions' },
@@ -24,6 +25,7 @@ export default function ItemsList() {
   const { appUser, currentUser } = useAuth();
   const { items } = useItems();
   const { categories, excludedCategories } = useCategories();
+  const basketIds = useBasketStore((s) => s.ids);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [condition, setCondition] = useState<'all' | 'good' | 'attention_needed' | 'needs_investigating' | 'damaged'>('all');
@@ -122,6 +124,7 @@ export default function ItemsList() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((item) => {
             const excluded = isCategoryExcluded(item, excludedCategories);
+            const inBasket = basketIds.includes(item.id);
             return (
             <div
               key={item.id}
@@ -154,12 +157,29 @@ export default function ItemsList() {
                   {excluded ? (
                     <span className="text-xs font-medium text-amber-600">Not bookable</span>
                   ) : (
-                    <Link
-                      to={`/reservations/new?itemId=${item.id}`}
-                      className="text-xs font-medium text-blue-600 hover:underline"
-                    >
-                      Reserve
-                    </Link>
+                    <div className="flex items-center gap-2.5">
+                      <Link
+                        to={`/reservations/new?itemId=${item.id}`}
+                        className="text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        Reserve
+                      </Link>
+                      {/* Gear awaiting inspection or repair is blocked from booking
+                          everywhere, so it never reaches the basket either. */}
+                      {!isFlagged(item) && (
+                        <button
+                          onClick={() => toggleBasketItem(item.id)}
+                          className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                            inBasket
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'
+                          }`}
+                        >
+                          {inBasket ? <Check size={11} /> : <Plus size={11} />}
+                          {inBasket ? 'In basket' : 'Add'}
+                        </button>
+                      )}
+                    </div>
                   )}
                   {appUser?.role !== 'user' && (
                     <div className="flex gap-2">

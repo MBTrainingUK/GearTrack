@@ -21,6 +21,7 @@ import { isFlagged, isCategoryExcluded, categoryOptions } from '../../lib/items'
 import { PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
 import PersonalDeclarations from '../../components/PersonalDeclarations';
 import { useCategories } from '../../store/categories';
+import { removeManyFromBasket } from '../../store/basket';
 
 export default function ReservationForm() {
   const { currentUser, appUser } = useAuth();
@@ -244,6 +245,9 @@ export default function ReservationForm() {
         targetId: resRef.id,
         targetName,
       });
+
+      // Booked gear has no business still sitting in the basket.
+      removeManyFromBasket(selectedItems);
 
       toast.success(
         isPersonalRequest

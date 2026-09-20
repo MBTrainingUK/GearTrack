@@ -40,6 +40,7 @@ The **Items** screen lists all equipment in the system.
 
 - Use the **search bar** to find items by name.
 - Filter by **category** or **condition** using the dropdowns.
+- Click **+ Add to basket** on any item to collect it as you browse — see *The Basket* below.
 - Click any item to open its **detail page**, which shows its current status, condition history, and full audit trail.
 
 ### Kits
@@ -48,12 +49,30 @@ The **Kits** screen lists named bundles of related equipment (e.g. "Camera Kit A
 
 ---
 
+## The Basket
+
+The **Basket** lets you gather gear while you browse and decide what to do with it afterwards, rather than choosing between a reservation and a checkout before you start.
+
+- Add anything from the **Items** screen with **+ Add to basket**. The button changes to **In basket**, and a count appears beside **Basket** in the sidebar.
+- Click **Basket** to open it. You can remove items one at a time, or empty it completely.
+- From there, pick one of two things:
+  - **Reserve for later** — takes everything in the basket through to a new reservation, with the items already selected.
+  - **Check out now** — takes only the items that are free right now through to a new checkout.
+
+Gear that is currently out on loan **can** still go in your basket. It can't be taken today, but it can be booked for a future date, so the basket tells you how many items are out and **Check out now** only ever takes the ones actually available. Anything flagged as **Damaged** or **Needs Investigating**, or in a category your organisation has marked as not bookable, can't be added at all.
+
+Your basket is private to you and stored in your own browser, so it survives closing the tab and coming back to it later. Signing out clears it. Once you've booked something, it leaves the basket on its own.
+
+> **The basket does not hold or reserve anything.** Nobody else can see it, and everything in it stays bookable by everyone until you actually book it. If a colleague checks something out while it's sitting in your basket, the basket updates to show it's gone.
+
+---
+
 ## Reservations
 
 ### Creating a Reservation (all roles)
 
 1. Go to **Reservations** and click **New Reservation**.
-2. Select the items or kits you need.
+2. Select the items or kits you need. Use the **search box** or the **category dropdown** above the list to narrow a long inventory down. (If you arrived here from your basket, they're already selected.)
 3. Choose a **start date** and **end date**.
 4. Choose the **Booking type** — **Work** or **Personal** (see *Personal Bookings* below).
 5. Submit. A **Work** booking made by a **User** is created **Pending** and needs a manager's approval; a **Manager** or **Admin** booking one is **approved automatically**. A **Personal** booking is always **Pending** until an admin decides, whoever raised it.
@@ -103,7 +122,7 @@ A personal booking cannot be raised on someone else's behalf — the declaration
 ### Checking Out Gear (Manager+)
 
 1. Go to **Checkouts** and click **New Checkout**.
-2. Select the items and the **due date**. The checkout is recorded under your own account — there's currently no way to check gear out on someone else's behalf. If it's for a teammate, they should grab it themselves (Quick Grab or the mobile app).
+2. Select the items and the **due date** — the **category dropdown** beside the search box narrows the list, and anything sent through from your basket is already ticked. The checkout is recorded under your own account — there's currently no way to check gear out on someone else's behalf. If it's for a teammate, they should grab it themselves (Quick Grab or the mobile app).
 3. Optionally add a **condition report** (rating and notes) at checkout time.
 4. Confirm — the items are marked as **Checked Out** and are no longer available for others to book.
 
@@ -171,6 +190,8 @@ GearTrack includes a **mobile-optimised PWA** accessible at the `/m/` path (or v
 ### My Gear (mobile)
 
 Shows all items you currently have checked out, with their due dates and return status. Tapping **Return** opens a condition report — select the condition (Excellent / Good / Fair / Poor / Damaged) and add any notes before confirming. Items returned in Poor or Damaged condition are automatically flagged for inspection.
+
+> The basket is part of the main app rather than the mobile app. On a phone you'll find it in the top bar when using the full site; the `/m` mobile app doesn't have it.
 
 ### Browse (mobile)
 
@@ -260,6 +281,12 @@ The item is automatically flagged for inspection. A manager must clear the flag 
 
 **Can I use GearTrack on my phone?**
 Yes — open the app on a mobile browser and navigate to the Browse or My Gear section. You can add it to your home screen as a PWA for faster access.
+
+**Does putting something in my basket reserve it?**
+No. The basket is a private shopping list in your own browser — it places no hold on anything, and nobody else can see it. Items in your basket stay available to everyone until you actually reserve or check them out. If someone books one first, you'll be told when you try to take it.
+
+**Why can't I add an item to my basket?**
+Items flagged as **Damaged** or **Needs Investigating** can't be added, and neither can items in a category your organisation has marked as not bookable. Gear that's simply out on loan *can* be added — you just can't check it out today, only book it for later.
 
 **Why did an old checkout or reservation disappear?**
 GearTrack clears out checkout and reservation records older than 180 days to keep things tidy. Personal checkout records are kept for 2 years. Your current and recent history isn't affected — only old, completed records are removed.

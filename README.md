@@ -9,6 +9,8 @@ Built for media and AV environments where kit needs to be signed out, tracked, a
 ## Features
 
 - **Inventory management** — add items with serial numbers, asset numbers, categories, custom fields, and dropdown filters
+- **Basket** — gather gear while browsing, then send it in one go to either a future-dated reservation or an immediate checkout; contents persist per user in their own browser and place no hold on the inventory, so items stay bookable by everyone until actually booked
+- **Category filtering in the pickers** — the checkout and reservation item pickers filter by category alongside the search box, with options built from the items actually on offer (and counts) so a filter can never produce an empty list
 - **Kits** — group items into named kits that can be reserved and checked out together, and edited in place rather than rebuilt
 - **Reservations** — book equipment for a date range, with approval workflow and a calendar view
 - **Personal bookings** — gear booked ahead for personal use is requested rather than taken: the booking is held pending, an admin is emailed to approve or decline, the decision is emailed back, and an undecided booking is declined automatically 30 minutes before it would have started
@@ -49,7 +51,7 @@ See [`legal/DPA.md`](./legal/DPA.md) for the data-processing terms this implies 
 |---|---|
 | Frontend | React 19, TypeScript, Vite |
 | Styling | Tailwind CSS v4 |
-| State | Zustand (shared items/categories stores) |
+| State | Zustand (shared items/categories/basket stores) |
 | Backend / DB | Firebase (Firestore, Authentication) |
 | Server-side logic | Firebase Cloud Functions (TypeScript, Node 20) — organisation/user provisioning |
 | Charts & calendar | Recharts, FullCalendar |

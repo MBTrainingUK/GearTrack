@@ -196,6 +196,7 @@
 <ul>
   <li>Use the <strong>search bar</strong> to find items by name.</li>
   <li>Filter by <strong>category</strong> or <strong>condition</strong> using the dropdowns.</li>
+  <li>Click <strong>+ Add to basket</strong> on any item to collect it as you browse — see <em>The Basket</em> below.</li>
   <li>Click any item to open its <strong>detail page</strong>, which shows its current status, condition history, and full audit trail.</li>
 </ul>
 
@@ -204,12 +205,34 @@
 </section>
 
 <section>
+<h2>The Basket</h2>
+
+<p>The <strong>Basket</strong> lets you gather gear while you browse and decide what to do with it afterwards, rather than choosing between a reservation and a checkout before you start.</p>
+<ul>
+  <li>Add anything from the <strong>Items</strong> screen with <strong>+ Add to basket</strong>. The button changes to <strong>In basket</strong>, and a count appears beside <strong>Basket</strong> in the sidebar.</li>
+  <li>Click <strong>Basket</strong> to open it. You can remove items one at a time, or empty it completely.</li>
+  <li>From there, pick one of two things:
+    <ul>
+      <li><strong>Reserve for later</strong> — takes everything in the basket through to a new reservation, with the items already selected.</li>
+      <li><strong>Check out now</strong> — takes only the items that are free right now through to a new checkout.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Gear that is currently out on loan <strong>can</strong> still go in your basket. It can't be taken today, but it can be booked for a future date, so the basket tells you how many items are out and <strong>Check out now</strong> only ever takes the ones actually available. Anything flagged as <strong>Damaged</strong> or <strong>Needs Investigating</strong>, or in a category your organisation has marked as not bookable, can't be added at all.</p>
+
+<p>Your basket is private to you and stored in your own browser, so it survives closing the tab and coming back to it later. Signing out clears it. Once you've booked something, it leaves the basket on its own.</p>
+
+<div class="callout"><strong>The basket does not hold or reserve anything.</strong> Nobody else can see it, and everything in it stays bookable by everyone until you actually book it. If a colleague checks something out while it's sitting in your basket, the basket updates to show it's gone.</div>
+</section>
+
+<section>
 <h2>Reservations</h2>
 
 <h3>Creating a Reservation (all roles)</h3>
 <ol>
   <li>Go to <strong>Reservations</strong> and click <strong>New Reservation</strong>.</li>
-  <li>Select the items or kits you need.</li>
+  <li>Select the items or kits you need. Use the <strong>search box</strong> or the <strong>category dropdown</strong> above the list to narrow a long inventory down. (If you arrived here from your basket, they're already selected.)</li>
   <li>Choose a <strong>start date</strong> and <strong>end date</strong>.</li>
   <li>Choose the <strong>Booking type</strong> — <strong>Work</strong> or <strong>Personal</strong> (see <em>Personal Bookings</em> below).</li>
   <li>Submit. A <strong>Work</strong> booking made by a <strong>User</strong> is created <strong>Pending</strong> and needs a manager's approval; a <strong>Manager</strong> or <strong>Admin</strong> booking one is <strong>approved automatically</strong>. A <strong>Personal</strong> booking is always <strong>Pending</strong> until an admin decides, whoever raised it.</li>
@@ -255,7 +278,7 @@
 <h3>Checking Out Gear (Manager+)</h3>
 <ol>
   <li>Go to <strong>Checkouts</strong> and click <strong>New Checkout</strong>.</li>
-  <li>Select the items and the <strong>due date</strong>. The checkout is recorded under your own account — there's currently no way to check gear out on someone else's behalf. If it's for a teammate, they should grab it themselves (Quick Grab or the mobile app).</li>
+  <li>Select the items and the <strong>due date</strong> — the <strong>category dropdown</strong> beside the search box narrows the list, and anything sent through from your basket is already ticked. The checkout is recorded under your own account — there's currently no way to check gear out on someone else's behalf. If it's for a teammate, they should grab it themselves (Quick Grab or the mobile app).</li>
   <li>Optionally add a <strong>condition report</strong> (rating and notes) at checkout time.</li>
   <li>Confirm — the items are marked as <strong>Checked Out</strong> and are no longer available for others to book.</li>
 </ol>
@@ -315,6 +338,8 @@
 
 <h3>My Gear (mobile)</h3>
 <p>Shows all items you currently have checked out, with their due dates and return status. Tapping <strong>Return</strong> opens a condition report — select the condition (Excellent / Good / Fair / Poor / Damaged) and add any notes before confirming. Items returned in Poor or Damaged condition are automatically flagged for inspection.</p>
+
+<div class="callout">The basket is part of the main app rather than the mobile app. On a phone you'll find it in the top bar when using the full site; the <code>/m</code> mobile app doesn't have it.</div>
 
 <h3>Browse (mobile)</h3>
 <p>A searchable list of currently available items. Tap <strong>Quick Grab</strong> to check one out to yourself instantly, due back by end of today — there's no condition report or custom due date on this quick mobile flow. For reservations, or a full checkout with a custom due date and condition report, use the full site (it works fine in a mobile browser too, just outside this dedicated app view).</p>
@@ -402,6 +427,12 @@
 
   <dt>Can I use GearTrack on my phone?</dt>
   <dd>Yes — open the app on a mobile browser and navigate to the Browse or My Gear section. You can add it to your home screen as a PWA for faster access.</dd>
+
+  <dt>Does putting something in my basket reserve it?</dt>
+  <dd>No. The basket is a private shopping list in your own browser — it places no hold on anything, and nobody else can see it. Items in your basket stay available to everyone until you actually reserve or check them out. If someone books one first, you'll be told when you try to take it.</dd>
+
+  <dt>Why can't I add an item to my basket?</dt>
+  <dd>Items flagged as <strong>Damaged</strong> or <strong>Needs Investigating</strong> can't be added, and neither can items in a category your organisation has marked as not bookable. Gear that's simply out on loan <em>can</em> be added — you just can't check it out today, only book it for later.</dd>
 
   <dt>Why did an old checkout or reservation disappear?</dt>
   <dd>GearTrack clears out checkout and reservation records older than 180 days to keep things tidy. Personal checkout records are kept for 2 years. Your current and recent history isn't affected — only old, completed records are removed.</dd>

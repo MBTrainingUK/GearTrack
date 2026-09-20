@@ -52,6 +52,16 @@ export default function CheckoutsList() {
   } | null>(null);
   const [showNewModal, setShowNewModal] = useState(Boolean(reservationId) || preselectedItemIds.length > 0);
 
+  // The initialiser above only runs on first mount. Arriving from the basket
+  // while this screen is already open changes the search params without
+  // remounting, so the modal has to be opened explicitly — otherwise the click
+  // sets the URL and nothing else happens, with no error to show for it.
+  useEffect(() => {
+    if (preselectedItemIds.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowNewModal(true);
+  }, [preselectedItemIds.length]);
+
   useEffect(() => {
     if (!appUser?.orgId) return;
     const orgId = appUser.orgId;
@@ -399,6 +409,7 @@ export default function CheckoutsList() {
       {/* New checkout modal */}
       {showNewModal && (
         <NewCheckoutModal
+          key={preselectedItemIds.join(',')}
           items={itemsList}
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}

@@ -22,7 +22,8 @@ import { useAuth } from '../../context/useAuth';
 import { writeAuditLog } from '../../lib/auditLog';
 import { isOverdue, createCheckout, isPersonal, PERSONAL_DECLARATIONS_VERSION } from '../../lib/checkout';
 import PersonalDeclarations from '../../components/PersonalDeclarations';
-import { isFlagged, isCategoryExcluded } from '../../lib/items';
+import { isFlagged, isCategoryExcluded, categoryOptions } from '../../lib/items';
+import { removeManyFromBasket } from '../../store/basket';
 import { useItems } from '../../store/items';
 import { useCategories } from '../../store/categories';
 
@@ -31,6 +32,8 @@ export default function CheckoutsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const reservationId = searchParams.get('reservationId');
   const returnId = searchParams.get('returnId');
+  // Set when the basket hands its contents over for an immediate checkout.
+  const preselectedItemIds = searchParams.get('itemIds')?.split(',').filter(Boolean) ?? [];
 
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
   const { items: itemsList, byId: items } = useItems();
@@ -47,7 +50,17 @@ export default function CheckoutsList() {
     mode: 'checkout' | 'return';
     reservationId?: string;
   } | null>(null);
-  const [showNewModal, setShowNewModal] = useState(Boolean(reservationId));
+  const [showNewModal, setShowNewModal] = useState(Boolean(reservationId) || preselectedItemIds.length > 0);
+
+  // The initialiser above only runs on first mount. Arriving from the basket
+  // while this screen is already open changes the search params without
+  // remounting, so the modal has to be opened explicitly — otherwise the click
+  // sets the URL and nothing else happens, with no error to show for it.
+  useEffect(() => {
+    if (preselectedItemIds.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowNewModal(true);
+  }, [preselectedItemIds.length]);
 
   useEffect(() => {
     if (!appUser?.orgId) return;
@@ -146,6 +159,22 @@ export default function CheckoutsList() {
       toast.error(err instanceof Error ? err.message : 'Failed to withdraw the request');
     } finally {
       setDecidingId(null);
+    }
+  }
+
+  // ?itemIds= is a one-shot hand-off from the basket: strip it on close so
+  // reopening the modal doesn't silently re-fill it with the old selection.
+  function closeNewModal() {
+    setShowNewModal(false);
+    if (searchParams.has('itemIds')) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('itemIds');
+          return next;
+        },
+        { replace: true }
+      );
     }
   }
 
@@ -380,12 +409,14 @@ export default function CheckoutsList() {
       {/* New checkout modal */}
       {showNewModal && (
         <NewCheckoutModal
+          key={preselectedItemIds.join(',')}
           items={itemsList}
           kits={Object.values(kits)}
           reservationId={reservationId ?? undefined}
-          onClose={() => setShowNewModal(false)}
+          initialItemIds={preselectedItemIds}
+          onClose={closeNewModal}
           onCreated={(wasPersonal) => {
-            setShowNewModal(false);
+            closeNewModal();
             toast.success(
               wasPersonal
                 ? 'Request sent — an admin has been emailed to approve it'
@@ -463,22 +494,25 @@ function NewCheckoutModal({
   items,
   kits,
   reservationId,
+  initialItemIds,
   onClose,
   onCreated,
 }: {
   items: Item[];
   kits: Kit[];
   reservationId?: string;
+  initialItemIds?: string[];
   onClose: () => void;
   onCreated: (wasPersonal: boolean) => void;
 }) {
   const { currentUser, appUser } = useAuth();
   const { excludedCategories } = useCategories();
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>(initialItemIds ?? []);
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
   const [checkoutTab, setCheckoutTab] = useState<'items' | 'kit'>('items');
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
   const [kitWarnings, setKitWarnings] = useState<string[]>([]);
@@ -563,6 +597,8 @@ function NewCheckoutModal({
         targetId: id,
         targetName: name,
       });
+      // Booked gear has no business still sitting in the basket.
+      removeManyFromBasket(itemIds);
       onCreated(isPersonalRequest);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create checkout');
@@ -594,7 +630,7 @@ function NewCheckoutModal({
     await create(selectedItems, Timestamp.fromDate(new Date(dueDate)), notes, true);
   }
 
-  const available = items.filter(
+  const selectable = items.filter(
     (i) =>
       (i.status === 'available' || selectedItems.includes(i.id)) &&
       !isFlagged(i) &&
@@ -602,6 +638,16 @@ function NewCheckoutModal({
       (i.name.toLowerCase().includes(search.toLowerCase()) ||
         (i.assetNumber ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (i.serialNumber ?? '').toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Options come from what is genuinely on offer here — already past the
+  // availability, condition and non-bookable filters above.
+  const catOptions = categoryOptions(selectable, category);
+
+  // A selected item stays on screen even when the category filter would hide
+  // it — otherwise "n selected" counts rows the user can no longer see.
+  const available = selectable.filter(
+    (i) => category === 'All' || i.category === category || selectedItems.includes(i.id)
   );
 
   return (
@@ -695,12 +741,24 @@ function NewCheckoutModal({
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Items ({selectedItems.length} selected) *
                 </label>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, asset no, serial no…"
-                  className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by name, asset no, serial no…"
+                    className="min-w-[160px] flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="All">All Categories</option>
+                    {catOptions.map((c) => (
+                      <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
                   {available.map((item) => {
                     const isSel = selectedItems.includes(item.id);

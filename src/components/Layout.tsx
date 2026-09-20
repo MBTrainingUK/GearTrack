@@ -3,8 +3,10 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  CalendarRange,
-  ArrowLeftRight,
+  // Uncomment alongside the two nav entries below to restore Reservations and
+  // Checkouts to the sidebar.
+  // CalendarRange,
+  // ArrowLeftRight,
   History,
   LogOut,
   Menu,
@@ -25,8 +27,14 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true, minRole: 'user' },
   { to: '/items', label: 'Items', icon: Package, minRole: 'user' },
   { to: '/kits', label: 'Kits', icon: Layers, minRole: 'user' },
-  { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'user' },
-  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'user' },
+  // TEMPORARY (trial, 20 Sep 2026): Reservations and Checkouts pulled out of the
+  // sidebar to see whether the basket has made them redundant as entry points.
+  // The routes still exist and both screens are still reachable — from the
+  // Dashboard, from My History, and from the basket's two hand-off buttons.
+  // Note they are also the only place to return gear, action pending approvals
+  // and cancel a booking, so restore these two lines if that proves awkward.
+  // { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'user' },
+  // { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'user' },
   { to: '/history', label: 'My History', icon: History, minRole: 'user' },
   { to: '/activity', label: 'Activity', icon: Activity, minRole: 'manager' },
   { to: '/reports', label: 'Reports', icon: BarChart2, minRole: 'admin' },

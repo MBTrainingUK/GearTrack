@@ -3,8 +3,10 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  CalendarRange,
-  ArrowLeftRight,
+  // Uncomment alongside the two nav entries below to restore Reservations and
+  // Checkouts to the sidebar.
+  // CalendarRange,
+  // ArrowLeftRight,
   PackageCheck,
   CheckCircle2,
   History,
@@ -34,11 +36,20 @@ const navItems = [
   // calling off your own booking.
   { to: '/my-gear', label: 'My Gear', icon: PackageCheck, minRole: 'user' },
   { to: '/approvals', label: 'Approvals', icon: CheckCircle2, minRole: 'manager', badge: 'approvals' as const },
-  // Reservations and Checkouts are now manager-and-above. Everything an
-  // ordinary user needs from them is on My Gear; what remains is the full
-  // org-wide list, the calendar, and chasing other people's overdue gear.
-  { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'manager' },
-  { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'manager' },
+  // TEMPORARY (trial, 20 Sep 2026): Reservations and Checkouts are out of the
+  // sidebar entirely, now that My Gear and Approvals carry what most people
+  // needed from them. Commented out rather than deleted — Jason may want them
+  // back. Both routes still exist and are reached from the Dashboard links and
+  // My History.
+  //
+  // What has no signposted home while these are hidden:
+  //   - Checking in gear on someone ELSE'S behalf. CheckoutsList gates that on
+  //     role !== 'user' and it is scoped to the whole org, so My Gear (which is
+  //     userId == me) cannot cover it. This is the one to watch.
+  //   - The reservations calendar and its Monday.com filming-dates overlay.
+  //
+  // { to: '/reservations', label: 'Reservations', icon: CalendarRange, minRole: 'manager' },
+  // { to: '/checkouts', label: 'Checkouts', icon: ArrowLeftRight, minRole: 'manager' },
   { to: '/history', label: 'My History', icon: History, minRole: 'user' },
   { to: '/activity', label: 'Activity', icon: Activity, minRole: 'manager' },
   { to: '/reports', label: 'Reports', icon: BarChart2, minRole: 'admin' },

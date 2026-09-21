@@ -216,9 +216,6 @@ function SidebarContent({
 
       {/* User footer */}
       <div className="border-t border-line-subtle px-3 py-3">
-        <div className="mb-2 px-2">
-          <ThemeToggle />
-        </div>
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 text-sm font-semibold">
             {appUser?.displayName?.[0]?.toUpperCase() ?? 'U'}
@@ -229,13 +226,16 @@ function SidebarContent({
               {appUser?.role === 'manager' ? 'Team Member' : appUser?.role === 'admin' ? 'Admin' : 'User'}
             </p>
           </div>
-          <button
-            onClick={onLogout}
-            className="text-ink-faint hover:text-red-500 dark:hover:text-red-400 transition-colors"
-            title="Sign out"
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <ThemeToggle />
+            <button
+              onClick={onLogout}
+              className="text-ink-faint hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              title="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

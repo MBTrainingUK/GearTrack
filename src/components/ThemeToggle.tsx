@@ -1,39 +1,28 @@
 import { Sun, Moon } from 'lucide-react';
-import { useTheme, setTheme } from '../store/theme';
+import { useTheme, toggleTheme } from '../store/theme';
 
-// A two-state switch rather than a single icon button: it shows which mode is
-// active, instead of leaving people to work out whether the moon means "you
-// are in dark" or "click for dark".
+// Deliberately quiet: a single icon beside Sign out, no label and no border.
+// This is a setting people change once, so it earns a corner rather than a
+// permanent block of contrast next to the navigation.
+//
+// The icon shows the mode you would switch TO, not the one you are in — the
+// usual ambiguity with a lone moon — and the title and aria-label say so
+// outright, so nothing depends on guessing the convention.
 export default function ThemeToggle() {
   const theme = useTheme();
+  const goingDark = theme === 'light';
+  const Icon = goingDark ? Moon : Sun;
+  const label = goingDark ? 'Switch to dark mode' : 'Switch to light mode';
 
   return (
-    <div
-      role="group"
-      aria-label="Colour theme"
-      className="flex w-full rounded-lg border border-line bg-surface p-0.5"
+    <button
+      type="button"
+      onClick={toggleTheme}
+      title={label}
+      aria-label={label}
+      className="text-ink-faint transition-colors hover:text-ink"
     >
-      {(['light', 'dark'] as const).map((choice) => {
-        const active = theme === choice;
-        const Icon = choice === 'light' ? Sun : Moon;
-        return (
-          <button
-            key={choice}
-            type="button"
-            onClick={() => setTheme(choice)}
-            aria-pressed={active}
-            title={choice === 'light' ? 'Light mode' : 'Dark mode'}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-              active
-                ? 'bg-surface-hover text-ink'
-                : 'text-ink-faint hover:text-ink-body'
-            }`}
-          >
-            <Icon size={13} />
-            {choice === 'light' ? 'Light' : 'Dark'}
-          </button>
-        );
-      })}
-    </div>
+      <Icon size={16} />
+    </button>
   );
 }

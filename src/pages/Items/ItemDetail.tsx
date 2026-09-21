@@ -123,8 +123,8 @@ export default function ItemDetail() {
   if (!item) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
-        <p className="text-gray-500">Item not found</p>
-        <button onClick={() => navigate(-1)} className="text-sm text-blue-600 hover:underline">Go back</button>
+        <p className="text-ink-muted">Item not found</p>
+        <button onClick={() => navigate(-1)} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Go back</button>
       </div>
     );
   }
@@ -132,10 +132,10 @@ export default function ItemDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700">
+        <button onClick={() => navigate(-1)} className="text-ink-faint hover:text-ink-label">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">{item.name}</h1>
+        <h1 className="text-xl font-bold text-ink">{item.name}</h1>
         <StatusBadge status={item.status} type="item" />
         <div className="ml-auto flex gap-2">
           <Link
@@ -147,7 +147,7 @@ export default function ItemDetail() {
           {appUser?.role !== 'user' && (
             <Link
               to={`/items/${item.id}/edit`}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm text-ink-body hover:bg-surface-hover"
             >
               <Edit size={14} />
               Edit
@@ -157,13 +157,13 @@ export default function ItemDetail() {
       </div>
 
       <div className="space-y-5">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900">Details</h2>
+              <h2 className="text-sm font-semibold text-ink">Details</h2>
               <ConditionBadge condition={item.condition} />
             </div>
             {item.condition && item.condition !== 'good' && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+              <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                 <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                 <div>
                   <p>
@@ -178,7 +178,7 @@ export default function ItemDetail() {
                       : ' and is blocked from booking.'}
                   </p>
                   {item.conditionFlagNote && (
-                    <p className="mt-1 text-xs text-amber-700">{item.conditionFlagNote}</p>
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{item.conditionFlagNote}</p>
                   )}
                 </div>
               </div>
@@ -196,15 +196,15 @@ export default function ItemDetail() {
               )}
             </dl>
             {item.description && (
-              <div className="mt-4 border-t border-gray-100 pt-4">
-                <p className="text-xs font-medium text-gray-500 mb-1">Description</p>
-                <p className="text-sm text-gray-700">{item.description}</p>
+              <div className="mt-4 border-t border-line-subtle pt-4">
+                <p className="text-xs font-medium text-ink-muted mb-1">Description</p>
+                <p className="text-sm text-ink-label">{item.description}</p>
               </div>
             )}
             {item.notes && (
               <div className="mt-3">
-                <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
-                <p className="text-sm text-gray-600">{item.notes}</p>
+                <p className="text-xs font-medium text-ink-muted mb-1">Notes</p>
+                <p className="text-sm text-ink-body">{item.notes}</p>
               </div>
             )}
           </div>
@@ -217,24 +217,24 @@ export default function ItemDetail() {
             const barColor = pct < 50 ? 'bg-emerald-500' : pct < 80 ? 'bg-amber-500' : 'bg-red-500';
 
             return (
-              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <Gauge size={15} /> Lifespan
                   </h2>
                   {isDue && !isAwaitingReset && (
-                    <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Inspection Due</span>
+                    <span className="rounded-full bg-red-100 dark:bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">Inspection Due</span>
                   )}
                   {isAwaitingReset && (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Awaiting Inspection</span>
+                    <span className="rounded-full bg-amber-100 dark:bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Awaiting Inspection</span>
                   )}
                 </div>
 
-                <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                <div className="mb-2 h-3 w-full overflow-hidden rounded-full bg-surface-hover">
                   <div className={`h-3 rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-ink-muted">
                   <span>{formatMonths(ageMonths)} old</span>
                   <span>{Math.min(pct, 999)}% of {formatMonths(item.expectedLifespanMonths!)} interval</span>
                 </div>
@@ -243,7 +243,7 @@ export default function ItemDetail() {
                   <button
                     onClick={flagForInspection}
                     disabled={actionSaving}
-                    className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 py-2 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+                    className="mt-3 w-full rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 py-2 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 disabled:opacity-60"
                   >
                     Flag for Inspection
                   </button>
@@ -252,28 +252,28 @@ export default function ItemDetail() {
                 {isAwaitingReset && !showResetModal && (
                   <button
                     onClick={() => setShowResetModal(true)}
-                    className="mt-3 w-full rounded-lg border border-emerald-200 bg-emerald-50 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+                    className="mt-3 w-full rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15"
                   >
                     ✓ Pass Inspection &amp; Reset
                   </button>
                 )}
 
                 {isAwaitingReset && showResetModal && (
-                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
-                    <p className="text-xs font-medium text-gray-700">How many months until the next inspection?</p>
+                  <div className="mt-3 rounded-lg border border-line bg-canvas p-3 space-y-3">
+                    <p className="text-xs font-medium text-ink-label">How many months until the next inspection?</p>
                     <input
                       type="number"
                       min="1"
                       value={newInterval}
                       onChange={(e) => setNewInterval(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       placeholder="e.g. 12"
                       autoFocus
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setShowResetModal(false); setNewInterval(''); }}
-                        className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-600 hover:bg-white"
+                        className="flex-1 rounded-lg border border-line py-1.5 text-xs text-ink-body hover:bg-surface"
                       >
                         Cancel
                       </button>
@@ -292,19 +292,19 @@ export default function ItemDetail() {
           })()}
 
           {/* Checkout history */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold text-ink flex items-center gap-2">
               <Clock size={15} /> Checkout History
             </h2>
             {history.length === 0 ? (
-              <p className="text-sm text-gray-400">No checkout history yet.</p>
+              <p className="text-sm text-ink-faint">No checkout history yet.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line-subtle">
                 {history.map((c) => (
                   <li key={c.id} className="flex items-center justify-between py-2.5 text-sm">
                     <div>
-                      <p className="font-medium text-gray-900">{c.userName}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-ink">{c.userName}</p>
+                      <p className="text-xs text-ink-muted">
                         {formatTS(c.checkedOutAt)} → {c.returnedAt ? formatTS(c.returnedAt) : 'Active'}
                       </p>
                     </div>
@@ -330,10 +330,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon size={13} className="mt-0.5 shrink-0 text-gray-400" />
+      <Icon size={13} className="mt-0.5 shrink-0 text-ink-faint" />
       <div>
-        <dt className="text-xs text-gray-500">{label}</dt>
-        <dd className="font-medium text-gray-900">{value}</dd>
+        <dt className="text-xs text-ink-muted">{label}</dt>
+        <dd className="font-medium text-ink">{value}</dd>
       </div>
     </div>
   );

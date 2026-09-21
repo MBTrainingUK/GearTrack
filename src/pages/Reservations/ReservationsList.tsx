@@ -339,16 +339,16 @@ export default function ReservationsList() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reservations</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{filtered.length} total</p>
+          <h1 className="text-2xl font-bold text-ink">Reservations</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">{filtered.length} total</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View toggle */}
-          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+          <div className="flex rounded-lg border border-line bg-surface p-0.5">
             <button
               onClick={() => setView('list')}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                view === 'list' ? 'bg-blue-600 text-white' : 'text-ink-body hover:text-ink'
               }`}
             >
               <List size={13} /> List
@@ -356,7 +356,7 @@ export default function ReservationsList() {
             <button
               onClick={() => setView('calendar')}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === 'calendar' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                view === 'calendar' ? 'bg-blue-600 text-white' : 'text-ink-body hover:text-ink'
               }`}
             >
               <Calendar size={13} /> Calendar
@@ -375,10 +375,10 @@ export default function ReservationsList() {
       {isAdmin && pendingPersonal.length > 0 && (
         <button
           onClick={() => { setView('list'); setFilter('pending'); setUserFilter('all'); }}
-          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100"
+          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-left hover:bg-amber-100 dark:hover:bg-amber-500/15"
         >
-          <Home size={16} className="shrink-0 text-amber-600" />
-          <p className="text-sm text-amber-900">
+          <Home size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-sm text-amber-900 dark:text-amber-200">
             <span className="font-semibold">
               {pendingPersonal.length} personal booking{pendingPersonal.length > 1 ? 's' : ''}
             </span>{' '}
@@ -389,14 +389,14 @@ export default function ReservationsList() {
       )}
 
       {view === 'calendar' ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-3">
             <button
               onClick={() => setShowMonday((v) => !v)}
               className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                 showMonday
-                  ? 'border-violet-400 bg-violet-50 text-violet-700'
-                  : 'border-gray-200 text-gray-500 hover:border-violet-300 hover:text-violet-600'
+                  ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300'
+                  : 'border-line text-ink-muted hover:border-violet-300 dark:hover:border-violet-500/40 hover:text-violet-600 dark:hover:text-violet-400'
               }`}
             >
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-500" />
@@ -432,13 +432,13 @@ export default function ReservationsList() {
                   className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                     userFilter === u
                       ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                      : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
                   }`}
                 >
                   {u === 'mine' ? 'Mine' : 'Everyone'}
                 </button>
               ))}
-              <div className="h-4 w-px bg-gray-200" />
+              <div className="h-4 w-px bg-surface-hover" />
               {/* Status filter */}
               {(['all', 'pending', 'approved', 'checked_out', 'completed', 'cancelled', 'declined'] as const).map(
                 (s) => (
@@ -447,8 +447,8 @@ export default function ReservationsList() {
                     onClick={() => setFilter(s)}
                     className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                       filter === s
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                        : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
                     }`}
                   >
                     {s === 'all' ? 'All' : s.replace('_', ' ')}
@@ -457,14 +457,14 @@ export default function ReservationsList() {
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-gray-400">Show:</span>
-              <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+              <span className="text-xs text-ink-faint">Show:</span>
+              <div className="flex rounded-lg border border-line bg-surface p-0.5">
                 {([30, 90] as const).map((d) => (
                   <button
                     key={d}
                     onClick={() => setDateRange(d)}
                     className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                      dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                      dateRange === d ? 'bg-blue-600 text-white' : 'text-ink-body hover:text-ink'
                     }`}
                   >
                     {d === 30 ? 'Last 30 days' : 'Last 90 days'}
@@ -474,15 +474,15 @@ export default function ReservationsList() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
             {filtered.length === 0 ? (
               <div className="flex h-48 items-center justify-center">
-                <p className="text-sm text-gray-400">No reservations found</p>
+                <p className="text-sm text-ink-faint">No reservations found</p>
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs text-gray-500">
+                  <tr className="border-b border-line-subtle text-xs text-ink-muted">
                     <th className="px-5 py-3 text-left font-medium">User</th>
                     <th className="px-5 py-3 text-left font-medium">Items</th>
                     <th className="px-5 py-3 text-left font-medium">Start</th>
@@ -493,26 +493,26 @@ export default function ReservationsList() {
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-line-subtle">
                   {filtered.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedReservation(r)}>
+                    <tr key={r.id} className="hover:bg-surface-hover cursor-pointer" onClick={() => setSelectedReservation(r)}>
                       <td className="px-5 py-3">
-                        <p className="font-medium text-gray-900">{r.userName}</p>
+                        <p className="font-medium text-ink">{r.userName}</p>
                         {isPersonal(r) && (
-                          <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-500/15 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:text-purple-300">
                             <Home size={10} />
                             Personal
                           </span>
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <p className="text-sm text-gray-900">{bookingLabel(r, items, kits)}</p>
+                        <p className="text-sm text-ink">{bookingLabel(r, items, kits)}</p>
                         {r.itemIds.length > 2 && !r.kitId && (
-                          <p className="text-xs text-gray-400">+{r.itemIds.length - 2} more</p>
+                          <p className="text-xs text-ink-faint">+{r.itemIds.length - 2} more</p>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{formatTS(r.startDate)}</td>
-                      <td className="px-5 py-3 text-gray-600">{formatTS(r.endDate)}</td>
+                      <td className="px-5 py-3 text-ink-body">{formatTS(r.startDate)}</td>
+                      <td className="px-5 py-3 text-ink-body">{formatTS(r.endDate)}</td>
                       <td className="px-5 py-3">
                         <StatusBadge status={r.status} type="reservation" />
                       </td>
@@ -522,7 +522,7 @@ export default function ReservationsList() {
                             {r.status === 'pending' && !isPersonal(r) && (
                               <button
                                 onClick={() => handleApprove(r.id)}
-                                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
+                                className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15"
                               >
                                 Approve
                               </button>
@@ -535,14 +535,14 @@ export default function ReservationsList() {
                                 <button
                                   onClick={() => decidePersonal(r, true)}
                                   disabled={decidingId === r.id}
-                                  className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                  className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 disabled:opacity-50"
                                 >
                                   {decidingId === r.id ? 'Saving…' : 'Approve'}
                                 </button>
                                 <button
                                   onClick={() => setDeclineTarget(r)}
                                   disabled={decidingId === r.id}
-                                  className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                  className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-2 py-1 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 disabled:opacity-50"
                                 >
                                   Decline
                                 </button>
@@ -551,7 +551,7 @@ export default function ReservationsList() {
                             {['pending', 'approved'].includes(r.status) && !(r.status === 'pending' && isPersonal(r)) && (
                               <button
                                 onClick={() => handleCancel(r.id)}
-                                className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                                className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-2 py-1 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15"
                               >
                                 Cancel
                               </button>
@@ -559,7 +559,7 @@ export default function ReservationsList() {
                             {r.status === 'approved' && (
                               <Link
                                 to={`/checkouts?reservationId=${r.id}`}
-                                className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                                className="rounded border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 text-xs text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/15"
                               >
                                 Check Out
                               </Link>
@@ -580,14 +580,14 @@ export default function ReservationsList() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => { setSelectedReservation(null); closeEdit(); }}
         >
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="font-semibold text-gray-900">
+          <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+              <h2 className="font-semibold text-ink">
                 {editing ? 'Edit Reservation' : 'Reservation Details'}
               </h2>
               <button
                 onClick={() => { setSelectedReservation(null); closeEdit(); }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-ink-faint hover:text-ink-body"
               >
                 <X size={18} />
               </button>
@@ -597,35 +597,35 @@ export default function ReservationsList() {
               {/* User + status */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{selectedReservation.userName}</p>
-                  <p className="text-xs text-gray-500">{selectedReservation.userEmail}</p>
+                  <p className="text-sm font-medium text-ink">{selectedReservation.userName}</p>
+                  <p className="text-xs text-ink-muted">{selectedReservation.userEmail}</p>
                 </div>
                 <StatusBadge status={selectedReservation.status} type="reservation" />
               </div>
 
               {isPersonal(selectedReservation) && (
-                <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm">
-                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+                <div className="rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 px-4 py-3 text-sm">
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-purple-700 dark:text-purple-300">
                     <Home size={12} />
                     Personal booking
                   </p>
                   {selectedReservation.personalReason && (
-                    <p className="text-purple-900">{selectedReservation.personalReason}</p>
+                    <p className="text-purple-900 dark:text-purple-200">{selectedReservation.personalReason}</p>
                   )}
                   {selectedReservation.declarations?.availabilityChecked &&
                     selectedReservation.declarations?.liabilityAccepted && (
-                    <p className="mt-1.5 text-xs text-purple-700">
+                    <p className="mt-1.5 text-xs text-purple-700 dark:text-purple-300">
                       Both declarations accepted (v{selectedReservation.declarations.version}) —
                       availability checked, £1000 excess liability accepted.
                     </p>
                   )}
                   {selectedReservation.approvedByName && (
-                    <p className="mt-1.5 text-xs text-purple-700">
+                    <p className="mt-1.5 text-xs text-purple-700 dark:text-purple-300">
                       Approved by {selectedReservation.approvedByName}.
                     </p>
                   )}
                   {selectedReservation.declinedByName && (
-                    <p className="mt-1.5 text-xs text-purple-700">
+                    <p className="mt-1.5 text-xs text-purple-700 dark:text-purple-300">
                       Declined by {selectedReservation.declinedByName}
                       {selectedReservation.declineReason ? ` — ${selectedReservation.declineReason}` : ''}
                     </p>
@@ -634,25 +634,25 @@ export default function ReservationsList() {
               )}
 
               {/* Period */}
-              <div className="rounded-lg bg-gray-50 px-4 py-3 text-sm">
-                <p className="text-xs font-medium text-gray-500 mb-1">Period</p>
-                <p className="text-gray-800">{formatTS(selectedReservation.startDate)} → {formatTS(selectedReservation.endDate)}</p>
+              <div className="rounded-lg bg-canvas px-4 py-3 text-sm">
+                <p className="text-xs font-medium text-ink-muted mb-1">Period</p>
+                <p className="text-ink">{formatTS(selectedReservation.startDate)} → {formatTS(selectedReservation.endDate)}</p>
               </div>
 
               {/* Items — read view */}
               {!editing && (
                 <div>
                   {selectedReservation.kitId && kits[selectedReservation.kitId] && (
-                    <p className="mb-2 text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5">
+                    <p className="mb-2 text-xs font-medium text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-lg px-3 py-1.5">
                       Kit: {kits[selectedReservation.kitId].name}
                     </p>
                   )}
-                  <p className="text-xs font-medium text-gray-500 mb-2">Reserved Items ({selectedReservation.itemIds.length})</p>
-                  <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                  <p className="text-xs font-medium text-ink-muted mb-2">Reserved Items ({selectedReservation.itemIds.length})</p>
+                  <ul className="divide-y divide-line-subtle rounded-lg border border-line">
                     {selectedReservation.itemIds.map((id) => (
                       <li key={id} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="font-medium text-gray-900">{items[id]?.name ?? id}</span>
-                        <span className="text-xs text-gray-400">{items[id]?.category ?? ''}</span>
+                        <span className="font-medium text-ink">{items[id]?.name ?? id}</span>
+                        <span className="text-xs text-ink-faint">{items[id]?.category ?? ''}</span>
                       </li>
                     ))}
                   </ul>
@@ -665,11 +665,11 @@ export default function ReservationsList() {
                   {/* Assignee picker — admin/manager only */}
                   {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1.5">Assigned To</p>
+                      <p className="text-xs font-medium text-ink-muted mb-1.5">Assigned To</p>
                       <select
                         value={editAssignedUserId}
                         onChange={(e) => setEditAssignedUserId(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {orgUsers
                           .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -681,15 +681,15 @@ export default function ReservationsList() {
                       </select>
                     </div>
                   )}
-                  <p className="text-xs font-medium text-gray-500">Items ({editItemIds.length})</p>
+                  <p className="text-xs font-medium text-ink-muted">Items ({editItemIds.length})</p>
                   {/* Current items with remove option */}
-                  <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 max-h-40 overflow-y-auto">
+                  <ul className="divide-y divide-line-subtle rounded-lg border border-line max-h-40 overflow-y-auto">
                     {editItemIds.map((id) => (
                       <li key={id} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="font-medium text-gray-900">{items[id]?.name ?? id}</span>
+                        <span className="font-medium text-ink">{items[id]?.name ?? id}</span>
                         <button
                           onClick={() => setEditItemIds((prev) => prev.filter((x) => x !== id))}
-                          className="ml-2 flex items-center gap-1 rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-600 hover:bg-red-100"
+                          className="ml-2 flex items-center gap-1 rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15"
                           title="Remove item"
                         >
                           <Minus size={10} /> Remove
@@ -700,14 +700,14 @@ export default function ReservationsList() {
 
                   {/* Add items */}
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">Add items</p>
+                    <p className="text-xs font-medium text-ink-muted mb-1.5">Add items</p>
                     <input
                       value={editSearch}
                       onChange={(e) => setEditSearch(e.target.value)}
                       placeholder="Search items…"
-                      className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="mb-2 w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
-                    <div className="max-h-44 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+                    <div className="max-h-44 overflow-y-auto rounded-lg border border-line divide-y divide-line-subtle">
                       {allOrgItems
                         .filter((item) => {
                           if (editItemIds.includes(item.id)) return false;
@@ -728,12 +728,12 @@ export default function ReservationsList() {
                               disabled={blocked}
                               onClick={() => !blocked && setEditItemIds((prev) => [...prev, item.id])}
                               className={`flex w-full items-center justify-between px-3 py-2 text-sm ${
-                                blocked ? 'cursor-not-allowed opacity-60 bg-gray-50' : 'hover:bg-blue-50'
+                                blocked ? 'cursor-not-allowed opacity-60 bg-canvas' : 'hover:bg-blue-50 dark:hover:bg-blue-500/10'
                               }`}
                             >
                               <div className="text-left">
-                                <p className="font-medium text-gray-900">{item.name}</p>
-                                <p className="text-xs text-gray-500">{item.category}</p>
+                                <p className="font-medium text-ink">{item.name}</p>
+                                <p className="text-xs text-ink-muted">{item.category}</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 {blocked
@@ -745,7 +745,7 @@ export default function ReservationsList() {
                           );
                         })}
                       {allOrgItems.filter((i) => !editItemIds.includes(i.id) && (editSearch === '' || i.name.toLowerCase().includes(editSearch.toLowerCase()))).length === 0 && (
-                        <p className="px-3 py-4 text-center text-xs text-gray-400">No items found</p>
+                        <p className="px-3 py-4 text-center text-xs text-ink-faint">No items found</p>
                       )}
                     </div>
                   </div>
@@ -755,21 +755,21 @@ export default function ReservationsList() {
               {/* Notes */}
               {!editing && selectedReservation.notes && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
-                  <p className="text-sm text-gray-700">{selectedReservation.notes}</p>
+                  <p className="text-xs font-medium text-ink-muted mb-1">Notes</p>
+                  <p className="text-sm text-ink-label">{selectedReservation.notes}</p>
                 </div>
               )}
             </div>
 
             {/* Footer actions */}
-            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
+            <div className="flex items-center justify-between border-t border-line-subtle px-6 py-4">
               {/* Edit button — only shown for editable statuses */}
               {!editing && ['pending', 'approved'].includes(selectedReservation.status) &&
                 !(isPersonal(selectedReservation) && selectedReservation.status === 'pending') &&
                 (appUser?.role !== 'user' || selectedReservation.userId === currentUser?.uid) && (
                 <button
                   onClick={() => openEdit(selectedReservation)}
-                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                   <Pencil size={13} /> Edit Items
                 </button>
@@ -782,7 +782,7 @@ export default function ReservationsList() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={closeEdit}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-body hover:bg-surface-hover"
                   >
                     Cancel
                   </button>
@@ -799,7 +799,7 @@ export default function ReservationsList() {
               {!editing && (
                 <button
                   onClick={() => { setSelectedReservation(null); closeEdit(); }}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                  className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-body hover:bg-surface-hover"
                 >
                   Close
                 </button>
@@ -842,29 +842,29 @@ function DeclineReservationModal({
   const [reason, setReason] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="font-semibold text-gray-900">Decline personal booking?</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+          <h2 className="font-semibold text-ink">Decline personal booking?</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="space-y-3 px-6 py-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-ink-label">
             <strong>{reservation.userName}</strong> will be emailed, and these dates will be free
             for everyone else to book.
           </p>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Reason (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Reason (optional)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               placeholder="Shared with the requester"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover">
             Cancel
           </button>
           <button

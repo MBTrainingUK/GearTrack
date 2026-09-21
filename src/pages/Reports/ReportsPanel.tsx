@@ -10,6 +10,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import StatusBadge from '../../components/StatusBadge';
 import { getLifespanStatus, formatMonths, type LifespanStatus } from '../../lib/items';
+import { useChartTheme, tooltipProps } from '../../lib/chartTheme';
 
 interface ItemStat {
   id: string;
@@ -71,6 +72,7 @@ interface PersonalRow {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function ReportsPanel() {
+  const chart = useChartTheme();
   const { appUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [itemStats, setItemStats] = useState<ItemStat[]>([]);
@@ -387,21 +389,21 @@ export default function ReportsPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <BarChart2 size={22} className="text-blue-600" />
+        <BarChart2 size={22} className="text-blue-600 dark:text-blue-400" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-sm text-gray-500">Usage analytics across all equipment</p>
+          <h1 className="text-2xl font-bold text-ink">Reports</h1>
+          <p className="text-sm text-ink-muted">Usage analytics across all equipment</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-line">
         {(['overview', 'items', 'inspections', 'users', 'personal', 'reservations', 'financials'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-5 py-2.5 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-900'
+              tab === t ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             {t}
@@ -416,37 +418,37 @@ export default function ReportsPanel() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Total Checkouts" value={totalCheckouts} />
             <StatCard label="Avg. Duration" value={`${avgDuration.toFixed(1)} days`} />
-            <StatCard label="Late Return Rate" value={`${overdueRate.toFixed(0)}%`} color={overdueRate > 20 ? 'text-red-600' : 'text-emerald-600'} />
-            <StatCard label="Unused Items" value={neverUsed.length} color={neverUsed.length > 0 ? 'text-amber-600' : 'text-emerald-600'} />
+            <StatCard label="Late Return Rate" value={`${overdueRate.toFixed(0)}%`} color={overdueRate > 20 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'} />
+            <StatCard label="Unused Items" value={neverUsed.length} color={neverUsed.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} />
             <StatCard label="Total Reservations" value={totalReservations} />
-            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600" />
-            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600' : 'text-emerald-600'} />
+            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600 dark:text-emerald-400" />
+            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'} />
             <StatCard label="Avg. Lead Time" value={`${avgLeadTime.toFixed(1)} days`} />
           </div>
 
           {/* Category chart + Condition pie */}
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-gray-900">Checkouts by Category</h2>
+            <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-ink">Checkouts by Category</h2>
               {categoryStats.length === 0 ? (
-                <p className="text-sm text-gray-400">No data yet</p>
+                <p className="text-sm text-ink-faint">No data yet</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={categoryStats} barSize={28}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: chart.axis }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chart.axis }} />
+                    <Tooltip {...tooltipProps(chart)} />
                     <Bar dataKey="value" name="Checkouts" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-gray-900">Return Condition Breakdown</h2>
+            <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-ink">Return Condition Breakdown</h2>
               {conditionStats.length === 0 ? (
-                <p className="text-sm text-gray-400">No returned items yet</p>
+                <p className="text-sm text-ink-faint">No returned items yet</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
@@ -455,8 +457,8 @@ export default function ReportsPanel() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-                    <Tooltip />
+                    <Legend iconSize={10} wrapperStyle={{ fontSize: 12, color: chart.axis }} />
+                    <Tooltip {...tooltipProps(chart)} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -465,12 +467,12 @@ export default function ReportsPanel() {
 
           {/* Never used */}
           {neverUsed.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-              <h2 className="mb-3 text-sm font-semibold text-amber-900">Unused Items ({neverUsed.length})</h2>
-              <p className="mb-3 text-xs text-amber-700">These items have never been checked out.</p>
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-5">
+              <h2 className="mb-3 text-sm font-semibold text-amber-900 dark:text-amber-200">Unused Items ({neverUsed.length})</h2>
+              <p className="mb-3 text-xs text-amber-700 dark:text-amber-300">These items have never been checked out.</p>
               <div className="flex flex-wrap gap-2">
                 {neverUsed.map((i) => (
-                  <span key={i.id} className="rounded-full bg-white border border-amber-200 px-3 py-1 text-xs text-amber-800">
+                  <span key={i.id} className="rounded-full bg-surface border border-amber-200 dark:border-amber-500/30 px-3 py-1 text-xs text-amber-800 dark:text-amber-300">
                     {i.name}
                   </span>
                 ))}
@@ -482,13 +484,13 @@ export default function ReportsPanel() {
 
       {/* ── ITEMS TAB ── */}
       {tab === 'items' && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
           {itemStats.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-gray-400">No data yet</div>
+            <div className="flex h-48 items-center justify-center text-sm text-ink-faint">No data yet</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-line-subtle text-xs text-ink-muted">
                   <th className="px-5 py-3 text-left font-medium">Item</th>
                   <th className="px-5 py-3 text-left font-medium">Category</th>
                   <th className="px-5 py-3 text-left font-medium">Purchased</th>
@@ -497,32 +499,32 @@ export default function ReportsPanel() {
                   <th className="px-5 py-3 text-left font-medium">Top Return Condition</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line-subtle">
                 {itemStats.map((i) => {
                   const topCond = Object.entries(i.conditionCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
                   const avgDays = i.checkoutCount > 0 && i.totalDaysOut > 0
                     ? (i.totalDaysOut / i.checkoutCount).toFixed(1)
                     : '—';
                   return (
-                    <tr key={i.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
-                      <td className="px-5 py-3 text-gray-500">{i.category}</td>
-                      <td className="px-5 py-3 text-gray-500">
+                    <tr key={i.id} className="hover:bg-surface-hover">
+                      <td className="px-5 py-3 font-medium text-ink">{i.name}</td>
+                      <td className="px-5 py-3 text-ink-muted">{i.category}</td>
+                      <td className="px-5 py-3 text-ink-muted">
                         {i.purchaseDate ? format(i.purchaseDate.toDate(), 'dd MMM yyyy') : '—'}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="h-2 rounded-full bg-blue-100 flex-1 max-w-[80px]">
+                          <div className="h-2 rounded-full bg-blue-100 dark:bg-blue-500/15 flex-1 max-w-[80px]">
                             <div
                               className="h-2 rounded-full bg-blue-500"
                               style={{ width: `${Math.min(100, (i.checkoutCount / (itemStats[0]?.checkoutCount || 1)) * 100)}%` }}
                             />
                           </div>
-                          <span className="font-semibold text-gray-900 tabular-nums">{i.checkoutCount}</span>
+                          <span className="font-semibold text-ink tabular-nums">{i.checkoutCount}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{avgDays}</td>
-                      <td className="px-5 py-3 capitalize text-gray-600">{topCond ?? '—'}</td>
+                      <td className="px-5 py-3 text-ink-body">{avgDays}</td>
+                      <td className="px-5 py-3 capitalize text-ink-body">{topCond ?? '—'}</td>
                     </tr>
                   );
                 })}
@@ -539,10 +541,10 @@ export default function ReportsPanel() {
         const dueSoonCount = inspectionRows.filter((r) => !r.status.isDue && r.status.pct >= 80).length;
 
         function bucket(status: LifespanStatus) {
-          if (status.isDue && !status.isAwaitingReset) return { label: 'Inspection Due', rank: 0, className: 'bg-red-100 text-red-700' };
-          if (status.isAwaitingReset) return { label: 'Awaiting Inspection', rank: 1, className: 'bg-amber-100 text-amber-700' };
-          if (status.pct >= 80) return { label: 'Due Soon', rank: 2, className: 'bg-yellow-100 text-yellow-700' };
-          return { label: 'OK', rank: 3, className: 'bg-emerald-100 text-emerald-700' };
+          if (status.isDue && !status.isAwaitingReset) return { label: 'Inspection Due', rank: 0, className: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300' };
+          if (status.isAwaitingReset) return { label: 'Awaiting Inspection', rank: 1, className: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300' };
+          if (status.pct >= 80) return { label: 'Due Soon', rank: 2, className: 'bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300' };
+          return { label: 'OK', rank: 3, className: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' };
         }
 
         const sorted = [...inspectionRows].sort((a, b) => {
@@ -558,19 +560,19 @@ export default function ReportsPanel() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <StatCard label="Inspection Due" value={dueCount} color={dueCount > 0 ? 'text-red-600' : 'text-emerald-600'} />
-              <StatCard label="Awaiting Inspection" value={awaitingCount} color={awaitingCount > 0 ? 'text-amber-600' : 'text-emerald-600'} />
-              <StatCard label="Due Soon" value={dueSoonCount} color={dueSoonCount > 0 ? 'text-amber-600' : 'text-emerald-600'} />
+              <StatCard label="Inspection Due" value={dueCount} color={dueCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'} />
+              <StatCard label="Awaiting Inspection" value={awaitingCount} color={awaitingCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} />
+              <StatCard label="Due Soon" value={dueSoonCount} color={dueSoonCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} />
               <StatCard label="Tracked Items" value={inspectionRows.length} />
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
               {inspectionRows.length === 0 ? (
-                <div className="flex h-48 items-center justify-center text-sm text-gray-400">No items have inspection tracking configured</div>
+                <div className="flex h-48 items-center justify-center text-sm text-ink-faint">No items have inspection tracking configured</div>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs text-gray-500">
+                    <tr className="border-b border-line-subtle text-xs text-ink-muted">
                       {(
                         [
                           ['name', 'Item'],
@@ -583,10 +585,10 @@ export default function ReportsPanel() {
                         <th
                           key={col}
                           onClick={() => toggleInspSort(col)}
-                          className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-gray-900 whitespace-nowrap"
+                          className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-ink whitespace-nowrap"
                         >
                           {label}
-                          <span className="ml-1 text-gray-300">
+                          <span className="ml-1 text-ink-ghost">
                             {inspSort === col ? (inspAsc ? '↑' : '↓') : '↕'}
                           </span>
                         </th>
@@ -594,24 +596,24 @@ export default function ReportsPanel() {
                       <th className="px-5 py-3 text-right font-medium"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-line-subtle">
                     {sorted.map(({ item, status }) => {
                       const b = bucket(status);
                       return (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-5 py-3 font-medium text-gray-900">{item.name}</td>
-                          <td className="px-5 py-3 text-gray-500">{item.category}</td>
+                        <tr key={item.id} className="hover:bg-surface-hover">
+                          <td className="px-5 py-3 font-medium text-ink">{item.name}</td>
+                          <td className="px-5 py-3 text-ink-muted">{item.category}</td>
                           <td className="px-5 py-3">
                             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${b.className}`}>{b.label}</span>
                           </td>
-                          <td className="px-5 py-3 text-gray-500">{formatMonths(item.expectedLifespanMonths!)}</td>
-                          <td className="px-5 py-3 tabular-nums text-gray-600">
+                          <td className="px-5 py-3 text-ink-muted">{formatMonths(item.expectedLifespanMonths!)}</td>
+                          <td className="px-5 py-3 tabular-nums text-ink-body">
                             {status.monthsRemaining >= 0
                               ? `${formatMonths(status.monthsRemaining)} left`
                               : `${formatMonths(Math.abs(status.monthsRemaining))} overdue`}
                           </td>
                           <td className="px-5 py-3 text-right">
-                            <Link to={`/items/${item.id}`} className="text-xs font-medium text-blue-600 hover:underline">Inspect →</Link>
+                            <Link to={`/items/${item.id}`} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Inspect →</Link>
                           </td>
                         </tr>
                       );
@@ -626,41 +628,41 @@ export default function ReportsPanel() {
 
       {/* ── USERS TAB ── */}
       {tab === 'users' && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
           {userStats.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-gray-400">No data yet</div>
+            <div className="flex h-48 items-center justify-center text-sm text-ink-faint">No data yet</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-line-subtle text-xs text-ink-muted">
                   <th className="px-5 py-3 text-left font-medium">User</th>
                   <th className="px-5 py-3 text-left font-medium">Total Checkouts</th>
                   <th className="px-5 py-3 text-left font-medium">Total Items Taken</th>
                   <th className="px-5 py-3 text-left font-medium">Avg. Items / Checkout</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line-subtle">
                 {userStats.map((u, idx) => (
-                  <tr key={u.userId} className="hover:bg-gray-50">
+                  <tr key={u.userId} className="hover:bg-surface-hover">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         {idx === 0 && <span className="text-amber-500 text-base">🏆</span>}
-                        <span className="font-medium text-gray-900">{u.userName}</span>
+                        <span className="font-medium text-ink">{u.userName}</span>
                       </div>
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-2 rounded-full bg-violet-100 flex-1 max-w-[80px]">
+                        <div className="h-2 rounded-full bg-violet-100 dark:bg-violet-500/15 flex-1 max-w-[80px]">
                           <div
                             className="h-2 rounded-full bg-violet-500"
                             style={{ width: `${Math.min(100, (u.checkoutCount / (userStats[0]?.checkoutCount || 1)) * 100)}%` }}
                           />
                         </div>
-                        <span className="font-semibold text-gray-900 tabular-nums">{u.checkoutCount}</span>
+                        <span className="font-semibold text-ink tabular-nums">{u.checkoutCount}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 tabular-nums">{u.itemsCheckedOut}</td>
-                    <td className="px-5 py-3 text-gray-600">{(u.itemsCheckedOut / u.checkoutCount).toFixed(1)}</td>
+                    <td className="px-5 py-3 text-ink-body tabular-nums">{u.itemsCheckedOut}</td>
+                    <td className="px-5 py-3 text-ink-body">{(u.itemsCheckedOut / u.checkoutCount).toFixed(1)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -685,9 +687,9 @@ export default function ReportsPanel() {
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-              <StatCard label="Out personally now" value={outNow.length} color="text-purple-700" />
-              <StatCard label="Booked, not yet out" value={bookedRows.length} color="text-blue-600" />
-              <StatCard label="Awaiting approval" value={pendingRows.length} color="text-amber-600" />
+              <StatCard label="Out personally now" value={outNow.length} color="text-purple-700 dark:text-purple-300" />
+              <StatCard label="Booked, not yet out" value={bookedRows.length} color="text-blue-600 dark:text-blue-400" />
+              <StatCard label="Awaiting approval" value={pendingRows.length} color="text-amber-600 dark:text-amber-400" />
               <StatCard label="Personal loans (all time)" value={personalRows.length} />
               <StatCard label="Value out personally" value={fmt(valueOut)} />
             </div>
@@ -699,8 +701,8 @@ export default function ReportsPanel() {
                   onClick={() => setPersonalFilter(f)}
                   className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                     personalFilter === f
-                      ? 'border-blue-600 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                      : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
                   }`}
                 >
                   {f === 'out'
@@ -714,17 +716,17 @@ export default function ReportsPanel() {
               ))}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
               {rows.length === 0 ? (
                 <div className="flex h-48 flex-col items-center justify-center gap-2 text-center">
-                  <Home size={28} className="text-gray-200" />
-                  <p className="text-sm text-gray-400">No personal bookings or checkouts to show</p>
+                  <Home size={28} className="text-ink-ghost" />
+                  <p className="text-sm text-ink-faint">No personal bookings or checkouts to show</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-100 text-xs text-gray-500">
+                      <tr className="border-b border-line-subtle text-xs text-ink-muted">
                         <th className="px-5 py-3 text-left font-medium">Item</th>
                         <th className="px-5 py-3 text-left font-medium">Borrower</th>
                         <th className="px-5 py-3 text-left font-medium">Requested</th>
@@ -734,61 +736,61 @@ export default function ReportsPanel() {
                         <th className="px-5 py-3 text-left font-medium">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-line-subtle">
                       {rows.map((r) => {
                         const overdueRow = r.status === 'active' && isPastDue(r.dueDate, today);
                         return (
-                          <tr key={r.key} className={`hover:bg-gray-50 ${overdueRow ? 'bg-red-50/40' : ''}`}>
+                          <tr key={r.key} className={`hover:bg-surface-hover ${overdueRow ? 'bg-red-50/40' : ''}`}>
                             <td className="px-5 py-3">
-                              <Link to={`/items/${r.itemId}`} className="font-medium text-blue-600 hover:underline">
+                              <Link to={`/items/${r.itemId}`} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
                                 {r.itemName}
                               </Link>
-                              {r.assetLabel && <p className="text-xs text-gray-400">#{r.assetLabel}</p>}
+                              {r.assetLabel && <p className="text-xs text-ink-faint">#{r.assetLabel}</p>}
                             </td>
                             <td className="px-5 py-3">
-                              <p className="text-gray-900">{r.userName}</p>
-                              {r.reason && <p className="text-xs text-gray-400 max-w-[200px] truncate" title={r.reason}>{r.reason}</p>}
+                              <p className="text-ink">{r.userName}</p>
+                              {r.reason && <p className="text-xs text-ink-faint max-w-[200px] truncate" title={r.reason}>{r.reason}</p>}
                             </td>
-                            <td className="px-5 py-3 text-gray-600">
+                            <td className="px-5 py-3 text-ink-body">
                               {tsDate(r.checkedOutAt)}
                               {r.declarationsAccepted ? (
                                 <p
-                                  className="text-xs text-emerald-700"
+                                  className="text-xs text-emerald-700 dark:text-emerald-300"
                                   title={`Availability and £1000 excess liability declarations accepted${r.declarationsVersion ? ` (v${r.declarationsVersion})` : ''}`}
                                 >
                                   Declarations accepted
                                 </p>
                               ) : (
-                                <p className="text-xs text-gray-400">No declarations on record</p>
+                                <p className="text-xs text-ink-faint">No declarations on record</p>
                               )}
                             </td>
                             <td className="px-5 py-3">
                               {r.approvedByName ? (
                                 <>
-                                  <span className="text-gray-900">{r.approvedByName}</span>
+                                  <span className="text-ink">{r.approvedByName}</span>
                                   {/* Self-approval is allowed, so surface it rather than prevent it. */}
                                   {r.selfApproved && (
-                                    <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                                    <span className="ml-1.5 rounded bg-amber-100 dark:bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
                                       self
                                     </span>
                                   )}
-                                  <p className="text-xs text-gray-400">{tsDate(r.approvedAt)}</p>
+                                  <p className="text-xs text-ink-faint">{tsDate(r.approvedAt)}</p>
                                 </>
                               ) : r.declinedByName ? (
-                                <span className="text-xs text-gray-400">Declined by {r.declinedByName}</span>
+                                <span className="text-xs text-ink-faint">Declined by {r.declinedByName}</span>
                               ) : (
-                                <span className="text-xs text-gray-400">—</span>
+                                <span className="text-xs text-ink-faint">—</span>
                               )}
                             </td>
-                            <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
+                            <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700 dark:text-red-300' : 'text-ink-body'}`}>
                               {tsDate(r.dueDate)}
                             </td>
-                            <td className="px-5 py-3 text-gray-600">{r.returnedAt ? tsDate(r.returnedAt) : '—'}</td>
+                            <td className="px-5 py-3 text-ink-body">{r.returnedAt ? tsDate(r.returnedAt) : '—'}</td>
                             <td className="px-5 py-3">
                               {/* 'booked' has no checkout behind it yet, so it
                                   has no CheckoutStatus badge to borrow. */}
                               {r.status === 'booked' ? (
-                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-500/15 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
                                   Booked
                                 </span>
                               ) : (
@@ -813,30 +815,30 @@ export default function ReportsPanel() {
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Total Inventory Value" value={fmt(totalInventoryValue)} />
-            <StatCard label="Value Currently Out" value={fmt(valueCurrentlyOut)} color="text-blue-600" />
+            <StatCard label="Value Currently Out" value={fmt(valueCurrentlyOut)} color="text-blue-600 dark:text-blue-400" />
             <StatCard label="Avg. Item Value" value={avgItemValue > 0 ? fmt(avgItemValue) : '—'} />
             <StatCard
               label="Avg. Value Per Checkout"
               value={avgActiveCheckoutValue > 0 ? fmt(avgActiveCheckoutValue) : '—'}
-              color="text-violet-600"
+              color="text-violet-600 dark:text-violet-400"
             />
           </div>
 
           {/* Inventory value by category */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-gray-900">Inventory Value by Category</h2>
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <h2 className="mb-4 text-sm font-semibold text-ink">Inventory Value by Category</h2>
             {valueByCat.length === 0 ? (
-              <p className="text-sm text-gray-400">No purchase price data yet</p>
+              <p className="text-sm text-ink-faint">No purchase price data yet</p>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={valueByCat} barSize={28}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: chart.axis }} />
                   <YAxis
                     tickFormatter={(v: number) => `£${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: chart.axis }}
                   />
-                  <Tooltip />
+                  <Tooltip {...tooltipProps(chart)} />
                   <Bar dataKey="value" name="Value" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -844,19 +846,19 @@ export default function ReportsPanel() {
           </div>
 
           {/* Cost per checkout (ROI) table */}
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-900">Cost per Checkout</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+          <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-line-subtle">
+              <h2 className="text-sm font-semibold text-ink">Cost per Checkout</h2>
+              <p className="text-xs text-ink-muted mt-0.5">
                 Items with the lowest cost-per-checkout give the best return on investment. Utilisation shows % of time in use since the item was added to GearTrack.
               </p>
             </div>
             {itemStats.filter((i) => i.purchasePrice != null).length === 0 ? (
-              <div className="flex h-32 items-center justify-center text-sm text-gray-400">No purchase price data yet</div>
+              <div className="flex h-32 items-center justify-center text-sm text-ink-faint">No purchase price data yet</div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs text-gray-500">
+                  <tr className="border-b border-line-subtle text-xs text-ink-muted">
                     {(
                       [
                         ['name', 'Item'],
@@ -872,17 +874,17 @@ export default function ReportsPanel() {
                       <th
                         key={col}
                         onClick={() => toggleFinSort(col)}
-                        className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-gray-900 whitespace-nowrap"
+                        className="px-5 py-3 text-left font-medium cursor-pointer select-none hover:text-ink whitespace-nowrap"
                       >
                         {label}
-                        <span className="ml-1 text-gray-300">
+                        <span className="ml-1 text-ink-ghost">
                           {finSort === col ? (finAsc ? '↑' : '↓') : '↕'}
                         </span>
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-line-subtle">
                   {itemStats
                     .filter((i) => i.purchasePrice != null)
                     .slice()
@@ -899,29 +901,29 @@ export default function ReportsPanel() {
                       return finAsc ? av - bv : bv - av;
                     })
                     .map((i) => (
-                      <tr key={i.id} className="hover:bg-gray-50">
-                        <td className="px-5 py-3 font-medium text-gray-900">{i.name}</td>
-                        <td className="px-5 py-3 text-gray-500">{i.category}</td>
-                        <td className="px-5 py-3 tabular-nums text-gray-900">{fmt(i.purchasePrice!)}</td>
-                        <td className="px-5 py-3 text-gray-500">
+                      <tr key={i.id} className="hover:bg-surface-hover">
+                        <td className="px-5 py-3 font-medium text-ink">{i.name}</td>
+                        <td className="px-5 py-3 text-ink-muted">{i.category}</td>
+                        <td className="px-5 py-3 tabular-nums text-ink">{fmt(i.purchasePrice!)}</td>
+                        <td className="px-5 py-3 text-ink-muted">
                           {i.ageMonths != null ? `${Math.round(i.ageMonths)} mo` : '—'}
                         </td>
-                        <td className="px-5 py-3 tabular-nums text-gray-900">{i.checkoutCount}</td>
-                        <td className="px-5 py-3 tabular-nums text-gray-900">
+                        <td className="px-5 py-3 tabular-nums text-ink">{i.checkoutCount}</td>
+                        <td className="px-5 py-3 tabular-nums text-ink">
                           {i.totalDaysOut > 0 ? `${Math.round(i.totalDaysOut)} d` : '—'}
                         </td>
-                        <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700">
-                          {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-gray-400">Never used</span>}
+                        <td className="px-5 py-3 tabular-nums font-semibold text-emerald-700 dark:text-emerald-300">
+                          {i.costPerCheckout != null ? fmt(i.costPerCheckout) : <span className="font-normal text-ink-faint">Never used</span>}
                         </td>
                         <td className="px-5 py-3">
                           {i.utilisationPct == null ? (
-                            <span className="text-xs text-gray-400">—</span>
+                            <span className="text-xs text-ink-faint">—</span>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <div className="h-2 w-16 rounded-full bg-emerald-100">
+                              <div className="h-2 w-16 rounded-full bg-emerald-100 dark:bg-emerald-500/15">
                                 <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${i.utilisationPct}%` }} />
                               </div>
-                              <span className="text-xs text-gray-500 tabular-nums">{i.utilisationPct.toFixed(0)}%</span>
+                              <span className="text-xs text-ink-muted tabular-nums">{i.utilisationPct.toFixed(0)}%</span>
                             </div>
                           )}
                         </td>
@@ -938,13 +940,13 @@ export default function ReportsPanel() {
             if (outItems.length === 0) return null;
             const outTotal = outItems.reduce((s, i) => s + (i.purchasePrice ?? 0), 0);
             return (
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-                <h2 className="mb-3 text-sm font-semibold text-blue-900">
+              <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 p-5">
+                <h2 className="mb-3 text-sm font-semibold text-blue-900 dark:text-blue-200">
                   Currently Checked Out — {outItems.length} items — Total Value: {fmt(outTotal)}
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {outItems.map((i) => (
-                    <span key={i.id} className="rounded-full bg-white border border-blue-200 px-3 py-1 text-xs text-blue-800">
+                    <span key={i.id} className="rounded-full bg-surface border border-blue-200 dark:border-blue-500/30 px-3 py-1 text-xs text-blue-800 dark:text-blue-300">
                       {i.name}{i.purchasePrice ? ` — ${fmt(i.purchasePrice)}` : ''}
                     </span>
                   ))}
@@ -955,28 +957,28 @@ export default function ReportsPanel() {
 
           {/* Missing purchase price */}
           {itemsMissingPrice.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-4">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-surface shadow-sm overflow-hidden">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-5 py-4">
                 <div>
-                  <h2 className="text-sm font-semibold text-amber-900">
+                  <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                     Missing Purchase Price — {itemsMissingPrice.length} item{itemsMissingPrice.length !== 1 ? 's' : ''}
                   </h2>
-                  <p className="mt-0.5 text-xs text-amber-800">
+                  <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
                     Excluded from every value figure on this tab. Add a price to bring them into the totals.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => downloadMissingPriceCsv(itemsMissingPrice)}
-                  className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                  className="rounded-lg border border-amber-300 dark:border-amber-500/40 bg-surface px-3 py-1.5 text-xs font-medium text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-500/15"
                 >
                   Download CSV
                 </button>
               </div>
               <div className="max-h-96 overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-white">
-                    <tr className="border-b border-gray-100 text-xs text-gray-500">
+                  <thead className="sticky top-0 bg-surface">
+                    <tr className="border-b border-line-subtle text-xs text-ink-muted">
                       <th className="px-5 py-2 text-left font-medium">Item</th>
                       <th className="px-5 py-2 text-left font-medium">Category</th>
                       <th className="px-5 py-2 text-left font-medium">Asset / Serial</th>
@@ -986,15 +988,15 @@ export default function ReportsPanel() {
                   </thead>
                   <tbody>
                     {itemsMissingPrice.map((i) => (
-                      <tr key={i.id} className="border-b border-gray-50 last:border-0">
-                        <td className="px-5 py-2.5 font-medium text-gray-900">{i.name}</td>
-                        <td className="px-5 py-2.5 text-gray-600">{i.category}</td>
-                        <td className="px-5 py-2.5 tabular-nums text-gray-500">
+                      <tr key={i.id} className="border-b border-line-subtle last:border-0">
+                        <td className="px-5 py-2.5 font-medium text-ink">{i.name}</td>
+                        <td className="px-5 py-2.5 text-ink-body">{i.category}</td>
+                        <td className="px-5 py-2.5 tabular-nums text-ink-muted">
                           {i.assetNumber || i.serialNumber || '—'}
                         </td>
                         <td className="px-5 py-2.5"><StatusBadge status={i.status} /></td>
                         <td className="px-5 py-2.5 text-right">
-                          <Link to={`/items/${i.id}/edit`} className="text-xs font-medium text-blue-600 hover:underline">
+                          <Link to={`/items/${i.id}/edit`} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
                             Add price →
                           </Link>
                         </td>
@@ -1013,49 +1015,49 @@ export default function ReportsPanel() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Total Reservations" value={totalReservations} />
-            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600" />
-            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600' : 'text-emerald-600'} />
+            <StatCard label="Approval Rate" value={`${approvalRate.toFixed(0)}%`} color="text-emerald-600 dark:text-emerald-400" />
+            <StatCard label="Cancellation Rate" value={`${cancellationRate.toFixed(0)}%`} color={cancellationRate > 30 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'} />
             <StatCard label="Avg. Lead Time" value={`${avgLeadTime.toFixed(1)} days`} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-gray-900">Reservations by Status</h2>
+            <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-ink">Reservations by Status</h2>
               {reservationsByStatus.length === 0 ? (
-                <p className="text-sm text-gray-400">No data yet</p>
+                <p className="text-sm text-ink-faint">No data yet</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={reservationsByStatus} barSize={28}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: chart.axis }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chart.axis }} />
+                    <Tooltip {...tooltipProps(chart)} />
                     <Bar dataKey="value" name="Reservations" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-gray-900">Most Reserved Items</h2>
+            <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold text-ink">Most Reserved Items</h2>
               {topReservedItems.length === 0 ? (
-                <p className="text-sm text-gray-400">No reservation data yet</p>
+                <p className="text-sm text-ink-faint">No reservation data yet</p>
               ) : (
                 <div className="space-y-2.5">
                   {topReservedItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3">
-                      <span className="w-4 text-right text-xs text-gray-400 tabular-nums">{idx + 1}</span>
+                      <span className="w-4 text-right text-xs text-ink-faint tabular-nums">{idx + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                        <p className="text-sm font-medium text-ink truncate">{item.name}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="h-2 w-20 rounded-full bg-violet-100">
+                        <div className="h-2 w-20 rounded-full bg-violet-100 dark:bg-violet-500/15">
                           <div
                             className="h-2 rounded-full bg-violet-500"
                             style={{ width: `${Math.min(100, (item.count / (topReservedItems[0]?.count || 1)) * 100)}%` }}
                           />
                         </div>
-                        <span className="w-6 text-right text-sm font-semibold text-gray-900 tabular-nums">{item.count}</span>
+                        <span className="w-6 text-right text-sm font-semibold text-ink tabular-nums">{item.count}</span>
                       </div>
                     </div>
                   ))}
@@ -1113,10 +1115,10 @@ function isPastDue(due: Timestamp, today: Date) {
   }
 }
 
-function StatCard({ label, value, color = 'text-gray-900' }: { label: string; value: string | number; color?: string }) {
+function StatCard({ label, value, color = 'text-ink' }: { label: string; value: string | number; color?: string }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
+    <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+      <p className="text-xs font-medium text-ink-muted mb-1">{label}</p>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );

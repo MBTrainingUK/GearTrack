@@ -68,7 +68,7 @@ export default function MyGear() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-gray-400" />
+        <Loader2 size={24} className="animate-spin text-ink-faint" />
       </div>
     );
   }
@@ -76,17 +76,17 @@ export default function MyGear() {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-2 mb-1">
-        <PackageCheck size={18} className="text-blue-600" />
-        <h1 className="text-lg font-bold text-gray-900">My Gear</h1>
+        <PackageCheck size={18} className="text-blue-600 dark:text-blue-400" />
+        <h1 className="text-lg font-bold text-ink">My Gear</h1>
         {outCount > 0 && (
-          <span className="ml-auto text-xs text-gray-400">{outCount} item{outCount !== 1 ? 's' : ''} out</span>
+          <span className="ml-auto text-xs text-ink-faint">{outCount} item{outCount !== 1 ? 's' : ''} out</span>
         )}
       </div>
 
       {checkouts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-          <PackageCheck size={40} className="text-gray-200" />
-          <p className="text-sm text-gray-400">Nothing checked out right now</p>
+          <PackageCheck size={40} className="text-ink-ghost" />
+          <p className="text-sm text-ink-faint">Nothing checked out right now</p>
         </div>
       )}
 
@@ -97,33 +97,33 @@ export default function MyGear() {
         return (
           <div
             key={co.id}
-            className={`rounded-xl bg-white border shadow-sm p-4 space-y-3 ${
-              pending ? 'border-amber-200' : overdue ? 'border-red-200' : 'border-gray-100'
+            className={`rounded-xl bg-surface border shadow-sm p-4 space-y-3 ${
+              pending ? 'border-amber-200 dark:border-amber-500/30' : overdue ? 'border-red-200 dark:border-red-500/30' : 'border-line-subtle'
             }`}
           >
             <div className="space-y-0.5">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-gray-900 leading-snug">{itemNamesFor(co)}</p>
+                <p className="font-semibold text-ink leading-snug">{itemNamesFor(co)}</p>
                 {isPersonal(co) && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-500/15 px-2 py-0.5 text-[11px] font-medium text-purple-800 dark:text-purple-300">
                     <Home size={10} />
                     Personal
                   </span>
                 )}
               </div>
               {assetNumbersFor(co) && (
-                <p className="text-xs text-gray-400">#{assetNumbersFor(co)}</p>
+                <p className="text-xs text-ink-faint">#{assetNumbersFor(co)}</p>
               )}
             </div>
             {pending ? (
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium text-amber-700">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
                   Awaiting admin approval — don't take this yet
                 </p>
                 <button
                   onClick={() => withdraw(co)}
                   disabled={withdrawingId === co.id}
-                  className="shrink-0 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink-body disabled:opacity-50"
                 >
                   Withdraw
                 </button>
@@ -132,7 +132,7 @@ export default function MyGear() {
               <div className="flex items-center justify-between">
                 <div>
                   {dueDate && (
-                    <p className={`text-xs font-medium ${overdue ? 'text-red-600' : 'text-gray-500'}`}>
+                    <p className={`text-xs font-medium ${overdue ? 'text-red-600 dark:text-red-400' : 'text-ink-muted'}`}>
                       {overdue ? 'Overdue — ' : 'Due '}
                       {format(dueDate, 'd MMM yyyy')}
                     </p>

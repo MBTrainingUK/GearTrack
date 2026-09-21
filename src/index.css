@@ -81,3 +81,35 @@ html.dark {
   }
   #root { width: 100%; height: 100%; }
 }
+
+/* ── FullCalendar ────────────────────────────────────────────────────
+   The calendar ships its own stylesheet, written for a light page, so no
+   amount of Tailwind on our side reaches it. It does expose CSS variables
+   for the parts that matter, so dark mode is a case of re-pointing those at
+   the token palette rather than fighting its selectors. */
+html.dark {
+  --fc-page-bg-color: var(--gt-surface);
+  --fc-border-color: var(--gt-line);
+  --fc-neutral-bg-color: var(--gt-surface-hover);
+  --fc-neutral-text-color: var(--gt-ink-muted);
+  --fc-today-bg-color: rgb(59 130 246 / 0.10);
+  --fc-highlight-color: rgb(59 130 246 / 0.16);
+  --fc-list-event-hover-bg-color: var(--gt-surface-hover);
+  --fc-button-text-color: var(--gt-ink);
+  --fc-button-bg-color: var(--gt-surface-hover);
+  --fc-button-border-color: var(--gt-line);
+  --fc-button-hover-bg-color: var(--gt-line);
+  --fc-button-hover-border-color: var(--gt-line-strong);
+  --fc-button-active-bg-color: var(--gt-line-strong);
+  --fc-button-active-border-color: var(--gt-line-strong);
+}
+
+/* The few pieces FullCalendar colours directly rather than through a variable. */
+html.dark .fc { color: var(--gt-ink); }
+html.dark .fc .fc-col-header-cell-cushion,
+html.dark .fc .fc-daygrid-day-number,
+html.dark .fc .fc-list-day-text,
+html.dark .fc .fc-list-day-side-text,
+html.dark .fc .fc-timegrid-slot-label-cushion {
+  color: var(--gt-ink-body);
+}

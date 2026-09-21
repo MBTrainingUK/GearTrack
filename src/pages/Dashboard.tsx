@@ -34,8 +34,10 @@ import {
 import { format, subDays } from 'date-fns';
 import StatusBadge from '../components/StatusBadge';
 import { isOverdue } from '../lib/checkout';
+import { useChartTheme, tooltipProps } from '../lib/chartTheme';
 
 export default function Dashboard() {
+  const chart = useChartTheme();
   const { appUser } = useAuth();
   const navigate = useNavigate();
   const { items } = useItems();
@@ -210,10 +212,10 @@ export default function Dashboard() {
           <h2 className="mb-4 text-sm font-semibold text-ink">Checkouts — Last 7 Days</h2>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} barSize={24}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: chart.axis }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chart.axis }} />
+              <Tooltip {...tooltipProps(chart)} />
               <Bar dataKey="checkouts" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

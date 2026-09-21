@@ -78,12 +78,12 @@ export default function OrganizationsConsole() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50">
-            <Building2 size={18} className="text-violet-600" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-500/10">
+            <Building2 size={18} className="text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Organizations</h1>
-            <p className="text-sm text-gray-500">{orgs.length} organization{orgs.length !== 1 ? 's' : ''}</p>
+            <h1 className="text-2xl font-bold text-ink">Organizations</h1>
+            <p className="text-sm text-ink-muted">{orgs.length} organization{orgs.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <button
@@ -95,25 +95,25 @@ export default function OrganizationsConsole() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-xs text-gray-500">
+            <tr className="border-b border-line-subtle text-xs text-ink-muted">
               <th className="px-5 py-3 text-left font-medium">Organization</th>
               <th className="px-5 py-3 text-left font-medium">Created</th>
               <th className="px-5 py-3 text-left font-medium">Users</th>
               <th className="px-5 py-3 text-left font-medium">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-line-subtle">
             {orgs.map((org) => (
-              <tr key={org.id} className="hover:bg-gray-50">
-                <td className="px-5 py-3 font-medium text-gray-900">{org.name}</td>
-                <td className="px-5 py-3 text-gray-500">{formatDate(org.createdAt)}</td>
-                <td className="px-5 py-3 text-gray-600">{userCounts[org.id] ?? '—'}</td>
+              <tr key={org.id} className="hover:bg-surface-hover">
+                <td className="px-5 py-3 font-medium text-ink">{org.name}</td>
+                <td className="px-5 py-3 text-ink-muted">{formatDate(org.createdAt)}</td>
+                <td className="px-5 py-3 text-ink-body">{userCounts[org.id] ?? '—'}</td>
                 <td className="px-5 py-3">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    org.status === 'suspended' ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-700'
+                    org.status === 'suspended' ? 'bg-surface-hover text-ink-body' : 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                   }`}>
                     {org.status === 'suspended' ? 'Suspended' : 'Active'}
                   </span>
@@ -123,7 +123,7 @@ export default function OrganizationsConsole() {
           </tbody>
         </table>
         {orgs.length === 0 && (
-          <div className="flex h-32 items-center justify-center text-sm text-gray-400">
+          <div className="flex h-32 items-center justify-center text-sm text-ink-faint">
             No organizations yet
           </div>
         )}
@@ -131,14 +131,14 @@ export default function OrganizationsConsole() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeCreateModal}>
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <h2 className="font-semibold text-gray-900">{newOrgLink ? 'Organization created' : 'New organization'}</h2>
-              <button onClick={closeCreateModal} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <div className="w-full max-w-sm rounded-2xl bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+              <h2 className="font-semibold text-ink">{newOrgLink ? 'Organization created' : 'New organization'}</h2>
+              <button onClick={closeCreateModal} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
             </div>
             {newOrgLink ? (
               <div className="px-6 py-5 space-y-3">
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-ink-label">
                   <strong>{form.orgName}</strong> has been created with <strong>{form.adminDisplayName}</strong> as its first admin. Send them this link so they can set a password — there's no automated email, so share it yourself.
                 </p>
                 <div className="flex items-center gap-2">
@@ -146,13 +146,13 @@ export default function OrganizationsConsole() {
                     readOnly
                     value={newOrgLink}
                     onFocus={(e) => e.target.select()}
-                    className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700"
+                    className="flex-1 rounded-lg border border-line bg-canvas px-3 py-2 text-xs text-ink-label"
                   />
                   <button
                     onClick={() => copyLink(newOrgLink)}
-                    className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    className="flex shrink-0 items-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink-label hover:bg-surface-hover"
                   >
-                    {linkCopied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    {linkCopied ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
                     {linkCopied ? 'Copied' : 'Copy'}
                   </button>
                 </div>
@@ -166,33 +166,33 @@ export default function OrganizationsConsole() {
             ) : (
               <form onSubmit={handleCreate} className="px-6 py-5 space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Organization name</label>
+                  <label className="mb-1 block text-sm font-medium text-ink-label">Organization name</label>
                   <input
                     required
                     value={form.orgName}
                     onChange={(e) => setForm((f) => ({ ...f, orgName: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="Acme Studios"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">First admin's name</label>
+                  <label className="mb-1 block text-sm font-medium text-ink-label">First admin's name</label>
                   <input
                     required
                     value={form.adminDisplayName}
                     onChange={(e) => setForm((f) => ({ ...f, adminDisplayName: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="Jane Smith"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">First admin's email</label>
+                  <label className="mb-1 block text-sm font-medium text-ink-label">First admin's email</label>
                   <input
                     required
                     type="email"
                     value={form.adminEmail}
                     onChange={(e) => setForm((f) => ({ ...f, adminEmail: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="jane@acme.com"
                   />
                 </div>
@@ -200,7 +200,7 @@ export default function OrganizationsConsole() {
                   <button
                     type="button"
                     onClick={closeCreateModal}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover"
                   >
                     Cancel
                   </button>

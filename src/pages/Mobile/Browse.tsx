@@ -67,19 +67,19 @@ export default function Browse() {
   return (
     <div className="flex flex-col h-full">
       {/* Search bar */}
-      <div className="sticky top-0 bg-gray-50 px-4 pt-4 pb-3 z-10">
+      <div className="sticky top-0 bg-canvas px-4 pt-4 pb-3 z-10">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or asset number…"
-            className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-xl border border-line bg-surface py-3 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         {query && (
-          <p className="mt-2 text-xs text-gray-400">
+          <p className="mt-2 text-xs text-ink-faint">
             {filtered.length} available result{filtered.length !== 1 ? 's' : ''}
           </p>
         )}
@@ -88,13 +88,13 @@ export default function Browse() {
       {/* Results */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
         {!query && (
-          <p className="text-xs text-gray-400 mb-3">Showing all available items</p>
+          <p className="text-xs text-ink-faint mb-3">Showing all available items</p>
         )}
 
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Package size={40} className="text-gray-200" />
-            <p className="text-sm text-gray-400">
+            <Package size={40} className="text-ink-ghost" />
+            <p className="text-sm text-ink-faint">
               {query ? 'No available items match that search' : 'No items available right now'}
             </p>
           </div>
@@ -103,16 +103,16 @@ export default function Browse() {
         {filtered.map((item) => (
           <div
             key={item.id}
-            className="rounded-xl bg-white border border-gray-100 shadow-sm p-4 flex items-center justify-between gap-3"
+            className="rounded-xl bg-surface border border-line-subtle shadow-sm p-4 flex items-center justify-between gap-3"
           >
             <div className="min-w-0 space-y-0.5">
-              <p className="font-medium text-gray-900 truncate">{item.name}</p>
+              <p className="font-medium text-ink truncate">{item.name}</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {item.assetNumber && (
-                  <span className="text-xs text-gray-400">#{item.assetNumber}</span>
+                  <span className="text-xs text-ink-faint">#{item.assetNumber}</span>
                 )}
                 {item.category && (
-                  <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">{item.category}</span>
+                  <span className="text-xs bg-surface-hover text-ink-muted rounded-full px-2 py-0.5">{item.category}</span>
                 )}
               </div>
             </div>
@@ -134,27 +134,27 @@ export default function Browse() {
           onClick={() => setCheckoutItem(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white shadow-xl mb-2"
+            className="w-full max-w-sm rounded-2xl bg-surface shadow-xl mb-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
+            <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-line-subtle">
               <div>
-                <h2 className="font-semibold text-gray-900">{checkoutItem.name}</h2>
+                <h2 className="font-semibold text-ink">{checkoutItem.name}</h2>
                 {checkoutItem.assetNumber && (
-                  <p className="text-xs text-gray-400">#{checkoutItem.assetNumber}</p>
+                  <p className="text-xs text-ink-faint">#{checkoutItem.assetNumber}</p>
                 )}
               </div>
-              <button onClick={() => setCheckoutItem(null)} className="text-gray-400">
+              <button onClick={() => setCheckoutItem(null)} className="text-ink-faint">
                 <X size={18} />
               </button>
             </div>
             <div className="px-6 py-4">
-              <p className="text-sm text-gray-500">Due back by end of today.</p>
+              <p className="text-sm text-ink-muted">Due back by end of today.</p>
             </div>
             <div className="flex gap-3 px-6 pb-5">
               <button
                 onClick={() => setCheckoutItem(null)}
-                className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600"
+                className="flex-1 rounded-xl border border-line py-3 text-sm font-medium text-ink-body"
               >
                 Cancel
               </button>

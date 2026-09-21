@@ -11,7 +11,7 @@ export default function ThemeToggle() {
     <div
       role="group"
       aria-label="Colour theme"
-      className="flex rounded-lg border border-line bg-surface p-0.5"
+      className="flex w-full rounded-lg border border-line bg-surface p-0.5"
     >
       {(['light', 'dark'] as const).map((choice) => {
         const active = theme === choice;
@@ -23,7 +23,7 @@ export default function ThemeToggle() {
             onClick={() => setTheme(choice)}
             aria-pressed={active}
             title={choice === 'light' ? 'Light mode' : 'Dark mode'}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               active
                 ? 'bg-surface-hover text-ink'
                 : 'text-ink-faint hover:text-ink-body'

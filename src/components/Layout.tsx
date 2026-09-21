@@ -23,6 +23,7 @@ import { useAuth } from '../context/useAuth';
 import type { AppUser } from '../types';
 import AppLogo from './AppLogo';
 import BasketDrawer from './BasketDrawer';
+import ThemeToggle from './ThemeToggle';
 import { useBasket } from '../store/basket';
 import { usePendingApprovals } from '../store/approvals';
 
@@ -215,6 +216,9 @@ function SidebarContent({
 
       {/* User footer */}
       <div className="border-t border-line-subtle px-3 py-3">
+        <div className="mb-2 px-2">
+          <ThemeToggle />
+        </div>
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 text-sm font-semibold">
             {appUser?.displayName?.[0]?.toUpperCase() ?? 'U'}

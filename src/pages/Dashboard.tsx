@@ -11,7 +11,6 @@ import { useAuth } from '../context/useAuth';
 import type { Checkout, Reservation } from '../types';
 import { isFlagged } from '../lib/items';
 import { useItems } from '../store/items';
-import ThemeToggle from '../components/ThemeToggle';
 import { Link, useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -145,14 +144,11 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">
-            Good {greeting()}, {appUser?.displayName?.split(' ')[0]} 👋
-          </h1>
-          <p className="mt-1 text-sm text-ink-muted">Here's what's happening with your equipment today.</p>
-        </div>
-        <ThemeToggle />
+      <div>
+        <h1 className="text-2xl font-bold text-ink">
+          Good {greeting()}, {appUser?.displayName?.split(' ')[0]} 👋
+        </h1>
+        <p className="mt-1 text-sm text-ink-muted">Here's what's happening with your equipment today.</p>
       </div>
 
       {/* Overdue alert */}

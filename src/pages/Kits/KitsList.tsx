@@ -65,8 +65,8 @@ export default function KitsList() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kits</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{kits.length} kit bundles</p>
+          <h1 className="text-2xl font-bold text-ink">Kits</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">{kits.length} kit bundles</p>
         </div>
         {appUser?.role !== 'user' && (
           <button
@@ -80,11 +80,11 @@ export default function KitsList() {
       </div>
 
       {kits.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
-          <Layers size={36} className="text-gray-300" />
-          <p className="text-sm text-gray-500">No kits yet</p>
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface">
+          <Layers size={36} className="text-ink-ghost" />
+          <p className="text-sm text-ink-muted">No kits yet</p>
           {appUser?.role !== 'user' && (
-            <button onClick={() => setShowForm(true)} className="text-sm font-medium text-blue-600 hover:underline">
+            <button onClick={() => setShowForm(true)} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
               Create your first kit →
             </button>
           )}
@@ -96,43 +96,43 @@ export default function KitsList() {
             const isExpanded = expandedKits.has(kit.id);
             const visibleItems = isExpanded ? kitItems : kitItems.slice(0, 4);
             return (
-              <div key={kit.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div key={kit.id} className="rounded-xl border border-line bg-surface p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50">
-                      <Layers size={18} className="text-violet-600" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-500/10">
+                      <Layers size={18} className="text-violet-600 dark:text-violet-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{kit.name}</h3>
-                      <p className="text-xs text-gray-500">{kit.itemIds.length} items</p>
+                      <h3 className="font-semibold text-ink">{kit.name}</h3>
+                      <p className="text-xs text-ink-muted">{kit.itemIds.length} items</p>
                     </div>
                   </div>
                   {appUser?.role !== 'user' && (
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setEditingKit(kit)} className="text-gray-300 hover:text-blue-500">
+                      <button onClick={() => setEditingKit(kit)} className="text-ink-ghost hover:text-blue-500">
                         <Edit size={15} />
                       </button>
-                      <button onClick={() => handleDelete(kit)} className="text-gray-300 hover:text-red-500">
+                      <button onClick={() => handleDelete(kit)} className="text-ink-ghost hover:text-red-500">
                         <Trash2 size={15} />
                       </button>
                     </div>
                   )}
                 </div>
                 {kit.description && (
-                  <p className="mt-3 text-sm text-gray-600 line-clamp-2">{kit.description}</p>
+                  <p className="mt-3 text-sm text-ink-body line-clamp-2">{kit.description}</p>
                 )}
                 <ul className="mt-3 space-y-1">
                   {visibleItems.map((i) => {
                     const excluded = isCategoryExcluded(i, excludedCategories);
                     return (
-                    <li key={i.id} className={`flex items-center justify-between rounded px-1.5 py-0.5 text-xs ${excluded ? 'border border-amber-400 bg-amber-50' : ''}`}>
-                      <span className="text-gray-700">{i.name}</span>
+                    <li key={i.id} className={`flex items-center justify-between rounded px-1.5 py-0.5 text-xs ${excluded ? 'border border-amber-400 bg-amber-50 dark:bg-amber-500/10' : ''}`}>
+                      <span className="text-ink-label">{i.name}</span>
                       <div className="flex items-center gap-2">
                         {(i.assetNumber || i.serialNumber) && (
-                          <span className="text-gray-400">#{i.assetNumber || i.serialNumber}</span>
+                          <span className="text-ink-faint">#{i.assetNumber || i.serialNumber}</span>
                         )}
                         {excluded
-                          ? <span className="text-amber-600">Not bookable</span>
+                          ? <span className="text-amber-600 dark:text-amber-400">Not bookable</span>
                           : <StatusBadge status={i.status} type="item" />}
                       </div>
                     </li>
@@ -149,7 +149,7 @@ export default function KitsList() {
                             return next;
                           })
                         }
-                        className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
+                        className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
                       >
                         {isExpanded ? 'Show less' : `+${kitItems.length - 4} more`}
                       </button>
@@ -159,7 +159,7 @@ export default function KitsList() {
                 <div className="mt-4">
                   <Link
                     to={`/reservations/new?kitId=${kit.id}`}
-                    className="block w-full rounded-lg border border-blue-200 bg-blue-50 py-1.5 text-center text-xs font-medium text-blue-700 hover:bg-blue-100"
+                    className="block w-full rounded-lg border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 py-1.5 text-center text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/15"
                   >
                     Reserve Kit
                   </Link>
@@ -257,68 +257,68 @@ function KitFormModal({ items, onClose, currentUser, appUser, editingKit }: { it
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <h2 className="font-semibold text-gray-900">{editingKit ? 'Edit Kit' : 'Create Kit'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+      <div className="w-full max-w-lg rounded-2xl bg-surface shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4 shrink-0">
+          <h2 className="font-semibold text-ink">{editingKit ? 'Edit Kit' : 'Create Kit'}</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="overflow-y-auto px-6 py-4 space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Kit Name *</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Kit Name *</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Studio Lighting Kit"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            <label className="mb-1.5 block text-sm font-medium text-ink-label">
               Add Items ({selectedItems.length} selected)
             </label>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search items…"
-              className="mb-2 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mb-2 w-full rounded-lg border border-line px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-line divide-y divide-line-subtle">
               {availableItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => toggleItem(item.id)}
-                  className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 ${
-                    selectedItems.includes(item.id) ? 'bg-blue-50' : ''
+                  className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-surface-hover ${
+                    selectedItems.includes(item.id) ? 'bg-blue-50 dark:bg-blue-500/10' : ''
                   }`}
                 >
-                  <span className="text-gray-900">{item.name}</span>
+                  <span className="text-ink">{item.name}</span>
                   <div className="flex items-center gap-2">
                     {(item.assetNumber || item.serialNumber) && (
-                      <span className="text-xs text-gray-400">#{item.assetNumber || item.serialNumber}</span>
+                      <span className="text-xs text-ink-faint">#{item.assetNumber || item.serialNumber}</span>
                     )}
                     <StatusBadge status={item.status} type="item" />
-                    {selectedItems.includes(item.id) && <Check size={14} className="text-blue-600" />}
+                    {selectedItems.includes(item.id) && <Check size={14} className="text-blue-600 dark:text-blue-400" />}
                   </div>
                 </button>
               ))}
               {availableItems.length === 0 && (
-                <p className="px-3 py-4 text-center text-xs text-gray-400">No items found</p>
+                <p className="px-3 py-4 text-center text-xs text-ink-faint">No items found</p>
               )}
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 shrink-0">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4 shrink-0">
+          <button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover">
             Cancel
           </button>
           <button

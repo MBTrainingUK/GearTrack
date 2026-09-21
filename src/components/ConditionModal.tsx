@@ -97,16 +97,16 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+          <h2 className="text-base font-semibold text-ink">
             {mode === 'return' ? 'Return — Condition Report' : 'Check-out — Condition Report'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="space-y-4 px-6 py-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Condition</label>
+            <label className="mb-1.5 block text-sm font-medium text-ink-label">Condition</label>
             <div className="flex flex-wrap gap-2">
               {conditions.map((c) => (
                 <button
@@ -115,8 +115,8 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
                   onClick={() => setCondition(c)}
                   className={`rounded-full border px-3 py-1 text-sm capitalize transition-colors ${
                     condition === c
-                      ? 'border-blue-600 bg-blue-50 text-blue-700 font-medium'
-                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 font-medium'
+                      : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
                   }`}
                 >
                   {c}
@@ -125,20 +125,20 @@ export default function ConditionModal({ checkoutId, itemIds, targetName, mode, 
             </div>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Notes (optional)</label>
+            <label className="mb-1.5 block text-sm font-medium text-ink-label">Notes (optional)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Any damage, missing accessories, etc…"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover"
           >
             Cancel
           </button>

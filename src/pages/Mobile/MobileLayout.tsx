@@ -13,16 +13,16 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex flex-col h-svh bg-gray-50">
+    <div className="flex flex-col h-svh bg-canvas">
       {/* Header */}
-      <header className="flex items-center justify-between bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+      <header className="flex items-center justify-between bg-surface border-b border-line-subtle px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
           <AppLogo size={28} />
-          <span className="font-semibold text-gray-900 text-sm">GearTrack</span>
+          <span className="font-semibold text-ink text-sm">GearTrack</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">{appUser?.displayName}</span>
-          <button onClick={handleLogout} className="text-gray-400 hover:text-gray-600">
+          <span className="text-xs text-ink-muted">{appUser?.displayName}</span>
+          <button onClick={handleLogout} className="text-ink-faint hover:text-ink-body">
             <LogOut size={16} />
           </button>
         </div>
@@ -34,12 +34,12 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
       </main>
 
       {/* Bottom nav */}
-      <nav className="shrink-0 bg-white border-t border-gray-100 flex safe-bottom">
+      <nav className="shrink-0 bg-surface border-t border-line-subtle flex safe-bottom">
         <NavLink
           to="/m/gear"
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-              isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              isActive ? 'text-blue-600 dark:text-blue-400' : 'text-ink-faint hover:text-ink-body'
             }`
           }
         >
@@ -50,7 +50,7 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
           to="/m/browse"
           className={({ isActive }) =>
             `flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-              isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              isActive ? 'text-blue-600 dark:text-blue-400' : 'text-ink-faint hover:text-ink-body'
             }`
           }
         >

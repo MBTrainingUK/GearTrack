@@ -6,7 +6,7 @@ export default function ConditionBadge({ condition }: { condition?: ItemConditio
   if (!condition || condition === 'good') return null;
   if (condition === 'attention_needed') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
         <AlertTriangle size={11} />
         Attention needed
       </span>
@@ -14,7 +14,7 @@ export default function ConditionBadge({ condition }: { condition?: ItemConditio
   }
   if (condition === 'needs_investigating') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
         <Search size={11} />
         Needs investigating
       </span>
@@ -22,7 +22,7 @@ export default function ConditionBadge({ condition }: { condition?: ItemConditio
   }
   if (condition === 'damaged') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">
         <AlertTriangle size={11} />
         Damaged
       </span>

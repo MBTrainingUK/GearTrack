@@ -297,23 +297,23 @@ export default function ReservationForm() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-700">
+        <button onClick={() => navigate(-1)} className="text-ink-faint hover:text-ink-label">
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-ink">
           {isPersonalRequest ? 'Personal Booking Request' : 'New Reservation'}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Booking type */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Booking type</label>
-          <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <label className="mb-1.5 block text-sm font-medium text-ink-label">Booking type</label>
+          <div className="flex rounded-lg border border-line bg-canvas p-0.5">
             <button
               type="button"
               onClick={() => setKind('work')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-surface text-blue-700 dark:text-blue-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
             >
               <Briefcase size={12} />
               Work
@@ -321,7 +321,7 @@ export default function ReservationForm() {
             <button
               type="button"
               onClick={() => setKind('personal')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-surface text-purple-700 dark:text-purple-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
             >
               <Home size={12} />
               Personal
@@ -329,15 +329,15 @@ export default function ReservationForm() {
           </div>
           {isPersonalRequest && (
             <>
-              <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
-                <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600" />
+              <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 px-3 py-2 text-xs text-purple-800 dark:text-purple-300">
+                <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600 dark:text-purple-400" />
                 <span>
                   An admin must approve this before the dates are yours. The gear is reserved in
                   the meantime, and is checked out to you automatically at the start time.
                 </span>
               </div>
               <div className="mt-3">
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-ink-label">
                   Reason for personal use *
                 </label>
                 <textarea
@@ -345,7 +345,7 @@ export default function ReservationForm() {
                   onChange={(e) => setPersonalReason(e.target.value)}
                   rows={2}
                   placeholder="Shown to the admin who approves it"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 />
               </div>
             </>
@@ -353,28 +353,28 @@ export default function ReservationForm() {
         </div>
 
         {/* Date range */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-gray-900">Date & Time Range</h2>
+        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Date & Time Range</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Start *</label>
+              <label className="mb-1 block text-sm font-medium text-ink-label">Start *</label>
               <input
                 type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">End *</label>
+              <label className="mb-1 block text-sm font-medium text-ink-label">End *</label>
               <input
                 type="datetime-local"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 required
                 min={startDate}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -382,12 +382,12 @@ export default function ReservationForm() {
 
         {/* Assign to (admin/manager only, and never for a personal booking) */}
         {canAssign && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Assign To</h2>
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-ink">Assign To</h2>
             <select
               value={assignedUserId}
               onChange={(e) => setAssignedUserId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">Myself ({appUser.displayName})</option>
               {orgUsers
@@ -399,7 +399,7 @@ export default function ReservationForm() {
                   </option>
                 ))}
             </select>
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs text-ink-faint">
               The reservation will be created in this person's name and auto-checked out at the start time.
             </p>
           </div>
@@ -407,8 +407,8 @@ export default function ReservationForm() {
 
         {/* Kit picker */}
         {kits.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Book a Kit (optional)</h2>
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-ink">Book a Kit (optional)</h2>
             <div className="flex flex-wrap gap-2">
               {kits.map((kit) => (
                 <button
@@ -417,8 +417,8 @@ export default function ReservationForm() {
                   onClick={() => selectKit(kit)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     selectedKitId === kit.id
-                      ? 'border-violet-600 bg-violet-50 text-violet-700'
-                      : 'border-gray-200 text-gray-600 hover:border-violet-300'
+                      ? 'border-violet-600 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300'
+                      : 'border-line text-ink-body hover:border-violet-300 dark:hover:border-violet-500/40'
                   }`}
                 >
                   {kit.name} ({kit.itemIds.length} items)
@@ -426,8 +426,8 @@ export default function ReservationForm() {
               ))}
             </div>
             {kitWarnings.length > 0 && (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-                <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-600" />
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span>
                   {selectedItems.length} of {selectedItems.length + kitWarnings.length} items selected —{' '}
                   <strong>{kitWarnings.join(', ')}</strong>{' '}
@@ -439,8 +439,8 @@ export default function ReservationForm() {
         )}
 
         {/* Item picker */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">
+        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-ink">
             Select Items ({selectedItems.length} selected)
           </h2>
           <div className="mb-3 flex flex-wrap gap-2">
@@ -448,12 +448,12 @@ export default function ReservationForm() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search items…"
-              className="min-w-[180px] flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="min-w-[180px] flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="rounded-lg border border-line px-3 py-2 text-sm text-ink-body focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="All">All Categories</option>
               {catOptions.map((c) => (
@@ -461,7 +461,7 @@ export default function ReservationForm() {
               ))}
             </select>
           </div>
-          <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line-subtle">
             {filteredItems.map((item) => {
               const isConflict = conflicts.includes(item.id);
               const isSelected = selectedItems.includes(item.id);
@@ -473,49 +473,49 @@ export default function ReservationForm() {
                   onClick={() => toggleItem(item.id)}
                   disabled={isBlocked}
                   className={`flex w-full items-center justify-between px-3 py-2.5 text-sm ${
-                    isBlocked ? 'cursor-not-allowed opacity-60 bg-gray-50' : 'hover:bg-gray-50'
-                  } ${isSelected ? 'bg-blue-50' : ''} ${isConflict ? 'bg-red-50' : ''}`}
+                    isBlocked ? 'cursor-not-allowed opacity-60 bg-canvas' : 'hover:bg-surface-hover'
+                  } ${isSelected ? 'bg-blue-50 dark:bg-blue-500/10' : ''} ${isConflict ? 'bg-red-50 dark:bg-red-500/10' : ''}`}
                 >
                   <div className="text-left">
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="font-medium text-ink">{item.name}</p>
+                    <p className="text-xs text-ink-muted">
                       {item.category}
                       {item.assetNumber && <span className="ml-2">· Asset: {item.assetNumber}</span>}
                       {!item.assetNumber && item.serialNumber && <span className="ml-2">· S/N: {item.serialNumber}</span>}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isConflict && <span className="text-xs text-red-600">Conflict</span>}
+                    {isConflict && <span className="text-xs text-red-600 dark:text-red-400">Conflict</span>}
                     {isCategoryExcluded(item, excludedCategories)
-                      ? <span className="text-xs text-amber-600">Not bookable</span>
+                      ? <span className="text-xs text-amber-600 dark:text-amber-400">Not bookable</span>
                       : isBlocked
                         ? <ConditionBadge condition={item.condition} />
                         : <StatusBadge status={item.status} type="item" />}
-                    {isSelected && !isBlocked && <Check size={14} className="text-blue-600 shrink-0" />}
+                    {isSelected && !isBlocked && <Check size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />}
                   </div>
                 </button>
               );
             })}
             {filteredItems.length === 0 && (
-              <p className="px-3 py-6 text-center text-sm text-gray-400">No items found</p>
+              <p className="px-3 py-6 text-center text-sm text-ink-faint">No items found</p>
             )}
           </div>
         </div>
 
         {/* Notes */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Notes (optional)</label>
+        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+          <label className="mb-1.5 block text-sm font-medium text-ink-label">Notes (optional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="Purpose of reservation, special requirements…"
           />
         </div>
 
         {isPersonalRequest && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <PersonalDeclarations
               availabilityChecked={availabilityChecked}
               liabilityAccepted={liabilityAccepted}
@@ -526,7 +526,7 @@ export default function ReservationForm() {
         )}
 
         {!isPersonalRequest && appUser?.role === 'user' && (
-          <p className="text-xs text-gray-500 text-center">
+          <p className="text-xs text-ink-muted text-center">
             Your reservation will be submitted for admin approval.
           </p>
         )}
@@ -535,7 +535,7 @@ export default function ReservationForm() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover"
           >
             Cancel
           </button>

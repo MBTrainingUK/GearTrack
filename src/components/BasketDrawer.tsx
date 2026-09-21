@@ -28,35 +28,35 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="fixed inset-0 bg-black/30" onClick={onClose} />
-      <aside className="relative z-10 flex h-full w-full max-w-sm flex-col bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-            <ShoppingBasket size={18} className="text-blue-600" />
+      <aside className="relative z-10 flex h-full w-full max-w-sm flex-col bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line-subtle px-5 py-4">
+          <h2 className="flex items-center gap-2 font-semibold text-ink">
+            <ShoppingBasket size={18} className="text-blue-600 dark:text-blue-400" />
             Basket
-            {count > 0 && <span className="text-sm font-normal text-gray-500">({count})</span>}
+            {count > 0 && <span className="text-sm font-normal text-ink-muted">({count})</span>}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body">
             <X size={18} />
           </button>
         </div>
 
         {count === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <ShoppingBasket size={36} className="text-gray-300" />
-            <p className="text-sm text-gray-500">The basket is empty</p>
-            <p className="text-xs text-gray-400">
+            <ShoppingBasket size={36} className="text-ink-ghost" />
+            <p className="text-sm text-ink-muted">The basket is empty</p>
+            <p className="text-xs text-ink-faint">
               Add gear from the Items page, then reserve it for a future date or check it out
               straight away.
             </p>
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-line-subtle">
               {entries.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-900">{item.name}</p>
-                    <p className="truncate text-xs text-gray-500">
+                    <p className="truncate text-sm font-medium text-ink">{item.name}</p>
+                    <p className="truncate text-xs text-ink-muted">
                       {item.category}
                       {item.assetNumber && <span className="ml-2">· Asset: {item.assetNumber}</span>}
                     </p>
@@ -65,7 +65,7 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
                   <button
                     onClick={() => removeFromBasket(item.id)}
                     title="Remove from basket"
-                    className="shrink-0 text-gray-300 hover:text-red-500"
+                    className="shrink-0 text-ink-ghost hover:text-red-500 dark:hover:text-red-400"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -73,9 +73,9 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
               ))}
             </div>
 
-            <div className="space-y-2 border-t border-gray-100 px-5 py-4">
+            <div className="space-y-2 border-t border-line-subtle px-5 py-4">
               {someUnavailable && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-ink-muted">
                   {count - availableNow.length} of {count} {count - availableNow.length === 1 ? 'is' : 'are'}{' '}
                   out right now — still bookable for a future date.
                 </p>
@@ -91,17 +91,17 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
               <button
                 onClick={checkOutNow}
                 disabled={availableNow.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink-label hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ArrowLeftRight size={15} />
                 Check out now
-                <span className="text-xs font-normal text-gray-400">
+                <span className="text-xs font-normal text-ink-faint">
                   {availableNow.length === count ? `all ${count}` : `${availableNow.length} of ${count}`}
                 </span>
               </button>
               <button
                 onClick={clearBasket}
-                className="w-full py-1 text-xs text-gray-400 hover:text-red-500"
+                className="w-full py-1 text-xs text-ink-faint hover:text-red-500 dark:hover:text-red-400"
               >
                 Empty basket
               </button>

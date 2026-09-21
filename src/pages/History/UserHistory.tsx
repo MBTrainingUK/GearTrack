@@ -81,18 +81,18 @@ export default function UserHistory() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <History size={22} className="text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">My History</h1>
+          <History size={22} className="text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-ink">My History</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">Show:</span>
-          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+          <span className="text-xs text-ink-faint">Show:</span>
+          <div className="flex rounded-lg border border-line bg-surface p-0.5">
             {([30, 90] as const).map((d) => (
               <button
                 key={d}
                 onClick={() => setDateRange(d)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                  dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                  dateRange === d ? 'bg-blue-600 text-white' : 'text-ink-body hover:text-ink'
                 }`}
               >
                 {d === 30 ? 'Last 30 days' : 'Last 90 days'}
@@ -103,15 +103,15 @@ export default function UserHistory() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-line">
         {(['checkouts', 'reservations'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-5 py-2.5 text-sm font-medium capitalize border-b-2 transition-colors ${
               tab === t
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-ink-muted hover:text-ink'
             }`}
           >
             {t} (
@@ -121,13 +121,13 @@ export default function UserHistory() {
       </div>
 
       {tab === 'checkouts' && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
           {filteredCheckouts.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-sm text-gray-400">No checkout history</div>
+            <div className="flex h-40 items-center justify-center text-sm text-ink-faint">No checkout history</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-line-subtle text-xs text-ink-muted">
                   <th className="px-5 py-3 text-left font-medium">Items</th>
                   <th className="px-5 py-3 text-left font-medium">Checked Out</th>
                   <th className="px-5 py-3 text-left font-medium">Due</th>
@@ -137,35 +137,35 @@ export default function UserHistory() {
                   <th className="px-5 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line-subtle">
                 {filteredCheckouts.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
+                  <tr key={c.id} className="hover:bg-surface-hover">
                     <td className="px-5 py-3">
                       <div className="space-y-0.5">
                         {c.itemIds.slice(0, 2).map((id) => (
-                          <p key={id} className="text-xs text-gray-700">{items[id]?.name ?? id}</p>
+                          <p key={id} className="text-xs text-ink-label">{items[id]?.name ?? id}</p>
                         ))}
                         {c.itemIds.length > 2 && (
-                          <p className="text-xs text-gray-400">+{c.itemIds.length - 2} more</p>
+                          <p className="text-xs text-ink-faint">+{c.itemIds.length - 2} more</p>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">{formatTS(c.checkedOutAt)}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">{formatTS(c.dueDate)}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">
+                    <td className="px-5 py-3 text-ink-body text-xs">{formatTS(c.checkedOutAt)}</td>
+                    <td className="px-5 py-3 text-ink-body text-xs">{formatTS(c.dueDate)}</td>
+                    <td className="px-5 py-3 text-ink-body text-xs">
                       {c.returnedAt ? formatTS(c.returnedAt) : '—'}
                     </td>
                     <td className="px-5 py-3">
                       <StatusBadge status={c.status} type="checkout" />
                     </td>
-                    <td className="px-5 py-3 text-xs capitalize text-gray-600">
+                    <td className="px-5 py-3 text-xs capitalize text-ink-body">
                       {c.returnCondition?.condition ?? '—'}
                     </td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => navigate(`/reservations/new?itemIds=${c.itemIds.join(',')}`)}
                         title="Reserve the same items again"
-                        className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <RotateCcw size={11} />
                         Repeat
@@ -180,13 +180,13 @@ export default function UserHistory() {
       )}
 
       {tab === 'reservations' && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
           {filteredReservations.length === 0 ? (
-            <div className="flex h-40 items-center justify-center text-sm text-gray-400">No reservation history</div>
+            <div className="flex h-40 items-center justify-center text-sm text-ink-faint">No reservation history</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-line-subtle text-xs text-ink-muted">
                   <th className="px-5 py-3 text-left font-medium">Items</th>
                   <th className="px-5 py-3 text-left font-medium">Start</th>
                   <th className="px-5 py-3 text-left font-medium">End</th>
@@ -195,18 +195,18 @@ export default function UserHistory() {
                   <th className="px-5 py-3 text-left font-medium"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-line-subtle">
                 {filteredReservations.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                  <tr key={r.id} className="hover:bg-surface-hover">
+                    <td className="px-5 py-3 text-xs text-ink-label">
                       {r.itemIds.length} item{r.itemIds.length !== 1 ? 's' : ''}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">{formatTS(r.startDate)}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">{formatTS(r.endDate)}</td>
+                    <td className="px-5 py-3 text-ink-body text-xs">{formatTS(r.startDate)}</td>
+                    <td className="px-5 py-3 text-ink-body text-xs">{formatTS(r.endDate)}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={r.status} type="reservation" />
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-500 max-w-[200px] truncate">
+                    <td className="px-5 py-3 text-xs text-ink-muted max-w-[200px] truncate">
                       {r.notes ?? '—'}
                     </td>
                     <td className="px-5 py-3">
@@ -214,7 +214,7 @@ export default function UserHistory() {
                         <button
                           onClick={() => navigate(`/checkouts?reservationId=${r.id}`)}
                           title="Check out this reservation"
-                          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         >
                           <LogOut size={11} />
                           Check Out
@@ -224,7 +224,7 @@ export default function UserHistory() {
                         <button
                           onClick={() => navigate(`/checkouts?returnId=${checkoutByReservation[r.id]}`)}
                           title="Return these items"
-                          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-100 transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 transition-colors"
                         >
                           <LogIn size={11} />
                           Check In

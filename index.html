@@ -9,6 +9,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="GearTrack" />
     <title>GearTrack — Equipment Manager</title>
+    <!-- Applies the saved theme before first paint. Without this the page
+         renders light, then React boots and flips it — a white flash on every
+         load for anyone using dark mode. Kept inline and tiny for that reason;
+         it must run before the stylesheet paints, not after the bundle loads. -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('geartrack:theme');
+          var dark = saved === 'dark' || (saved !== 'light' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) { /* private mode: fall through to light */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

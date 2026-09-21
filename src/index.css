@@ -1,7 +1,115 @@
 @import "tailwindcss";
 
+/* Dark mode is driven by a `dark` class on <html>, set by src/store/theme.ts
+   and by the pre-paint script in index.html. Tailwind v4 defaults to the OS
+   preference, so this variant is what lets the in-app toggle win over it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Neutral tokens ──────────────────────────────────────────────────
+   The greys are the bulk of the UI and the part worth centralising: change
+   "what colour is a card" here rather than in sixty files. Semantic colours
+   (status badges, buttons) are NOT tokens — they already live in lookup maps
+   in StatusBadge/ConditionBadge, so they are handled at source instead.
+
+   Light values are the exact Tailwind greys the app used before, so light
+   mode is unchanged to the pixel. */
+@theme {
+  --color-canvas: var(--gt-canvas);
+  --color-surface: var(--gt-surface);
+  --color-surface-hover: var(--gt-surface-hover);
+
+  --color-line: var(--gt-line);
+  --color-line-subtle: var(--gt-line-subtle);
+  --color-line-strong: var(--gt-line-strong);
+
+  --color-ink: var(--gt-ink);
+  --color-ink-label: var(--gt-ink-label);
+  --color-ink-body: var(--gt-ink-body);
+  --color-ink-muted: var(--gt-ink-muted);
+  --color-ink-faint: var(--gt-ink-faint);
+  --color-ink-ghost: var(--gt-ink-ghost);
+}
+
+:root {
+  --gt-canvas: #f9fafb;        /* was gray-50   — page background */
+  --gt-surface: #ffffff;       /* was white     — cards, drawers, modals */
+  --gt-surface-hover: #f3f4f6; /* was gray-100  — row hover, avatar chip */
+
+  --gt-line: #e5e7eb;          /* was gray-200  — default border */
+  --gt-line-subtle: #f3f4f6;   /* was gray-100  — dividers inside a card */
+  --gt-line-strong: #d1d5db;   /* was gray-300  — dashed empty-state border */
+
+  --gt-ink: #111827;           /* was gray-900  — headings, primary text */
+  --gt-ink-label: #374151;     /* was gray-700  — form labels */
+  --gt-ink-body: #4b5563;      /* was gray-600  — body, nav items */
+  --gt-ink-muted: #6b7280;     /* was gray-500  — supporting text */
+  --gt-ink-faint: #9ca3af;     /* was gray-400  — hints, inactive icons */
+  --gt-ink-ghost: #d1d5db;     /* was gray-300  — empty-state illustrations */
+
+  color-scheme: light;
+}
+
+/* html.dark rather than .dark so it outranks :root regardless of source order
+   — both sit on the same <html> element and would otherwise tie. */
+html.dark {
+  --gt-canvas: #0f1116;
+  --gt-surface: #171a21;
+  --gt-surface-hover: #1f232c;
+
+  --gt-line: #2b313c;
+  --gt-line-subtle: #23272f;
+  --gt-line-strong: #3a4150;
+
+  --gt-ink: #e8eaee;
+  --gt-ink-label: #c7ccd6;
+  --gt-ink-body: #b2b9c5;
+  --gt-ink-muted: #8b93a1;
+  --gt-ink-faint: #6b7381;
+  --gt-ink-ghost: #4a515d;
+
+  /* Tells the browser to render native controls, scrollbars and the
+     datetime-local picker dark too — without it those stay stubbornly light. */
+  color-scheme: dark;
+}
+
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', system-ui, sans-serif; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--gt-canvas);
+    color: var(--gt-ink);
+  }
   #root { width: 100%; height: 100%; }
+}
+
+/* ── FullCalendar ────────────────────────────────────────────────────
+   The calendar ships its own stylesheet, written for a light page, so no
+   amount of Tailwind on our side reaches it. It does expose CSS variables
+   for the parts that matter, so dark mode is a case of re-pointing those at
+   the token palette rather than fighting its selectors. */
+html.dark {
+  --fc-page-bg-color: var(--gt-surface);
+  --fc-border-color: var(--gt-line);
+  --fc-neutral-bg-color: var(--gt-surface-hover);
+  --fc-neutral-text-color: var(--gt-ink-muted);
+  --fc-today-bg-color: rgb(59 130 246 / 0.10);
+  --fc-highlight-color: rgb(59 130 246 / 0.16);
+  --fc-list-event-hover-bg-color: var(--gt-surface-hover);
+  --fc-button-text-color: var(--gt-ink);
+  --fc-button-bg-color: var(--gt-surface-hover);
+  --fc-button-border-color: var(--gt-line);
+  --fc-button-hover-bg-color: var(--gt-line);
+  --fc-button-hover-border-color: var(--gt-line-strong);
+  --fc-button-active-bg-color: var(--gt-line-strong);
+  --fc-button-active-border-color: var(--gt-line-strong);
+}
+
+/* The few pieces FullCalendar colours directly rather than through a variable. */
+html.dark .fc { color: var(--gt-ink); }
+html.dark .fc .fc-col-header-cell-cushion,
+html.dark .fc .fc-daygrid-day-number,
+html.dark .fc .fc-list-day-text,
+html.dark .fc .fc-list-day-side-text,
+html.dark .fc .fc-timegrid-slot-label-cushion {
+  color: var(--gt-ink-body);
 }

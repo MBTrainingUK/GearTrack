@@ -24,19 +24,19 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ACTION_COLOURS: Record<string, string> = {
-  checkout: 'bg-blue-50 text-blue-700',
-  checkin: 'bg-emerald-50 text-emerald-700',
-  reserve: 'bg-violet-50 text-violet-700',
-  approve_reservation: 'bg-emerald-50 text-emerald-700',
-  cancel_reservation: 'bg-red-50 text-red-700',
-  edit_reservation: 'bg-amber-50 text-amber-700',
-  flag: 'bg-orange-50 text-orange-700',
-  resolve_flag: 'bg-emerald-50 text-emerald-700',
-  create_item: 'bg-blue-50 text-blue-700',
-  update_item: 'bg-gray-100 text-gray-600',
-  delete_item: 'bg-red-50 text-red-700',
-  create_kit: 'bg-violet-50 text-violet-700',
-  delete_kit: 'bg-red-50 text-red-700',
+  checkout: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  checkin: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  reserve: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300',
+  approve_reservation: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  cancel_reservation: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300',
+  edit_reservation: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  flag: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300',
+  resolve_flag: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  create_item: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300',
+  update_item: 'bg-surface-hover text-ink-body',
+  delete_item: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300',
+  create_kit: 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300',
+  delete_kit: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300',
 };
 
 export default function ActivityLog() {
@@ -83,10 +83,10 @@ export default function ActivityLog() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <Activity size={22} className="text-blue-600" />
+        <Activity size={22} className="text-blue-600 dark:text-blue-400" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Activity</h1>
-          <p className="text-sm text-gray-500">All user interactions across the system</p>
+          <h1 className="text-2xl font-bold text-ink">Activity</h1>
+          <p className="text-sm text-ink-muted">All user interactions across the system</p>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export default function ActivityLog() {
         <select
           value={userFilter}
           onChange={(e) => setUserFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-line px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="all">All users</option>
           {users.map((u) => <option key={u}>{u}</option>)}
@@ -102,46 +102,46 @@ export default function ActivityLog() {
         <select
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-line px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="all">All actions</option>
           {actions.map((a) => (
             <option key={a} value={a}>{ACTION_LABELS[a] ?? a}</option>
           ))}
         </select>
-        <span className="ml-auto text-sm text-gray-400">{filtered.length} entries</span>
+        <span className="ml-auto text-sm text-ink-faint">{filtered.length} entries</span>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex h-48 items-center justify-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-ink-faint">
               {logs.length === 0 ? 'No activity recorded yet' : 'No entries match the current filters'}
             </p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-xs text-gray-500">
+              <tr className="border-b border-line-subtle text-xs text-ink-muted">
                 <th className="px-5 py-3 text-left font-medium">When</th>
                 <th className="px-5 py-3 text-left font-medium">User</th>
                 <th className="px-5 py-3 text-left font-medium">Action</th>
                 <th className="px-5 py-3 text-left font-medium">Target</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line-subtle">
               {filtered.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-5 py-3 text-gray-500">
+                <tr key={log.id} className="hover:bg-surface-hover">
+                  <td className="whitespace-nowrap px-5 py-3 text-ink-muted">
                     {log.timestamp ? format(log.timestamp.toDate(), 'dd MMM yyyy, HH:mm') : '—'}
                   </td>
-                  <td className="px-5 py-3 font-medium text-gray-900">{log.performedByName}</td>
+                  <td className="px-5 py-3 font-medium text-ink">{log.performedByName}</td>
                   <td className="px-5 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${ACTION_COLOURS[log.action] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${ACTION_COLOURS[log.action] ?? 'bg-surface-hover text-ink-body'}`}>
                       {ACTION_LABELS[log.action] ?? log.action}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{log.targetName}</td>
+                  <td className="px-5 py-3 text-ink-body">{log.targetName}</td>
                 </tr>
               ))}
             </tbody>

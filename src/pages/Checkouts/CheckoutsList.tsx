@@ -182,8 +182,8 @@ export default function CheckoutsList() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Checkouts</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{filtered.length} total</p>
+          <h1 className="text-2xl font-bold text-ink">Checkouts</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">{filtered.length} total</p>
         </div>
         {/* Open to every role: a personal checkout is a request, not an approval,
             and the rules already allow anyone to check gear out to themselves. */}
@@ -197,9 +197,9 @@ export default function CheckoutsList() {
       </div>
 
       {overdue > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <AlertTriangle size={16} className="shrink-0 text-red-600" />
-          <p className="text-sm text-red-800">
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-3">
+          <AlertTriangle size={16} className="shrink-0 text-red-600 dark:text-red-400" />
+          <p className="text-sm text-red-800 dark:text-red-300">
             <span className="font-semibold">{overdue} overdue</span> checkout{overdue > 1 ? 's' : ''} require attention.
           </p>
         </div>
@@ -208,10 +208,10 @@ export default function CheckoutsList() {
       {isAdmin && pendingApproval.length > 0 && (
         <button
           onClick={() => { setFilter('pending'); setUserFilter('all'); }}
-          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100"
+          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-left hover:bg-amber-100 dark:hover:bg-amber-500/15"
         >
-          <Home size={16} className="shrink-0 text-amber-600" />
-          <p className="text-sm text-amber-900">
+          <Home size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-sm text-amber-900 dark:text-amber-200">
             <span className="font-semibold">
               {pendingApproval.length} personal checkout{pendingApproval.length > 1 ? 's' : ''}
             </span>{' '}
@@ -231,13 +231,13 @@ export default function CheckoutsList() {
               className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                 userFilter === u
                   ? 'border-blue-600 bg-blue-600 text-white'
-                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                  : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
               }`}
             >
               {u === 'mine' ? 'Mine' : 'Everyone'}
             </button>
           ))}
-          <div className="h-4 w-px bg-gray-200" />
+          <div className="h-4 w-px bg-surface-hover" />
           {/* Status filter */}
           {(['all', 'pending', 'active', 'overdue', 'returned'] as const).map((f) => (
             <button
@@ -245,8 +245,8 @@ export default function CheckoutsList() {
               onClick={() => setFilter(f)}
               className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
                 filter === f
-                  ? 'border-blue-600 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                  : 'border-line text-ink-body hover:border-blue-300 dark:hover:border-blue-500/40'
               }`}
             >
               {f === 'pending' ? 'Awaiting approval' : f}
@@ -254,14 +254,14 @@ export default function CheckoutsList() {
           ))}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-gray-400">Show:</span>
-          <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+          <span className="text-xs text-ink-faint">Show:</span>
+          <div className="flex rounded-lg border border-line bg-surface p-0.5">
             {([30, 90] as const).map((d) => (
               <button
                 key={d}
                 onClick={() => setDateRange(d)}
                 className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                  dateRange === d ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
+                  dateRange === d ? 'bg-blue-600 text-white' : 'text-ink-body hover:text-ink'
                 }`}
               >
                 {d === 30 ? 'Last 30 days' : 'Last 90 days'}
@@ -271,15 +271,15 @@ export default function CheckoutsList() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-line bg-surface shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex h-48 items-center justify-center">
-            <p className="text-sm text-gray-400">No checkouts found</p>
+            <p className="text-sm text-ink-faint">No checkouts found</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-xs text-gray-500">
+              <tr className="border-b border-line-subtle text-xs text-ink-muted">
                 <th className="px-5 py-3 text-left font-medium">User</th>
                 <th className="px-5 py-3 text-left font-medium">Items</th>
                 <th className="px-5 py-3 text-left font-medium">Checked Out</th>
@@ -288,38 +288,38 @@ export default function CheckoutsList() {
                 <th className="px-5 py-3 text-left font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-line-subtle">
               {filtered.map((c) => {
                 const overdueRow = isOverdue(c);
                 const displayStatus = overdueRow ? 'overdue' : c.status;
                 return (
-                  <tr key={c.id} className={`hover:bg-gray-50 ${overdueRow ? 'bg-red-50/40' : ''}`}>
+                  <tr key={c.id} className={`hover:bg-surface-hover ${overdueRow ? 'bg-red-50/40' : ''}`}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900">{c.userName}</p>
+                        <p className="font-medium text-ink">{c.userName}</p>
                         {isPersonal(c) && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-500/15 px-2 py-0.5 text-[11px] font-medium text-purple-800 dark:text-purple-300">
                             <Home size={10} />
                             Personal
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500">{c.userEmail}</p>
+                      <p className="text-xs text-ink-muted">{c.userEmail}</p>
                     </td>
                     <td className="px-5 py-3">
                       <div className="space-y-0.5">
                         {c.itemIds.slice(0, 2).map((id) => (
-                          <Link key={id} to={`/items/${id}`} className="block text-xs text-blue-600 hover:underline">
+                          <Link key={id} to={`/items/${id}`} className="block text-xs text-blue-600 dark:text-blue-400 hover:underline">
                             {items[id]?.name ?? id}
                           </Link>
                         ))}
                         {c.itemIds.length > 2 && (
-                          <span className="text-xs text-gray-400">+{c.itemIds.length - 2} more</span>
+                          <span className="text-xs text-ink-faint">+{c.itemIds.length - 2} more</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-gray-600">{formatTS(c.checkedOutAt)}</td>
-                    <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700' : 'text-gray-600'}`}>
+                    <td className="px-5 py-3 text-ink-body">{formatTS(c.checkedOutAt)}</td>
+                    <td className={`px-5 py-3 ${overdueRow ? 'font-semibold text-red-700 dark:text-red-300' : 'text-ink-body'}`}>
                       {formatTS(c.dueDate)}
                     </td>
                     <td className="px-5 py-3">
@@ -333,14 +333,14 @@ export default function CheckoutsList() {
                               <button
                                 onClick={() => decide(c, true)}
                                 disabled={decidingId === c.id}
-                                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 disabled:opacity-50"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => setDeclineTarget(c)}
                                 disabled={decidingId === c.id}
-                                className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-2 py-1 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/15 disabled:opacity-50"
                               >
                                 Decline
                               </button>
@@ -350,7 +350,7 @@ export default function CheckoutsList() {
                             <button
                               onClick={() => cancelRequest(c)}
                               disabled={decidingId === c.id}
-                              className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                              className="rounded border border-line px-2 py-1 text-xs text-ink-body hover:bg-surface-hover disabled:opacity-50"
                             >
                               Withdraw
                             </button>
@@ -365,18 +365,18 @@ export default function CheckoutsList() {
                             setConditionModal({ checkoutId: c.id, itemIds: c.itemIds, targetName: names + extra, mode: 'return', reservationId: c.reservationId ?? undefined });
                           }
                           }
-                          className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100"
+                          className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/15"
                         >
                           Check In
                         </button>
                       )}
                       {c.status === 'returned' && c.returnCondition && (
-                        <span className="text-xs text-gray-400 capitalize">
+                        <span className="text-xs text-ink-faint capitalize">
                           Returned: {c.returnCondition.condition}
                         </span>
                       )}
                       {c.status === 'declined' && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-ink-faint">
                           {c.declineReason || 'Declined'}
                         </span>
                       )}
@@ -453,29 +453,29 @@ function DeclineModal({
   const [reason, setReason] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="font-semibold text-gray-900">Decline personal checkout?</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+          <h2 className="font-semibold text-ink">Decline personal checkout?</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="space-y-3 px-6 py-4">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-ink-label">
             <strong>{checkout.userName}</strong> will be emailed and the gear will go back into the
             available pool.
           </p>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Reason (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Reason (optional)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               placeholder="Shared with the requester"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover">
             Cancel
           </button>
           <button
@@ -652,22 +652,22 @@ function NewCheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <h2 className="font-semibold text-gray-900">
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4 shrink-0">
+          <h2 className="font-semibold text-ink">
             {isPersonalRequest ? 'Personal Checkout Request' : 'New Checkout'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="overflow-y-auto px-6 py-4 space-y-4">
           {!reservationId && (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Checkout type</label>
-              <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+              <label className="mb-1.5 block text-sm font-medium text-ink-label">Checkout type</label>
+              <div className="flex rounded-lg border border-line bg-canvas p-0.5">
                 <button
                   type="button"
                   onClick={() => setKind('work')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'work' ? 'bg-surface text-blue-700 dark:text-blue-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                 >
                   <Briefcase size={12} />
                   Work
@@ -675,15 +675,15 @@ function NewCheckoutModal({
                 <button
                   type="button"
                   onClick={() => setKind('personal')}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors ${kind === 'personal' ? 'bg-surface text-purple-700 dark:text-purple-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                 >
                   <Home size={12} />
                   Personal
                 </button>
               </div>
               {isPersonalRequest && (
-                <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
-                  <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600" />
+                <div className="mt-2 flex items-start gap-2 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 px-3 py-2 text-xs text-purple-800 dark:text-purple-300">
+                  <AlertCircle size={12} className="mt-0.5 shrink-0 text-purple-600 dark:text-purple-400" />
                   <span>
                     An admin must approve this before you can take it. The gear is held for you in
                     the meantime.
@@ -694,7 +694,7 @@ function NewCheckoutModal({
           )}
           {isPersonalRequest && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-1 block text-sm font-medium text-ink-label">
                 Reason for personal use *
               </label>
               <textarea
@@ -702,34 +702,34 @@ function NewCheckoutModal({
                 onChange={(e) => setPersonalReason(e.target.value)}
                 rows={2}
                 placeholder="Shown to the admin who approves it"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Due Date *</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Due Date *</label>
             <input
               type="datetime-local"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div>
             {!reservationId && (
-              <div className="mb-3 flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+              <div className="mb-3 flex rounded-lg border border-line bg-canvas p-0.5">
                 <button
                   type="button"
                   onClick={() => { setCheckoutTab('items'); setSelectedKitId(null); setSelectedItems([]); setKitWarnings([]); }}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'items' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'items' ? 'bg-surface text-blue-700 dark:text-blue-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                 >
                   Individual Items
                 </button>
                 <button
                   type="button"
                   onClick={() => { setCheckoutTab('kit'); setSelectedItems([]); setSelectedKitId(null); setKitWarnings([]); }}
-                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'kit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                  className={`flex-1 rounded-md py-1.5 text-xs font-medium transition-colors ${checkoutTab === 'kit' ? 'bg-surface text-blue-700 dark:text-blue-300 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                 >
                   Kit
                 </button>
@@ -738,7 +738,7 @@ function NewCheckoutModal({
 
             {checkoutTab === 'items' ? (
               <>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                <label className="mb-1.5 block text-sm font-medium text-ink-label">
                   Items ({selectedItems.length} selected) *
                 </label>
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -746,12 +746,12 @@ function NewCheckoutModal({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by name, asset no, serial no…"
-                    className="min-w-[160px] flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="min-w-[160px] flex-1 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-body focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="All">All Categories</option>
                     {catOptions.map((c) => (
@@ -759,19 +759,19 @@ function NewCheckoutModal({
                     ))}
                   </select>
                 </div>
-                <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 divide-y divide-gray-100">
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-line divide-y divide-line-subtle">
                   {available.map((item) => {
                     const isSel = selectedItems.includes(item.id);
                     return (
-                      <div key={item.id} className={`flex w-full items-center justify-between px-3 py-2 text-sm ${isSel ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                      <div key={item.id} className={`flex w-full items-center justify-between px-3 py-2 text-sm ${isSel ? 'bg-blue-50 dark:bg-blue-500/10' : 'hover:bg-surface-hover'}`}>
                         <button
                           type="button"
                           onClick={() => setSelectedItems((p) => p.includes(item.id) ? p.filter((x) => x !== item.id) : [...p, item.id])}
                           className="flex-1 text-left min-w-0"
                         >
-                          <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                          <p className="font-medium text-ink truncate">{item.name}</p>
                           {(item.assetNumber || item.serialNumber) && (
-                            <p className="text-xs text-gray-400">{item.assetNumber ? `Asset: ${item.assetNumber}` : `S/N: ${item.serialNumber}`}</p>
+                            <p className="text-xs text-ink-faint">{item.assetNumber ? `Asset: ${item.assetNumber}` : `S/N: ${item.serialNumber}`}</p>
                           )}
                         </button>
                         <div className="flex items-center gap-1.5 ml-2 shrink-0">
@@ -782,13 +782,13 @@ function NewCheckoutModal({
                               title="Quick Grab — check out now, due end of today"
                               onClick={() => quickGrab([item.id])}
                               disabled={saving}
-                              className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                              className="flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/15 disabled:opacity-50"
                             >
                               <Zap size={11} />
                               Quick Grab
                             </button>
                           )}
-                          {isSel && <Check size={13} className="text-blue-600" />}
+                          {isSel && <Check size={13} className="text-blue-600 dark:text-blue-400" />}
                         </div>
                       </div>
                     );
@@ -797,10 +797,10 @@ function NewCheckoutModal({
               </>
             ) : (
               <>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Select a Kit</label>
+                <label className="mb-1.5 block text-sm font-medium text-ink-label">Select a Kit</label>
                 <div className="max-h-48 overflow-y-auto space-y-1.5">
                   {kits.length === 0 ? (
-                    <p className="py-4 text-center text-xs text-gray-400">No kits available</p>
+                    <p className="py-4 text-center text-xs text-ink-faint">No kits available</p>
                   ) : (
                     kits.map((kit) => {
                       const availableCount = kit.itemIds.filter((id) => {
@@ -813,10 +813,10 @@ function NewCheckoutModal({
                           key={kit.id}
                           type="button"
                           onClick={() => selectKit(kit)}
-                          className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}
+                          className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10' : 'border-line hover:border-blue-300 dark:hover:border-blue-500/40 hover:bg-surface-hover'}`}
                         >
-                          <p className="text-sm font-medium text-gray-900">{kit.name}</p>
-                          <p className="mt-0.5 text-xs text-gray-500">
+                          <p className="text-sm font-medium text-ink">{kit.name}</p>
+                          <p className="mt-0.5 text-xs text-ink-muted">
                             {availableCount} of {kit.itemIds.length} items available
                           </p>
                         </button>
@@ -824,8 +824,8 @@ function NewCheckoutModal({
                     })
                   )}
                   {checkoutTab === 'kit' && kitWarnings.length > 0 && (
-                    <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                      <AlertCircle size={12} className="mt-0.5 shrink-0 text-amber-600" />
+                    <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                      <AlertCircle size={12} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                       <span>
                         <strong>{kitWarnings.join(', ')}</strong>{' '}
                         {kitWarnings.length === 1 ? 'is' : 'are'} unavailable and won't be included.
@@ -837,12 +837,12 @@ function NewCheckoutModal({
             )}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+            <label className="mb-1 block text-sm font-medium text-ink-label">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           {isPersonalRequest && (
@@ -854,8 +854,8 @@ function NewCheckoutModal({
             />
           )}
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 shrink-0">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4 shrink-0">
+          <button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover">
             Cancel
           </button>
           {selectedItems.length > 0 && !isPersonalRequest && (

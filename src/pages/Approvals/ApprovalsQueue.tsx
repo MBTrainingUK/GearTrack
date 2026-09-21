@@ -53,9 +53,9 @@ export default function ApprovalsQueue() {
 
   if (!canApprove) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
-        <CheckCircle2 size={36} className="text-gray-300" />
-        <p className="text-sm text-gray-500">You don't have anything to approve</p>
+      <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface">
+        <CheckCircle2 size={36} className="text-ink-ghost" />
+        <p className="text-sm text-ink-muted">You don't have anything to approve</p>
       </div>
     );
   }
@@ -63,22 +63,22 @@ export default function ApprovalsQueue() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Approvals</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-ink">Approvals</h1>
+        <p className="mt-0.5 text-sm text-ink-muted">
           {count === 0 ? 'Nothing waiting' : `${count} waiting on you`}
         </p>
       </div>
 
       {count === 0 && (
-        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
-          <CheckCircle2 size={36} className="text-emerald-300" />
-          <p className="text-sm text-gray-500">All caught up — nothing needs a decision</p>
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface">
+          <CheckCircle2 size={36} className="text-emerald-300 dark:text-emerald-500/60" />
+          <p className="text-sm text-ink-muted">All caught up — nothing needs a decision</p>
         </div>
       )}
 
       {workReservations.length > 0 && (
         <Group
-          icon={<Briefcase size={15} className="text-gray-400" />}
+          icon={<Briefcase size={15} className="text-ink-faint" />}
           title="Work bookings"
           hint="Approving frees the requester to collect the gear on the start date."
         >
@@ -109,7 +109,7 @@ export default function ApprovalsQueue() {
 
       {personalReservations.length > 0 && (
         <Group
-          icon={<Home size={15} className="text-purple-500" />}
+          icon={<Home size={15} className="text-purple-500 dark:text-purple-400" />}
           title="Personal bookings"
           hint="Admin only. The requester accepted the £1000 excess when they raised this."
           tone="purple"
@@ -133,7 +133,7 @@ export default function ApprovalsQueue() {
 
       {personalCheckouts.length > 0 && (
         <Group
-          icon={<Home size={15} className="text-purple-500" />}
+          icon={<Home size={15} className="text-purple-500 dark:text-purple-400" />}
           title="Personal checkouts"
           hint="Admin only. The gear is already held out of circulation while this waits."
           tone="purple"
@@ -205,14 +205,14 @@ function Group({
 }) {
   return (
     <section className="space-y-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
         {icon}
         {title}
       </h2>
-      <p className="text-xs text-gray-500">{hint}</p>
+      <p className="text-xs text-ink-muted">{hint}</p>
       <div
-        className={`divide-y divide-gray-100 overflow-hidden rounded-xl border bg-white shadow-sm ${
-          tone === 'purple' ? 'border-purple-200' : 'border-gray-200'
+        className={`divide-y divide-line-subtle overflow-hidden rounded-xl border bg-surface shadow-sm ${
+          tone === 'purple' ? 'border-purple-200 dark:border-purple-500/30' : 'border-line'
         }`}
       >
         {children}
@@ -243,10 +243,10 @@ function Row({
   return (
     <div className="flex flex-wrap items-start gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900">{who}</p>
-        <p className="truncate text-xs text-gray-500">{what}</p>
-        {when && <p className="text-xs text-gray-400">{when}</p>}
-        {reason && <p className="mt-1 text-xs italic text-gray-600">“{reason}”</p>}
+        <p className="text-sm font-medium text-ink">{who}</p>
+        <p className="truncate text-xs text-ink-muted">{what}</p>
+        {when && <p className="text-xs text-ink-faint">{when}</p>}
+        {reason && <p className="mt-1 text-xs italic text-ink-body">“{reason}”</p>}
       </div>
       <div className="flex shrink-0 gap-2">
         <button
@@ -259,7 +259,7 @@ function Row({
         <button
           onClick={onDecline}
           disabled={busy}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-body hover:bg-surface-hover disabled:opacity-50"
         >
           {declineLabel}
         </button>
@@ -282,34 +282,34 @@ function DeclineModal({
   const [reason, setReason] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="font-semibold text-gray-900">
+      <div className="w-full max-w-md rounded-2xl bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
+          <h2 className="font-semibold text-ink">
             {isWork ? `Cancel ${who}'s booking` : `Decline ${who}'s request`}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink-body"><X size={18} /></button>
         </div>
         <div className="px-6 py-4">
           {isWork ? (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-body">
               The booking is cancelled and the dates are freed up. Work bookings carry no
               decline reason, so nothing is emailed — let {who} know yourself.
             </p>
           ) : (
             <>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Reason (optional)</label>
+              <label className="mb-1.5 block text-sm font-medium text-ink-label">Reason (optional)</label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={2}
                 placeholder="Shared with the requester"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </>
           )}
         </div>
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+        <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4">
+          <button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover">
             Cancel
           </button>
           <button

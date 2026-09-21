@@ -71,9 +71,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-canvas">
       {/* Desktop sidebar */}
-      <aside className="hidden w-56 flex-shrink-0 border-r border-gray-200 bg-white lg:flex lg:flex-col">
+      <aside className="hidden w-56 flex-shrink-0 border-r border-line bg-surface lg:flex lg:flex-col">
         <SidebarContent
           appUser={appUser}
           basketCount={basketCount}
@@ -91,7 +91,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="fixed inset-0 bg-black/30"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative z-50 w-56 bg-white shadow-xl">
+          <aside className="relative z-50 w-56 bg-surface shadow-xl">
             <SidebarContent
               appUser={appUser}
               basketCount={basketCount}
@@ -107,18 +107,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top bar (mobile) */}
-        <header className="flex h-14 items-center gap-3 border-b border-gray-200 bg-white px-4 lg:hidden">
+        <header className="flex h-14 items-center gap-3 border-b border-line bg-surface px-4 lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            className="text-gray-500 hover:text-gray-900"
+            className="text-ink-muted hover:text-ink"
           >
             <Menu size={20} />
           </button>
           <AppLogo size={28} />
-          <span className="font-bold text-gray-900">GearTrack</span>
+          <span className="font-bold text-ink">GearTrack</span>
           <button
             onClick={() => setBasketOpen(true)}
-            className="relative ml-auto text-gray-500 hover:text-gray-900"
+            className="relative ml-auto text-ink-muted hover:text-ink"
             title="Basket"
           >
             <ShoppingBasket size={20} />
@@ -157,9 +157,9 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-5">
+      <div className="flex h-16 items-center gap-2.5 border-b border-line-subtle px-5">
         <AppLogo size={32} />
-        <span className="text-base font-bold text-gray-900">GearTrack</span>
+        <span className="text-base font-bold text-ink">GearTrack</span>
       </div>
 
       {/* Nav */}
@@ -179,8 +179,8 @@ function SidebarContent({
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                      : 'text-ink-body hover:bg-surface-hover hover:text-ink'
                   }`
                 }
               >
@@ -199,7 +199,7 @@ function SidebarContent({
           <li>
             <button
               onClick={onOpenBasket}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink-body transition-colors hover:bg-surface-hover hover:text-ink"
             >
               <ShoppingBasket size={17} />
               Basket
@@ -214,20 +214,20 @@ function SidebarContent({
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-gray-100 px-3 py-3">
+      <div className="border-t border-line-subtle px-3 py-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 text-sm font-semibold">
             {appUser?.displayName?.[0]?.toUpperCase() ?? 'U'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-gray-900">{appUser?.displayName}</p>
-            <p className="truncate text-xs text-gray-500">
+            <p className="truncate text-sm font-medium text-ink">{appUser?.displayName}</p>
+            <p className="truncate text-xs text-ink-muted">
               {appUser?.role === 'manager' ? 'Team Member' : appUser?.role === 'admin' ? 'Admin' : 'User'}
             </p>
           </div>
           <button
             onClick={onLogout}
-            className="text-gray-400 hover:text-red-500 transition-colors"
+            className="text-ink-faint hover:text-red-500 dark:text-red-400 transition-colors"
             title="Sign out"
           >
             <LogOut size={16} />

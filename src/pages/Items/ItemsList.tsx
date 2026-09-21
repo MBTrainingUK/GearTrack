@@ -67,8 +67,8 @@ export default function ItemsList() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Items</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{items.length} items in inventory</p>
+          <h1 className="text-2xl font-bold text-ink">Items</h1>
+          <p className="mt-0.5 text-sm text-ink-muted">{items.length} items in inventory</p>
         </div>
         {(appUser?.role === 'admin' || appUser?.role === 'manager') && (
           <Link
@@ -84,18 +84,18 @@ export default function ItemsList() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, serial, category…"
-            className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-line py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-line px-3 py-2 text-sm text-ink-body focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="All">All Categories</option>
           {categories.map((c) => <option key={c}>{c}</option>)}
@@ -103,7 +103,7 @@ export default function ItemsList() {
         <select
           value={condition}
           onChange={(e) => setCondition(e.target.value as typeof condition)}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-line px-3 py-2 text-sm text-ink-body focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           {CONDITIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
@@ -111,11 +111,11 @@ export default function ItemsList() {
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
-          <Package size={36} className="text-gray-300" />
-          <p className="text-sm text-gray-500">No items found</p>
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface">
+          <Package size={36} className="text-ink-ghost" />
+          <p className="text-sm text-ink-muted">No items found</p>
           {appUser?.role !== 'user' && (
-            <Link to="/items/new" className="text-sm font-medium text-blue-600 hover:underline">
+            <Link to="/items/new" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
               Add your first item →
             </Link>
           )}
@@ -128,25 +128,25 @@ export default function ItemsList() {
             return (
             <div
               key={item.id}
-              className={`group relative rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden ${
-                excluded ? 'border-amber-400' : 'border-gray-200'
+              className={`group relative rounded-xl border bg-surface shadow-sm hover:shadow-md transition-shadow overflow-hidden ${
+                excluded ? 'border-amber-400 dark:border-amber-500/50' : 'border-line'
               }`}
             >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <Link to={`/items/${item.id}`} className="min-w-0">
-                    <h3 className="truncate font-semibold text-gray-900 hover:text-blue-600">
+                    <h3 className="truncate font-semibold text-ink hover:text-blue-600 dark:text-blue-400">
                       {item.name}
                     </h3>
                   </Link>
                   <StatusBadge status={item.status} type="item" className="shrink-0" />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">{item.category}</p>
+                <p className="mt-1 text-xs text-ink-muted">{item.category}</p>
                 {item.assetNumber && (
-                  <p className="text-xs text-gray-400">Asset: {item.assetNumber}</p>
+                  <p className="text-xs text-ink-faint">Asset: {item.assetNumber}</p>
                 )}
                 {item.serialNumber && (
-                  <p className="text-xs text-gray-400">S/N: {item.serialNumber}</p>
+                  <p className="text-xs text-ink-faint">S/N: {item.serialNumber}</p>
                 )}
                 {item.condition && item.condition !== 'good' && (
                   <div className="mt-1.5">
@@ -155,12 +155,12 @@ export default function ItemsList() {
                 )}
                 <div className="mt-3 flex items-center justify-between">
                   {excluded ? (
-                    <span className="text-xs font-medium text-amber-600">Not bookable</span>
+                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Not bookable</span>
                   ) : (
                     <div className="flex items-center gap-2.5">
                       <Link
                         to={`/reservations/new?itemId=${item.id}`}
-                        className="text-xs font-medium text-blue-600 hover:underline"
+                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         Reserve
                       </Link>
@@ -171,8 +171,8 @@ export default function ItemsList() {
                           onClick={() => toggleBasketItem(item.id)}
                           className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium transition-colors ${
                             inBasket
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'
+                              ? 'border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                              : 'border-line text-ink-muted hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:text-blue-400'
                           }`}
                         >
                           {inBasket ? <Check size={11} /> : <Plus size={11} />}
@@ -185,13 +185,13 @@ export default function ItemsList() {
                     <div className="flex gap-2">
                       <Link
                         to={`/items/${item.id}/edit`}
-                        className="text-xs text-gray-400 hover:text-gray-700"
+                        className="text-xs text-ink-faint hover:text-ink-label"
                       >
                         Edit
                       </Link>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-ink-faint hover:text-red-500 dark:text-red-400"
                       >
                         <Trash2 size={13} />
                       </button>

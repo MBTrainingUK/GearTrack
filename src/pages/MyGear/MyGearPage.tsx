@@ -99,7 +99,7 @@ export default function MyGearPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-gray-400" />
+        <Loader2 size={24} className="animate-spin text-ink-faint" />
       </div>
     );
   }
@@ -107,38 +107,38 @@ export default function MyGearPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Gear</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-ink">My Gear</h1>
+        <p className="mt-0.5 text-sm text-ink-muted">
           {out.length > 0 ? `${out.length} item${out.length !== 1 ? 's' : ''} out` : 'Nothing out right now'}
           {upcoming.length > 0 && ` · ${upcoming.length} booking${upcoming.length !== 1 ? 's' : ''} coming up`}
         </p>
       </div>
 
       {nothing && (
-        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white">
-          <PackageCheck size={36} className="text-gray-300" />
-          <p className="text-sm text-gray-500">You have no gear out and nothing booked</p>
-          <p className="text-xs text-gray-400">Add items to your basket to book something.</p>
+        <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface">
+          <PackageCheck size={36} className="text-ink-ghost" />
+          <p className="text-sm text-ink-muted">You have no gear out and nothing booked</p>
+          <p className="text-xs text-ink-faint">Add items to your basket to book something.</p>
         </div>
       )}
 
       {out.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-900">Out with you</h2>
-          <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <h2 className="text-sm font-semibold text-ink">Out with you</h2>
+          <div className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
             {out.map((c) => {
               const late = isOverdue(c);
               return (
                 <div key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-900">{names(c.itemIds)}</p>
-                    <p className={`text-xs ${late ? 'font-medium text-red-600' : 'text-gray-500'}`}>
+                    <p className="truncate text-sm font-medium text-ink">{names(c.itemIds)}</p>
+                    <p className={`text-xs ${late ? 'font-medium text-red-600 dark:text-red-400' : 'text-ink-muted'}`}>
                       {late ? 'Overdue — due ' : 'Due '}
                       {c.dueDate && format(c.dueDate.toDate(), 'd MMM yyyy')}
                     </p>
                   </div>
                   {isPersonal(c) && (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800">
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-500/15 px-2 py-0.5 text-[11px] font-medium text-purple-800 dark:text-purple-300">
                       <Home size={10} />
                       Personal
                     </span>
@@ -159,20 +159,20 @@ export default function MyGearPage() {
 
       {awaiting.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-900">Waiting on approval</h2>
-          <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+          <h2 className="text-sm font-semibold text-ink">Waiting on approval</h2>
+          <div className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-amber-200 dark:border-amber-500/30 bg-surface shadow-sm">
             {awaiting.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">{names(c.itemIds)}</p>
-                  <p className="text-xs font-medium text-amber-700">
+                  <p className="truncate text-sm font-medium text-ink">{names(c.itemIds)}</p>
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
                     An admin has to approve this — don't take it yet
                   </p>
                 </div>
                 <button
                   onClick={() => withdraw(c)}
                   disabled={busyId === c.id}
-                  className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-body hover:bg-surface-hover disabled:opacity-50"
                 >
                   {busyId === c.id ? 'Withdrawing…' : 'Withdraw'}
                 </button>
@@ -184,16 +184,16 @@ export default function MyGearPage() {
 
       {upcoming.length > 0 && (
         <section className="space-y-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <CalendarRange size={15} className="text-gray-400" />
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <CalendarRange size={15} className="text-ink-faint" />
             Booked ahead
           </h2>
-          <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
             {upcoming.map((r) => (
               <div key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">{names(r.itemIds)}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="truncate text-sm font-medium text-ink">{names(r.itemIds)}</p>
+                  <p className="text-xs text-ink-muted">
                     {format(r.startDate.toDate(), 'd MMM yyyy')} → {format(r.endDate.toDate(), 'd MMM yyyy')}
                   </p>
                 </div>
@@ -201,7 +201,7 @@ export default function MyGearPage() {
                 <button
                   onClick={() => setConfirmCancel(r)}
                   disabled={busyId === r.id}
-                  className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink-body hover:bg-surface-hover disabled:opacity-50"
                 >
                   {busyId === r.id ? 'Cancelling…' : 'Cancel'}
                 </button>
@@ -213,18 +213,18 @@ export default function MyGearPage() {
 
       {confirmCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl bg-surface shadow-xl">
             <div className="px-6 py-5">
-              <h2 className="font-semibold text-gray-900">Cancel this booking?</h2>
-              <p className="mt-1.5 text-sm text-gray-600">
+              <h2 className="font-semibold text-ink">Cancel this booking?</h2>
+              <p className="mt-1.5 text-sm text-ink-body">
                 {names(confirmCancel.itemIds)} will be released for {format(confirmCancel.startDate.toDate(), 'd MMM')}
                 {' → '}{format(confirmCancel.endDate.toDate(), 'd MMM yyyy')}. This can't be undone.
               </p>
             </div>
-            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+            <div className="flex justify-end gap-3 border-t border-line-subtle px-6 py-4">
               <button
                 onClick={() => setConfirmCancel(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="rounded-lg border border-line px-4 py-2 text-sm text-ink-body hover:bg-surface-hover"
               >
                 Keep it
               </button>

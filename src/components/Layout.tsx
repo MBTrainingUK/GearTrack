@@ -227,7 +227,7 @@ function SidebarContent({
           </div>
           <button
             onClick={onLogout}
-            className="text-ink-faint hover:text-red-500 dark:text-red-400 transition-colors"
+            className="text-ink-faint hover:text-red-500 dark:hover:text-red-400 transition-colors"
             title="Sign out"
           >
             <LogOut size={16} />

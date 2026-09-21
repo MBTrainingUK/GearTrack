@@ -65,7 +65,7 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
                   <button
                     onClick={() => removeFromBasket(item.id)}
                     title="Remove from basket"
-                    className="shrink-0 text-ink-ghost hover:text-red-500 dark:text-red-400"
+                    className="shrink-0 text-ink-ghost hover:text-red-500 dark:hover:text-red-400"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -101,7 +101,7 @@ export default function BasketDrawer({ open, onClose }: { open: boolean; onClose
               </button>
               <button
                 onClick={clearBasket}
-                className="w-full py-1 text-xs text-ink-faint hover:text-red-500 dark:text-red-400"
+                className="w-full py-1 text-xs text-ink-faint hover:text-red-500 dark:hover:text-red-400"
               >
                 Empty basket
               </button>

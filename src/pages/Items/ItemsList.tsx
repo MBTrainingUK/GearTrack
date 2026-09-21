@@ -135,7 +135,7 @@ export default function ItemsList() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <Link to={`/items/${item.id}`} className="min-w-0">
-                    <h3 className="truncate font-semibold text-ink hover:text-blue-600 dark:text-blue-400">
+                    <h3 className="truncate font-semibold text-ink hover:text-blue-600 dark:hover:text-blue-400">
                       {item.name}
                     </h3>
                   </Link>
@@ -172,7 +172,7 @@ export default function ItemsList() {
                           className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium transition-colors ${
                             inBasket
                               ? 'border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                              : 'border-line text-ink-muted hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:text-blue-400'
+                              : 'border-line text-ink-muted hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400'
                           }`}
                         >
                           {inBasket ? <Check size={11} /> : <Plus size={11} />}
@@ -191,7 +191,7 @@ export default function ItemsList() {
                       </Link>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="text-ink-faint hover:text-red-500 dark:text-red-400"
+                        className="text-ink-faint hover:text-red-500 dark:hover:text-red-400"
                       >
                         <Trash2 size={13} />
                       </button>
